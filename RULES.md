@@ -32,7 +32,7 @@
 
 ### 禁止引入
 
-- 其他 Web 自动化库（已锁定 Playwright + CloakBrowser 适配器）
+- 其他 Web 自动化库（已锁定 Playwright,通过 `PlaywrightBrowserAdapter` 适配）
 - 国产 RPA 框架
 - 关系型数据库（本项目使用文件配置 + 内存状态）
 - 非 Maven 构建工具
@@ -45,10 +45,12 @@
 每个设计模式类必须在第一行注释中显式标注：
 
 ```java
-// Design Pattern: Static Factory
-// 编程技术: 泛型 / 枚举 / 注解
-public final class ClientFactory { ... }
+// Design Pattern: Adapter
+// 编程技术: sealed interface / Lambda
+public sealed interface BrowserLifecycle permits PlaywrightBrowserAdapter, FakeBrowser { ... }
 ```
+
+> **历史变更**(ADR-0007 D1):原 `BrowserFactory` / Static Factory 已删除,改 `ConfigManager` 配置注入。5 模式 → 4 模式。
 
 报告验收时执行：`grep -rn "Design Pattern:" src/`
 

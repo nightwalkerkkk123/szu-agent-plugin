@@ -34,17 +34,32 @@
 
 ## 项目状态
 
-**当前阶段：文档设计阶段（Phase 1）**
-- 核心代码（`src/`）尚未实现
-- 设计文档已完成：`docs/PRD.md`、`docs/design-patterns.md`、`docs/system-map.md`
-- 计划按实现顺序逐步完成编码
+**当前阶段：方向已校准（ADR-0001, 2026-06-11 Accepted）**
+
+项目方向已通过 grill 拷问重新对齐，详见 [`docs/adr/0001-project-direction-recalibration.md`](docs/adr/0001-project-direction-recalibration.md)：
+- **真演示优先**：课堂演示真跑 Playwright 完整预约流程（不再以 `--dry-run` 为默认）
+- **5 模式重选**：Builder / Singleton / Strategy / Adapter(4 模式,见 ADR-0007)
+- **业务聚焦**：P0 仅 `book` 一个业务跑通；`CampusTask<T>` 保留为 P1 扩展点
+
+**实施路径**（5 天）：
+
+| Phase | 时长 | 内容 | 状态 |
+|---|---|---|---|
+| P0 | 0.5d | 骨架（pom.xml + 包结构 + Logback + dotenv-java） | 待开始 |
+| P1 | 1.0d | 无依赖基础（domain/ + error/ + retry/ + matcher/） | 待开始 |
+| P2 | 1.0d | 浏览器抽象（browser/ + selectors/） | 待开始 |
+| P3 | 1.0d | 业务编排（task/ + client/ + config/ + observability/ + account/） | 待开始 |
+| P4 | 1.0d | CLI + Wrapper（cli/ + skill/ + mcp/） | 待开始 |
+| P5 | 0.5d | 收尾（测试 80% + 报告 + 演示脚本） | 待开始 |
+
+每阶段过 `mvn test` 才进下一阶段。
 
 ## 范围
 
 | 阶段 | 范围 | 状态 |
 |---|---|---|
-| **P0 核心** | 体育场馆定时预约、通用任务框架、CloakBrowser 适配器、CLI 入口、配置/日志/Trace/错误码、有限重试、Skill/MCP 最小原型 | 设计完成，实现待开始 |
-| **P1 扩展接口** | 公文通查询、畅课任务、成长方案、邮件草稿、企业微信摘要 | 设计接口 + 部分示例 |
+| **P0 核心** | 体育场馆定时预约（`BookingClient` 唯一业务）、`PlaywrightBrowserAdapter` 适配器、CLI 入口、配置/日志/Trace/错误码、有界重试（≤3，见 ADR-0006 retry 子决定） | 设计完成，方向已校准 |
+| **P1 扩展接口** | `CampusTask<T>` 扩展点、公文通查询、畅课任务、成长方案、邮件草稿、企业微信摘要 | roadmap，不实现 |
 | **P2 未来** | 校园小巴、电费、报修、Dashboard、任务队列、Docker | 不做 |
 
 ## 快速开始（待实现后可用）
@@ -53,48 +68,64 @@
 # 编译
 mvn package
 
-# 体育场馆预约（核心 demo）
+# 体育场馆预约（核心 demo，**真跑** Playwright,ADR-0001 D2）
 java -jar target/szu-agent-plugin.jar booking venue \
-  --username 2023150090 --campus 粤海 --sport 网球 \
-  --date 0 --time-slot 19:00-20:00
+  --username 2023150090 --campus YUEHAI --sport TENNIS \
+  --date 2026-06-12 --time-slot 19:00-20:00
 
-# 查询公文通（扩展 demo）
-java -jar target/szu-agent-plugin.jar notice list --keyword 讲座 --limit 10
-
-# 输出为 JSON，供 Agent 解析
+# 输出为 JSON,供 Agent 解析
 java -jar target/szu-agent-plugin.jar booking venue ... --format json
+
+# 演示从 Skill 目录调(Skill wrapper 传 --env-file,见 ADR-0005 D1)
+java -jar /opt/szu-agent-plugin.jar booking venue \
+  --env-file /opt/skills/szu-sports/.env \
+  --username 2023150090 --campus YUEHAI --sport TENNIS \
+  --date 2026-06-12 --time-slot 19:00-20:00
 ```
 
-Agent 端只需 `exec` 本 CLI 并解析 stdout JSON / 退出码。详细契约见 [`docs/PRD.md`](docs/PRD.md) §5。
+Agent 端只需 `exec` 本 CLI 并解析 stdout JSON / 退出码。
+**注意**:`--dry-run` 标志仅作单元测试夹具用(ADR-0001 D4),课堂演示必须真跑。
+凭证通过 `SZU_PASSWORD_XXXX` 进程环境变量 / `--env-file` 指向的 .env / Skill wrapper 注入(优先级见 ADR-0005 D1)。
+详细契约见 [`docs/PRD.md`](docs/PRD.md) §5。
 
 ## 架构概览
 
 ```
-edu.szu.agent
-├── platform/      AgentToolPlatform 平台门面（Facade）
-├── task/          CampusTask<T> 通用任务接口 + TaskResult<T> + TaskStatus
-├── client/        VenueBookingClient / NoticeQueryClient / ChaoxingCourseClient / ...
-├── browser/       BrowserLifecycle 接口 + CloakBrowserAdapter + FakeBrowser
-├── config/        ConfigManager（单例）
-├── account/       Account + AccountManager + AccountState
-├── retry/         RetryPolicy（策略）+ FixedDelay / ExponentialBackoff
-├── error/         ErrorCode 枚举 + ErrorClassifier（策略）+ BookingException
-├── observability/ Tracer / MetricsCollector（单例）
-├── skill/         Skill 接口 + SkillManager（@AgentTool 反射）
-├── mcp/           MCPToolProvider（暴露工具 schema）
-├── cli/           CLI 入口（picocli）+ JSON 序列化
-└── domain/        Campus / Sport / TimeSlot / Venue / BookingRequest
+com.szu.agent
+├── Main.java                          # picocli 入口
+├── cli/           BookingCommand / SkillCommand / McpCommand(第一性工作单元,ADR-0001 D1)
+├── domain/        Campus / Sport / TimeSlot / BookingRequest(Builder) / BookingResult(sealed)
+├── browser/       BrowserLifecycle(sealed, 6 方法,见 ADR-0007 D3) + PlaywrightBrowserAdapter + FakeBrowser
+│   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager 配 browser.kind 注入
+├── matcher/       Matcher<T>(Strategy) + AbstractMatcher + Exact/Contains/Regex/VenueIndex
+├── retry/         RetryPolicy(Strategy,3 实现:FixedDelay/ExponentialBackoff/NoRetry,见 ADR-0007 D2) + RetryPolicies
+├── error/         ErrorCode(枚举,12 值 5 元数据) + Severity + BookingException + LogMasker
+├── config/        ConfigManager(单例,Singleton)
+├── observability/ Tracer(单例,Singleton) + RunRecord(JSON 落盘)
+├── account/       Account + AccountResolver(3 层凭证,ADR-0005 D1) + EnvVarName
+├── selectors/     Select.Login / Campus / Sport / ...(ehall selector 常量集中)
+├── client/        BookingClient(P0 唯一业务)
+├── task/          CampusTask<T> + BookingTask(P1 扩展点,代码层保留)
+├── skill/         Skill + SkillManager(P1 薄壳 wrapper)
+└── mcp/           MCPToolProvider(P1 薄壳 wrapper,ADR-0001 D5)
 ```
 
-## 设计模式（5 种）
+> **历史变更**(ADR-0001 D9, 2026-06-11):删除 `platform/AgentToolPlatform` Facade、
+> `client/ClientFactory`、`error/ErrorClassifier`、`client/NoticeQueryClient` /
+> `ChaoxingCourseClient` / `GrowthPlanClient`。
+> `CloakBrowserAdapter` 改名为 `PlaywrightBrowserAdapter`。
+> `CampusTask<T>` 保留为 P1 扩展点(不算第 6 个模式)。
+
+## 设计模式（4 种）
 
 | 模式 | 落点 | 作用 |
 |---|---|---|
-| **静态工厂** | `ClientFactory.create(CliName)` | 按名称创建不同的校园服务客户端 |
-| **Builder** | `BookingRequest.Builder` | 拼装多参数预约请求（账号/校区/项目/日期/时间段/重试） |
+| **Builder** | `BookingRequest.Builder` | 拼装 6 参数预约请求（校区/项目/日期/时段/场地号/备注） |
 | **单例** | `ConfigManager` / `Tracer` | 全局唯一，保证配置/追踪上下文一致 |
-| **策略** | `RetryPolicy` / `ErrorClassifier` / `Matcher` | 行为族可替换，新增策略不改调用方 |
-| **适配器** | `CloakBrowserAdapter` 适配 `BrowserLifecycle` | 把第三方浏览器库封装为统一接口，业务不感知 Playwright |
+| **策略** | `Matcher<T>` (4 实现) / `RetryPolicy` (3 实现) | 行为族可替换，新增策略不改调用方 |
+| **适配器** | `PlaywrightBrowserAdapter` 适配 `BrowserLifecycle` | 把 Playwright 封装为统一接口，业务不感知具体浏览器 |
+
+> **5 → 4 模式变更**(ADR-0007 D1):`BrowserFactory` / Static Factory 删除,改 `ConfigManager` 配置 `browser.kind` 注入;seam 深度提升,调用方零决策。详见 [docs/design-patterns.md](docs/design-patterns.md) §5。
 
 完整说明: [`docs/design-patterns.md`](docs/design-patterns.md)。
 
@@ -186,7 +217,8 @@ szu-agent-plugin/
 │   ├── plans/               功能规划说明
 │   ├── templates/           Story packet 模板
 │   ├── stories/             Story packets（待填充）
-│   └── decisions/           Decision records（待填充）
+│   └── adr/                 Architecture Decision Records
+│       └── 0001-project-direction-recalibration.md  方向校准(Accepted)
 ├── harness-records/         持久化记录（类比 repository-harness SQLite）
 │   ├── traces/              每次任务的 trace 记录
 │   └── friction/            摩擦记录
@@ -204,7 +236,8 @@ szu-agent-plugin/
 - Jackson（YAML / JSON）
 - Logback
 - JUnit 5 + AssertJ（测试）
-- Playwright Java（在 `CloakBrowserAdapter` 适配）
+- Playwright Java（在 `PlaywrightBrowserAdapter` 适配）
+- dotenv-java（凭证 .env 注入，ADR-0001 D6）
 
 ## 致谢
 

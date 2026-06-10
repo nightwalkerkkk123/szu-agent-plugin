@@ -1,7 +1,15 @@
 # Working Context
 
-> Last updated: 2026-06-10
-> 当前阶段: 文档设计阶段 (Phase 1) — 尚未开始编码实现
+> Last updated: 2026-06-11
+> 当前阶段: **方向已校准**(ADR-0001/0005/0006 均 Accepted),Phase 1 子决定固化完成,准备启动 Phase 0
+
+> ⚠️ **ADR 校准声明**(2026-06-11):本工作上下文已按 **ADR-0001 / 0005 / 0006** 重写。
+> - 5 模式落点重选:`BrowserFactory` 替代 `ClientFactory`,`PlaywrightBrowserAdapter` 替代 `CloakBrowserAdapter`,`ErrorClassifier` 删除
+> - 业务聚焦:`book` 唯一 P0 业务;`CampusTask<T>` 保留为 P1 扩展点
+> - 演示模式:真跑 Playwright(ADR-0001 D2),`--dry-run` 仅作测试夹具
+> - 凭证流转:Skill wrapper 传 `--env-file` 给 CLI(ADR-0005 D1),不走 cwd
+> - 日志强制:`LogMasker` 走 archunit 静态规则(ADR-0005 D2)
+> 详细理由见 `docs/adr/0001-project-direction-recalibration.md` / `0005-credential-and-logging-enforcement.md` / `0006-phase1-domain-error-retry-matcher.md`(待建)。
 
 ---
 
@@ -16,47 +24,54 @@
 
 ## 当前状态
 
-### 阶段：文档先行（Phase 1）
+### 阶段：方向已校准，准备启动 Phase 0（骨架）
 
 已完成：
-- [x] `docs/PRD.md` — 产品需求文档
-- [x] `docs/design-patterns.md` — 设计模式应用清单（5 种）
-- [x] `docs/system-map.md` — 系统地图 + 局限性分析
+- [x] `docs/adr/0001-project-direction-recalibration.md` — **方向校准 ADR (Accepted)**
+- [x] `docs/adr/0005-credential-and-logging-enforcement.md` — 凭证流转 + archunit 强制 (Accepted)
+- [x] `docs/adr/0006-phase1-domain-error-retry-matcher.md` — Phase 1 子决定(待 Phase 1 收尾建)
+- [x] `docs/PRD.md` — 产品需求文档(已加 ADR 校准声明,已同步 `--env-file`)
+- [x] `docs/design-patterns.md` — 设计模式清单(5 种已重选,retry/matcher 子决定已同步)
+- [x] `docs/system-map.md` — 系统地图 + 局限性分析(retry/matcher/account 段已同步)
+- [x] `SECURITY.md` — LogMasker 12 Pattern + ErrorCode 12 元数据 + archunit 段(已同步)
+- [x] `docs/HARNESS_BACKLOG.md` — OQ1-OQ4 已登记
+- [x] `README.md` — 项目定位、架构、快速开始(已同步 ADR-0005/0006)
+- [x] `FILETREE.md` — 文件地图(已加 docs/adr/)
 - [x] `.claude/` — 规则 + agents + skills 基建
-- [x] `SECURITY.md` — 项目安全策略（已更新）
-- [x] `FILETREE.md` — 反映实际文件存在状态
-- [x] `MCP.md` — 更新为待实现状态
-- [x] `CONTRIBUTING.md` — 明确为评分指南
-- [x] `CLAUDE.md` — 更新实现顺序和阶段说明
 
-待创建：
+待创建（Phase 0）：
 - [ ] `pom.xml` — Maven 构建配置
 - [ ] `design/2023150090_王子豪_大作业自拟题目.md` — 提案文档
 - [ ] `docs/class-diagram.puml` — PlantUML 类图
 
-待实现：
-- [ ] Maven 骨架 + pom.xml
-- [ ] 核心代码实现（按包顺序）
-- [ ] 单元测试
+待实现（按 5 天路径）：
+- [ ] Phase 0 骨架 + Phase 1 域模型/错误/重试/匹配器
+- [ ] Phase 2 浏览器抽象 + Phase 3 业务编排
+- [ ] Phase 4 CLI + Wrapper + Phase 5 测试/报告/演示
 
 ---
 
 ## 技术栈
 
 - Java 21 / Maven / picocli / Jackson / Logback / JUnit 5 + AssertJ
-- CloakBrowser / Playwright Java（通过 `BrowserLifecycle` 适配器）
+- Playwright Java（通过 `PlaywrightBrowserAdapter` 适配）
+- dotenv-java（凭证注入，ADR-0001 D6）
 
 ---
 
-## 设计模式（5 种，报告必含）
+## 设计模式（4 种，按 ADR-0001 D9 + ADR-0007 D1 落点）
 
 | 模式 | 类 |
 |---|---|
-| 静态工厂 | `ClientFactory` |
 | Builder | `BookingRequest.Builder` |
 | 单例 | `ConfigManager`, `Tracer` |
-| 策略 | `RetryPolicy`, `Matcher`, `ErrorClassifier` |
-| 适配器 | `CloakBrowserAdapter` |
+| 策略 | `Matcher<T>` (4 实现), `RetryPolicy` (3 实现,见 ADR-0007 D2) |
+| 适配器 | `PlaywrightBrowserAdapter`, `FakeBrowser` |
+
+> ⚠️ `ErrorClassifier` 已删除(枚举自带元数据);`ClientFactory` 已删除(只 1 个 Skill 无业务价值);
+> `BrowserFactory` 已删除(ADR-0007 D1),改 `ConfigManager` 配 `browser.kind` 注入;
+> `JitteredBackoff` 已删除(ADR-0007 D2),`RetryPolicy` 4 实现 → 3 实现;
+> `CloakBrowserAdapter` 已重命名;模板方法已删。
 
 ---
 
@@ -66,30 +81,28 @@
 
 ---
 
-## 实现顺序（待执行）
+## 实现顺序（按 ADR-0001 5 天路径）
 
-1. `domain/` — 值对象 records（Campus, Sport, TimeSlot, Venue, BookingRequest）
-2. `error/` — ErrorCode 枚举 + BookingException
-3. `retry/` — RetryPolicy 接口 + FixedDelayRetry / ExponentialBackoff
-4. `account/` — AccountState 枚举 + Account + AccountManager
-5. `browser/` — BrowserLifecycle 接口 + FakeBrowser + CloakBrowserAdapter
-6. `matcher/` — Matcher 接口 + TextMatcher / RegexMatcher / ContainsMatcher / CompositeMatcher
-7. `client/` — VenueBookingClient + ClientFactory（静态工厂）
-8. `task/` — CampusTask<T> 接口 + TaskResult<T> + TaskExecutor
-9. `config/` — ConfigManager（单例）
-10. `observability/` — Tracer（单例）+ MetricsCollector
-11. `platform/` — AgentToolPlatform（Facade）
-12. `skill/` — Skill 接口 + @AgentTool 注解 + SkillManager
-13. `mcp/` — MCPToolProvider
-14. `cli/` — picocli 入口 + BookingCommand + NoticeCommand + JsonOutput
+| Phase | 时长 | 内容 | 状态 |
+|---|---|---|---|
+| 0 | 0.5d | 骨架：pom.xml + 包结构 + Logback + dotenv-java | 待开始 |
+| 1 | 1.0d | 无依赖基础：domain/ + error/ + retry/ + matcher/ | 待开始 |
+| 2 | 1.0d | 浏览器抽象：browser/ + selectors/ | 待开始 |
+| 3 | 1.0d | 业务编排：client/ + config/ + observability/ + account/ | 待开始 |
+| 4 | 1.0d | CLI + Wrapper：cli/ + skill/ + mcp/ | 待开始 |
+| 5 | 0.5d | 收尾：测试 80% + 报告 + 演示脚本 | 待开始 |
+
+> ⚠️ 旧的 14 步顺序（含 `ClientFactory` / `AgentToolPlatform` / `ErrorClassifier` / `Notice*` / `Chaoxing*` / `Growth*`）已废弃。
+> `task/` 整个包移到 P1。
 
 ---
 
 ## 当前约束
 
 - 不引入 Gradle（只用 Maven）
-- 不访问真实系统（默认 `--dry-run` 模式）
-- 敏感信息不写日志（LogMasker 集中脱敏）
+- **真演示**：课堂演示走 Playwright 真跑，`--dry-run` 仅作单元测试夹具
+- 凭证流转:Skill wrapper 传 `--env-file` 给 CLI(ADR-0005 D1),优先级:进程 env > `--env-file` 指向的 .env > Skill 注入
+- 敏感信息不写日志(LogMasker 集中脱敏,12 个 Pattern,archunit 强制,ADR-0005 D2)
 - `mvn test` 必须通过才能结束实现
 
 ---
@@ -106,20 +119,27 @@
 
 | 文档 | 内容 | 状态 |
 |---|---|---|
-| `CLAUDE.md` | 项目入口、编码规则、实现顺序 | ✅ 已更新 |
-| `README.md` | 项目定位、架构概览、快速开始 | ✅ 已存在 |
-| `FILETREE.md` | 实际文件地图 | ✅ 已更新 |
-| `MCP.md` | MCP 工具导出契约 | ✅ 已更新为待实现 |
-| `SECURITY.md` | 项目安全策略 | ✅ 已更新 |
-| `SOUL.md` | 项目灵魂、核心原则 | ✅ 已存在 |
-| `RULES.md` | 项目规则汇总 | ✅ 已存在 |
-| `WORKING-CONTEXT.md` | 工作上下文 | ✅ 已更新 |
-| `CONTRIBUTING.md` | 教师评分指南 | ✅ 已更新 |
+| `CLAUDE.md` | 项目入口、编码规则、5 天实施路径 | ✅ 已更新 |
+| `docs/adr/0001-*.md` | 方向校准 ADR | ✅ Accepted |
+| `docs/adr/0005-*.md` | 凭证流转 + archunit 强制 | ✅ Accepted |
+| `docs/adr/0006-*.md` | Phase 1 子决定 | ⏳ Phase 1 收尾建 |
+| `README.md` | 项目定位、架构概览、快速开始 | ✅ 已同步 ADR-0005/0006 |
+| `FILETREE.md` | 实际文件地图 | ✅ 已加 docs/adr/ |
+| `docs/PRD.md` | 产品需求(含 ADR 校准声明) | ✅ 已同步 |
+| `docs/design-patterns.md` | 设计模式清单 | ✅ 5 模式 + 子决定已重选 |
+| `docs/system-map.md` | 系统架构 + 局限性分析 | ✅ retry/matcher/account 已同步 |
+| `docs/HARNESS_BACKLOG.md` | OQ1-OQ4 已登记 | ✅ |
+| `SECURITY.md` | LogMasker + ErrorCode + archunit 段 | ✅ 已同步 |
+| `MCP.md` | MCP 工具导出契约 | ⚠️ Phase 4 启动前同步 |
+| `SOUL.md` | 项目灵魂、核心原则 | ⚠️ 5 模式已重选,待确认 |
+| `RULES.md` | 项目规则汇总 | ⚠️ CloakBrowser 改名 Playwright,待确认 |
+| `CONTRIBUTING.md` | 教师评分指南 | ⚠️ demo 命令 `YUEHAI/TENNIS/LocalDate`,待确认 |
 
 ---
 
 ## 下一步
 
-1. 创建 `pom.xml` Maven 构建配置
-2. 创建 `design/2023150090_王子豪_大作业自拟题目.md` 提案文档
-3. 按实现顺序开始编码（从 `domain/` 开始）
+1. 创建 `pom.xml` Maven 构建配置(Phase 0)
+2. 创建 ADR-0006 `Phase 1 子决定`(Phase 1 收尾建)
+3. 创建 `design/2023150090_王子豪_大作业自拟题目.md` 提案文档
+4. 从 `domain/` 域模型 records 开始 Phase 1 编码

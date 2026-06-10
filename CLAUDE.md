@@ -19,7 +19,7 @@
 ## What this is — and isn't
 
 - ✅ CLI 工具 + Skill 插件 + MCP 工具导出,供外部 Agent 调用
-- ✅ 通过 `BrowserLifecycle` 适配器封装 CloakBrowser/Playwright
+- ✅ 通过 `BrowserLifecycle` 适配器封装 Playwright
 - ❌ **不是** AI Agent — 无 NLU / 意图识别 / 对话管理
 - ❌ 不绕过验证码、不高频访问、不发送敏感邮件
 

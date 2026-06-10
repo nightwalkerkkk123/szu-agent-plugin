@@ -28,6 +28,6 @@ SZU Agent Plugin — 面向对象高级编程大作业项目。面向深圳大�
 ## 课程要求对齐
 
 - 至少 **5 种编程技术**:泛型/枚举/注解/重载/抽象类/Lambda+Stream
-- 至少 **2 种设计模式**:静态工厂/Builder/单例/策略/适配器
-- 局限性分析与改进建议(报告必含)
+- 至少 **4 种设计模式**(按 ADR-0001 D9 + ADR-0007 D1):Builder / Singleton / Strategy / Adapter (**5 模式 → 4 模式,Static Factory 改 ConfigManager 注入**)
+- 局限性分析与改进建议(报告必含,含 CAS 验证码场景,见 ADR-0001 D7)
 - 独立完成,无抄袭

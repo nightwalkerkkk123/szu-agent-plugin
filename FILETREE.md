@@ -34,13 +34,14 @@ _手动维护。实际存在的文件列出，存在但为空的标注 (empty)�
 - `docs/CONTEXT_RULES.md` — 上下文阶段规则（intake → implementation → trace）
 - `docs/TRACE_SPEC.md` — Trace 记录规范
 - `docs/HARNESS_BACKLOG.md` — Harness 改进 backlog
-- `docs/HARNESS.md` — Harness 工作流说明（待创建）
+- `docs/HARNESS.md` — Harness 工作流说明
 - `docs/plans/` — 功能规划目录
   - `docs/plans/README.md` — 项目计划说明
 - `docs/templates/` — 模板目录
   - `docs/templates/story.md` — Story packet 模板
 - `docs/stories/` — Story packets（待填充）
-- `docs/decisions/` — Decision records（待填充）
+- `docs/adr/` — Architecture Decision Records
+  - `docs/adr/0001-project-direction-recalibration.md` — 方向校准(Accepted,2026-06-11)
 
 ## harness-records/
 

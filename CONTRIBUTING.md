@@ -3,6 +3,11 @@
 > 本文件面向助教和教师，说明如何运行、测试和评估本项目。
 > 文件名 CONTRIBUTING.md 为 GitHub 惯例，实际内容为评分指南。
 
+> ⚠️ **ADR 校准声明**(2026-06-11):评分清单已按 **ADR-0001 / 0007** 同步。
+> 5 模式 → 4 模式(`BrowserFactory` / Static Factory 删除改 `ConfigManager` 注入),
+> 课堂演示命令改为**真跑** Playwright(不推荐 dry-run 演示)。
+> 详细理由见 `docs/adr/0001-project-direction-recalibration.md`。
+
 ---
 
 ## 项目信息
@@ -32,15 +37,19 @@ mvn package
 mvn test
 ```
 
-### 核心演示（dry-run 模式，不访问真实系统）
+### 核心演示（**真跑** Playwright,ADR-0001 D2）
 
 ```bash
 java -jar target/szu-agent-plugin.jar booking venue \
   --username 2023150090 --campus 粤海 --sport 网球 \
-  --date 0 --time-slot 19:00-20:00 --dry-run --format json
+  --date 0 --time-slot 19:00-20:00 --format json
 ```
 
-预期输出：合法 JSON，`success: true`，退出码 0。
+预期输出：合法 JSON，`success: true`，退出码 0，**真实占位场地**。
+
+> **重要**: `--dry-run` 仅作单元测试夹具,**不作为课堂演示模式**(ADR-0001 D4)。
+> 真演示依赖凭证就绪 — `SZU_PASSWORD_XXXX` 环境变量 / cwd `.env` / skill 目录 `.env`
+> (优先级见 ADR-0001 D6)。演示前手工 `cat .env` 验证。
 
 ### 列出所有 Skill/MCP 工具
 
@@ -56,11 +65,11 @@ java -jar target/szu-agent-plugin.jar skill list --format json
 
 | 技术 | 检查方式 |
 |---|---|
-| **泛型** | `grep -rn "<T>" src/` 应找到 `TaskResult<T>`、`CampusTask<T>`、`Repository<T>` |
+| **泛型** | `grep -rn "<T>" src/` 应找到 `TaskResult<T>`、`CampusTask<T>` |
 | **枚举** | `grep -rn "enum" src/` 应找到 `ErrorCode`、`TaskStatus`、`AccountState`，每个枚举值携带方法 |
 | **注解** | `grep -rn "@interface" src/` 应找到 `@AgentTool` 自定义注解 |
 | **重载** | `grep -rn "public.*(" src/` 应找到同名方法不同参数形式 |
-| **抽象类** | `grep -rn "abstract class" src/` 应找到 `AbstractBrowser` |
+| **抽象类** | `grep -rn "abstract class" src/` 应找到抽象浏览器基类或类似 |
 | **Lambda + Stream** | `grep -rn "\.stream\(\)" src/` 应找到列表过滤/映射/聚合 |
 
 ### 设计模式（≥5 种，每种必须在代码中显式可见）
@@ -71,15 +80,18 @@ java -jar target/szu-agent-plugin.jar skill list --format json
 grep -rn "Design Pattern:" src/
 ```
 
-预期找到至少 5 个标注：
+预期找到至少 5 个标注（**按 ADR-0001 D9 落点**）：
 
 | 模式 | 类 |
 |---|---|
-| 静态工厂 | `ClientFactory` |
 | Builder | `BookingRequest.Builder` |
 | 单例 | `ConfigManager`、`Tracer` |
-| 策略 | `RetryPolicy`、`Matcher`、`ErrorClassifier` |
-| 适配器 | `CloakBrowserAdapter`、`FakeBrowser` |
+| 策略 | `Matcher`、`RetryPolicy` |
+| 适配器 | `PlaywrightBrowserAdapter`、`FakeBrowser` |
+
+> ADR-0007 D1:删 Static Factory / `BrowserFactory`,改 `ConfigManager` 配置注入,5 模式 → 4 模式
+
+> **历史变更**(2026-06-11 ADR-0001 D9):原 `ClientFactory` / `ErrorClassifier` / `CloakBrowserAdapter` 已删除/重命名。
 
 ### 代码质量
 
@@ -91,29 +103,30 @@ grep -rn "Design Pattern:" src/
 
 ### 报告质量
 
-- [ ] `docs/design-patterns.md` 包含全部使用的设计模式说明
+- [ ] `docs/design-patterns.md` 包含全部 4 种设计模式说明（**按 ADR-0001 D9 + ADR-0007 D1 落点**）
 - [ ] `docs/system-map.md` 包含"局限性分析与改进建议"章节（≥6 种技术/模式分析）
 - [ ] 报告分析有技术发展动态引用（注明来源）
 - [ ] `docs/class-diagram.puml` PlantUML 类图完整（待创建）
+- [ ] 报告必含"局限性分析"章节（含 CAS 验证码场景,见 ADR-0001 D7）
 
 ### 文档完整性
 
 - [ ] `CLAUDE.md` 存在且包含项目说明
 - [ ] `README.md` "快速开始"章节可实际执行
 - [ ] `docs/PRD.md` 需求文档完整
+- [ ] `docs/adr/0001-*.md` 方向校准 ADR 存在
 - [ ] `design/2023150090_王子豪_大作业自拟题目.md` 自拟题目文档存在（待创建）
 
 ---
 
 ## 设计模式在代码中的位置
 
-| 模式 | 文件 | 行号（grep 关键字） |
+| 模式 | 文件 | 关键字 |
 |---|---|---|
-| 静态工厂 | `client/ClientFactory.java` | `// Design Pattern: Static Factory` |
 | Builder | `domain/BookingRequest.java` | `// Design Pattern: Builder` |
 | 单例 | `config/ConfigManager.java` | `// Design Pattern: Singleton` |
-| 策略 | `retry/RetryPolicy.java` | `// Design Pattern: Strategy` |
-| 适配器 | `browser/CloakBrowserAdapter.java` | `// Design Pattern: Adapter` |
+| 策略 | `matcher/Matcher.java` | `// Design Pattern: Strategy` |
+| 适配器 | `browser/PlaywrightBrowserAdapter.java` | `// Design Pattern: Adapter` |
 
 ---
 
@@ -133,29 +146,56 @@ grep -rn "Design Pattern:" src/
 
 ## 当前实现状态
 
-本项目**尚处于文档设计阶段**，核心代码（`src/`）尚未实现。
-所有设计模式、编程技术的实现计划已记录在文档中：
-- `docs/PRD.md` — 产品需求
-- `docs/design-patterns.md` — 设计模式清单
-- `docs/system-map.md` — 系统架构 + 局限性分析
-- `CLAUDE.md` — 实现顺序
+本项目**方向已校准**（ADR-0001, 2026-06-11 Accepted），准备按 5 天路径启动编码。
+所有设计模式、编程技术的落点已按 ADR 重选：
+- `docs/adr/0001-project-direction-recalibration.md` — 方向校准
+- `docs/PRD.md` — 产品需求（含 ADR 校准声明）
+- `docs/design-patterns.md` — 5 模式落点（已重选）
+- `docs/system-map.md` — 系统架构 + 局限性分析（已同步）
+- `CLAUDE.md` — 5 天实施路径
 
-实现完成后的目录结构：
+实施完成后的目录结构（按 ADR-0001）：
 
 ```
 src/main/java/edu/szu/agent/
-├── platform/AgentToolPlatform.java
-├── task/CampusTask.java, TaskResult.java, TaskStatus.java, TaskExecutor.java
-├── domain/Campus.java, Sport.java, TimeSlot.java, Venue.java, BookingRequest.java
-├── client/ClientFactory.java, VenueBookingClient.java, NoticeQueryClient.java
-├── browser/BrowserLifecycle.java, CloakBrowserAdapter.java, FakeBrowser.java
-├── config/ConfigManager.java
-├── account/Account.java, AccountManager.java, AccountState.java
-├── retry/RetryPolicy.java, FixedDelayRetry.java, ExponentialBackoff.java
-├── error/ErrorCode.java, BookingException.java, ErrorClassifier.java
-├── matcher/Matcher.java, TextMatcher.java, RegexMatcher.java, ...
-├── observability/Tracer.java, MetricsCollector.java
-├── skill/Skill.java, SkillManager.java, @AgentTool.java
-├── mcp/MCPToolProvider.java
-└── cli/Main.java, BookingCommand.java, NoticeCommand.java
+├── task/                          # P1 扩展点
+│   ├── CampusTask.java
+│   ├── TaskResult.java
+│   ├── TaskStatus.java
+│   └── TaskExecutor.java
+├── domain/
+│   ├── Campus.java, Sport.java, TimeSlot.java, Venue.java
+│   └── BookingRequest.java        # Builder
+├── client/
+│   └── VenueBookingClient.java    # P0 唯一业务
+├── browser/
+│   ├── BrowserLifecycle.java
+│   ├── PlaywrightBrowserAdapter.java  # 真演示入口
+│   └── FakeBrowser.java              # 测试夹具
+│   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager 注入
+├── config/ConfigManager.java          # 单例
+├── account/                           # P1 扩展
+├── retry/
+│   ├── RetryPolicy.java           # 策略接口(OQ4 有界)
+│   ├── FixedDelayRetry.java
+│   └── ExponentialBackoff.java
+├── error/
+│   ├── ErrorCode.java             # 枚举自带元数据
+│   └── BookingException.java      # 密封继承(OQ3)
+├── matcher/
+│   ├── Matcher.java               # 策略接口
+│   ├── TextMatcher.java
+│   ├── RegexMatcher.java
+│   ├── ContainsMatcher.java
+│   └── CompositeMatcher.java
+├── observability/
+│   ├── Tracer.java                # 单例
+│   └── MetricsCollector.java
+├── skill/                              # P1 薄壳 wrapper
+├── mcp/MCPToolProvider.java           # P1 薄壳 wrapper
+└── cli/
+    ├── Main.java                  # picocli 入口
+    └── BookingCommand.java        # P0 唯一业务命令
 ```
+
+> ⚠️ `AgentToolPlatform` Facade / `ClientFactory` / `ErrorClassifier` / `NoticeQueryClient` / `ChaoxingCourseClient` / `GrowthPlanClient` / `CloakBrowserAdapter` 已删除/重命名,**评分 grep 不应再找到这些类名**。

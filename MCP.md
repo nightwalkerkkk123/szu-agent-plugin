@@ -3,12 +3,17 @@
 > MCP (Model Context Protocol) 工具导出，供外部 AI Agent 调用。
 > 版本 v1.0 · 学号 2023150090 · 姓名 王子豪
 
+> ⚠️ **ADR 校准声明**(2026-06-11):MCP 是 CLI 的**薄壳 wrapper**(ADR-0001 D5),
+> 通过 `tools/call` 收到后 fork 这个 jar。`--dry-run` 不作为 demo 标志(ADR-0001 D4)。
+> 详细理由见 `docs/adr/0001-project-direction-recalibration.md`。
+
 ---
 
 ## Tool Provider 入口
 
 `MCPToolProvider` 类（位于 `edu.szu.agent.mcp`）导出标准 MCP `tools/list` 和 `tools/call` 接口。
-实现状态：**待实现**（对应类尚未创建）
+实现状态：**P1 薄壳 wrapper**（按 ADR-0001 D5 推迟,MCP 进程 `tools/call` 收到后 fork jar 执行,
+不嵌 MCP server 在 CLI 里）。
 
 ---
 
@@ -16,7 +21,7 @@
 
 ### `booking_venue`
 
-体育场馆定时预约（P0 核心功能）
+体育场馆定时预约（**P0 唯一业务**,对应 CLI `booking venue`）
 
 **参数:**
 
@@ -25,9 +30,11 @@
 | `username` | string | ✅ | 学号 |
 | `campus` | string | ✅ | 校区（粤海/丽湖） |
 | `sport` | string | ✅ | 体育项目（网球/羽毛球/...） |
-| `date` | integer | ✅ | 日期索引（0=今天，1=明天，2=后天） |
-| `timeSlot` | string | ✅ | 时间段（如 19:00-20:00） |
-| `dryRun` | boolean | ❌ | 干跑模式（默认 false） |
+| `date` | string | ✅ | ISO 8601 日期（如 2026-06-12,见 ADR-0006 §1.2） |
+| `timeSlot` | object | ✅ | `{"start": "19:00", "end": "20:00"}`（见 ADR-0006 §1.5） |
+
+> **注意**:`dryRun` 参数**已移除**（ADR-0001 D4）。MCP `tools/call` 收到请求后 fork jar
+> 执行真演示路径,`FakeBrowser` 不出现在 MCP 工具路径中。
 
 **返回:**
 
@@ -45,9 +52,9 @@
 }
 ```
 
-### `notice_list`
+### `notice_list` (P1 预留)
 
-公文通查询（P1 扩展接口）
+公文通查询（**P1 扩展接口**,对应 `CampusTask<T>` 扩展点,按 ADR-0001 D10 延后）
 
 **参数:**
 
@@ -55,7 +62,6 @@
 |---|---|---|---|
 | `keyword` | string | ❌ | 关键词筛选 |
 | `limit` | integer | ❌ | 返回数量（默认 10） |
-| `dryRun` | boolean | ❌ | 干跑模式（默认 true） |
 
 **返回:**
 
@@ -126,8 +132,8 @@
           "username": { "type": "string" },
           "campus": { "type": "string" },
           "sport": { "type": "string" },
-          "date": { "type": "integer" },
-          "timeSlot": { "type": "string" },
+          "date": { "type": "string", "format": "date", "description": "ISO 8601 格式,如 2026-06-12" },
+          "timeSlot": { "type": "object", "properties": { "start": {"type":"string"}, "end": {"type":"string"} } },
           "dryRun": { "type": "boolean" }
         },
         "required": ["username", "campus", "sport", "date", "timeSlot"]
@@ -146,10 +152,10 @@
   "name": "booking_venue",
   "arguments": {
     "username": "2023150090",
-    "campus": "粤海",
-    "sport": "网球",
-    "date": 0,
-    "timeSlot": "19:00-20:00"
+    "campus": "YUEHAI",
+    "sport": "TENNIS",
+    "date": "2026-06-12",
+    "timeSlot": {"start": "19:00", "end": "20:00"}
   }
 }
 ```
@@ -180,8 +186,8 @@ MCP 工具可通过 CLI 调用：
 ```bash
 # 等效于 booking_venue 工具
 java -jar target/szu-agent-plugin.jar booking venue \
-  --username 2023150090 --campus 粤海 --sport 网球 \
-  --date 0 --time-slot 19:00-20:00 --format json
+  --username 2023150090 --campus YUEHAI --sport TENNIS \
+  --date 2026-06-12 --time-slot 19:00-20:00 --format json
 
 # 等效于 notice_list 工具
 java -jar target/szu-agent-plugin.jar notice list --keyword 讲座 --limit 10 --format json

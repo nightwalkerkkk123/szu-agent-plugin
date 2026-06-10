@@ -3,6 +3,14 @@
 > 本文档描述系统整体架构、模块拓扑、核心时序、状态机与关键设计决策。
 > 集成"局限性分析与改进建议"章节(课程报告必含)。
 
+> ⚠️ **ADR 校准声明**:本文档的模块拓扑与设计模式归属已按 **ADR-0001** (2026-06-11) D9/D10 重选。
+> - 删除 `platform/AgentToolPlatform` Facade、`client/ClientFactory`、`error/ErrorClassifier`
+> - 删除 `client/NoticeQueryClient` / `ChaoxingCourseClient` / `GrowthPlanClient`(P1 扩展点保留,代码层只 `book`)
+> - `browser/CloakBrowserAdapter` → **`PlaywrightBrowserAdapter`**
+> - 5 模式重选后,本文件 §6 局限性章节对应同步
+>
+> 详细理由见 `docs/adr/0001-project-direction-recalibration.md`。
+
 ---
 
 ## 1. 模块拓扑
@@ -10,10 +18,7 @@
 ```
 edu.szu.agent
 │
-├── platform/
-│   └── AgentToolPlatform          # Facade:统一入口,协调各子系统
-│
-├── task/
+├── task/                          # P1 扩展点(代码层只 book,P1 阶段实现)
 │   ├── CampusTask<T>              # 任务抽象接口
 │   ├── TaskResult<T>              # 任务返回结果(record)
 │   ├── TaskStatus                 # 任务状态枚举
@@ -26,83 +31,84 @@ edu.szu.agent
 │   ├── Venue                       # 场地
 │   └── BookingRequest              # 预约请求(Builder 构造)
 │
-├── client/                         # 校园服务客户端(静态工厂创建)
-│   ├── ClientFactory               # Design Pattern: Static Factory
-│   ├── VenueBookingClient          # 体育场馆预约(核心实现)
-│   ├── NoticeQueryClient           # 公文通查询
-│   ├── ChaoxingCourseClient        # 畅课任务
-│   └── GrowthPlanClient            # 成长方案
+├── client/                         # 校园服务客户端(P0 仅 book)
+│   └── VenueBookingClient          # 体育场馆预约(核心实现)
 │
-├── browser/                        # 浏览器抽象层(适配器模式)
-│   ├── BrowserLifecycle            # 目标接口: launch/navigate/click/type/screenshot/close
-│   ├── PlaywrightBrowserAdapter    # Playwright 实现 BrowserLifecycle
-│   ├── FakeBrowser                 # 测试/干跑实现 BrowserLifecycle
-│   └── AbstractBrowser             # 模板方法骨架(可选)
+├── browser/                        # 浏览器抽象层(Adapter + ConfigManager 注入)
+│   ├── BrowserLifecycle            # Design Pattern: Adapter 目标接口(6 方法,见 ADR-0007 D3)
+│   ├── PlaywrightBrowserAdapter    # Design Pattern: Adapter,真演示唯一入口
+│   └── FakeBrowser                 # 单元测试夹具,不出现在课堂演示
+│   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager.browser() 注入
 │
 ├── config/
 │   └── ConfigManager               # Design Pattern: Singleton
 │
-├── account/
-│   ├── Account                     # 账号实体
-│   ├── AccountManager               # 多账号管理
-│   └── AccountState                 # 账号状态枚举(AVAILABLE/COOLDOWN/LOCKED)
+├── account/                        # 凭证层(ADR-0005 D1,单立包,替代 P1 的 AccountManager)
+│   ├── Account                     # record(学号 + 密码 + 显示名)
+│   ├── AccountResolver             # 三层凭证查找(进程 env → --env-file → Skill 注入)
+│   └── EnvVarName                  # 工厂 enum(forStudentId 返回 SZU_PASSWORD_XXXX)
 │
-├── retry/
-│   ├── RetryPolicy                 # Design Pattern: Strategy(策略接口)
-│   ├── FixedDelayRetry             # 固定延迟策略
-│   └── ExponentialBackoff          # 指数退避策略
+├── retry/                          # Design Pattern: Strategy(FunctionalInterface + orElse default)
+│   ├── RetryPolicy                 # 策略接口(@FunctionalInterface)
+│   ├── FixedDelay                  # 固定间隔
+│   ├── ExponentialBackoff          # 指数退避
+│   ├── NoRetry                     # 不重试(单例 INSTANCE)
+│   └── RetryPolicies               # 工厂(defaultBooking/login/quickFix)
 │
 ├── error/
-│   ├── ErrorCode                   # 错误码枚举(每个值带元数据)
-│   ├── BookingException            # 统一异常
-│   └── ErrorClassifier             # Design Pattern: Strategy(错误分类策略)
+│   ├── ErrorCode                   # 错误码枚举(12 值,自带元数据:severity/retryable/switchAccount/screenshot/hint)
+│   ├── Severity                    # LOW/MEDIUM/HIGH/CRITICAL
+│   ├── BookingException            # 统一异常(extends RuntimeException,见 ADR-0001 D9 + ADR-0006 error 子决定)
+│   └── LogMasker                   # 静态脱敏工具(9 字段名正则 + 2 值正则,见 ADR-0005 D2)
 │
-├── matcher/                        # Design Pattern: Strategy
-│   ├── Matcher<T>                  # 匹配器接口
-│   ├── TextMatcher                 # 精确文本匹配
-│   ├── RegexMatcher                # 正则匹配
-│   ├── ContainsMatcher             # 包含匹配
-│   └── CompositeMatcher            # 组合匹配
+├── matcher/                        # Design Pattern: Strategy(泛型 + 抽象类 + 4 default 组合)
+│   ├── Matcher<T>                  # 策略接口(@FunctionalInterface,4 default 组合)
+│   ├── AbstractMatcher<T>          # 抽象基类(description + toString)
+│   ├── ExactMatcher                # 精确文本
+│   ├── ContainsMatcher             # 包含(支持 ignoreCase)
+│   ├── RegexMatcher                # 正则(预编译 Pattern)
+│   ├── VenueIndexMatcher           # 业务专用:4 种 ehall 编号写法
+│   └── Matchers                    # 工厂(exact/contains/regex/venueIndex/all/any)
+│
+├── account/                        # 凭证层(ADR-0005 D1,单立包)
+│   ├── Account                     # record(学号 + 密码 + 显示名)
+│   ├── AccountResolver             # 三层凭证查找(进程 env → --env-file → Skill 注入)
+│   └── EnvVarName                  # 工厂 enum(forStudentId 返回 SZU_PASSWORD_XXXX)
 │
 ├── observability/
-│   ├── Tracer                      # Design Pattern: Singleton(trace_id 管理)
-│   └── MetricsCollector            # 指标收集(成功/失败/耗时)
+│   ├── Tracer                      # Design Pattern: Singleton(trace_id 管理 + 步骤记录)
+│   │   # 接口纯数据:recordFailure(ErrorCode, String, Optional<Path>)
+│   │   # 不接 Throwable / BookingException(ADR-0007 D4,observability ↔ error seam 干净)
+│   └── RunRecord                   # run 结束落盘 JSON(替代 Python runs.db,SQLite 不引)
 │
-├── skill/
+├── skill/                          # P1 薄壳 wrapper(ADR-0001 D5)
 │   ├── Skill                       # Skill 接口
 │   ├── SkillManager                # Skill 注册/加载/执行
 │   └── @AgentTool                  # 注解:标记可暴露给 Agent 的方法
 │
-├── mcp/
+├── mcp/                            # P1 薄壳 wrapper(ADR-0001 D5)
 │   └── MCPToolProvider             # MCP tools/list 导出
 │
-└── cli/
+└── cli/                            # 第一性工作单元(ADR-0001 D1)
     ├── Main                        # picocli 入口
-    ├── BookingCommand              # booking 子命令
-    ├── NoticeCommand               # notice 子命令
-    └── JsonOutput                  # JSON 序列化
+    └── BookingCommand              # booking 子命令(P0 唯一业务)
 ```
 
 ### 包依赖关系
 
 ```
-platform.AgentToolPlatform
-  ├──► task.TaskExecutor
-  │     ├──► domain.BookingRequest
-  │     └──► error.ErrorCode / BookingException
-  │
-  ├──► client.ClientFactory
-  │     └──► client.VenueBookingClient
-  │           ├──► browser.BrowserLifecycle
-  │           ├──► matcher.Matcher (Strategy)
-  │           ├──► retry.RetryPolicy (Strategy)
-  │           ├──► account.AccountManager
-  │           └──► domain.BookingRequest
-  │
-  ├──► config.ConfigManager (Singleton)
-  ├──► observability.Tracer (Singleton)
-  └──► skill.SkillManager
-        └──► mcp.MCPToolProvider
+(无 Facade 入口;CLI 直接路由,ADR-0001 D9 删 AgentToolPlatform;ADR-0007 D1 删 BrowserFactory)
+cli.Main
+  └──► cli.BookingCommand
+        ├──► domain.BookingRequest (Builder)
+        ├──► config.ConfigManager.browser() (Singleton,按 browser.kind 配置注入)
+        │     └──► browser.PlaywrightBrowserAdapter
+        │           └──► browser.BrowserLifecycle
+        ├──► matcher.Matcher (Strategy)
+        ├──► retry.RetryPolicy (Strategy,详见 ADR-0006 retry 子决定)
+        ├──► config.ConfigManager (Singleton)
+        ├──► observability.Tracer (Singleton)
+        └──► domain / error.ErrorCode
 ```
 
 ---
@@ -116,48 +122,41 @@ Agent 调用 CLI                              系统内部
 java -jar ... booking venue                   │
     │                                          │
     ▼                                          │
-AgentToolPlatform.run("booking.venue", args)  │
+ConfigManager.getInstance().load()            │ Singleton
     │                                          │
-    ├──► ConfigManager.getInstance().load()    │ Singleton
+ConfigManager.getInstance().browser()       │ Singleton + 配置文件
+    │     ▼                                    │
+    │   PlaywrightBrowserAdapter               │ Adapter
+    │     ▼                                    │
+    │   BrowserLifecycle.launch()             │
     │                                          │
-    ├──► ClientFactory.create("booking.venue") │ Static Factory
-    │        ▼                                 │
-    │   VenueBookingClient                    │
+login(username, pwd)                          │
+    │     ▼                                    │
+    │   BrowserLifecycle.navigate(url)         │
+    │   BrowserLifecycle.click(sel)            │
+    │   BrowserLifecycle.type(sel,text)        │
     │                                          │
-    ├──► TaskExecutor.execute(client)          │
-    │        │                                │
-    │        ├──► BrowserLifecycle.launch()    │
-    │        │        ▼                       │
-    │        │   CloakBrowserAdapter.doLaunch()│ Adapter
-    │        │   (或 FakeBrowser.dryRun())    │
-    │        │                                  │
-    │        ├──► client.login(username, pwd)  │
-    │        │        ▼                       │
-    │        │   BrowserLifecycle.navigate(url)│
-    │        │   BrowserLifecycle.click(sel)   │
-    │        │   BrowserLifecycle.type(sel,text)│
-    │        │                                  │
-    │        ├──► client.selectCampus(campus)   │
-    │        ├──► client.selectSport(sport)     │
-    │        ├──► client.selectTimeSlot(slot)   │
-    │        │        ▼                       │
-    │        │   Matcher.match(elements)        │ Strategy
-    │        │                                  │
-    │        ├──► client.selectVenue()          │
-    │        │        ▼                       │
-    │        │   Matcher.filter(venues, regex)  │ Strategy
-    │        │                                  │
-    │        ├──► client.confirm()              │
-    │        │        ▼                       │
-    │        │   RetryPolicy.shouldRetry()      │ Strategy
-    │        │   (失败时重试,最多 maxRetry 次)   │
-    │        │                                  │
-    │        └──► BrowserLifecycle.close()      │
+selectCampus(campus)                          │
+selectSport(sport)                            │
+selectTimeSlot(slot)                          │
+    │     ▼                                    │
+    │   Matcher.match(elements)                │ Strategy
     │                                          │
-    ├──► Tracer.generateTraceId()               │ Singleton
+selectVenue()                                 │
+    │     ▼                                    │
+    │   Matcher.filter(venues, regex)          │ Strategy
     │                                          │
-    └──► return TaskResult<T> (JSON)           │
-         ▼                                     │
+confirm()                                     │
+    │     ▼                                    │
+    │   RetryPolicy.execute()                  │ Strategy
+    │   (有界重试 ≤3 次,详见 ADR-0006 retry 子决定) │
+    │                                          │
+BrowserLifecycle.close()                      │
+    │                                          │
+Tracer.generateTraceId()                       │ Singleton
+    │                                          │
+return TaskResult (JSON)                       │
+    ▼                                          │
 Agent 解析结果                                 │
 ```
 
@@ -191,34 +190,39 @@ AccountState enum (每个值携带行为):
 ## 4. 错误码枚举
 
 ```java
-// 编程技术: 枚举(每个枚举值携带元数据方法)
-// Design Pattern: Strategy (ErrorClassifier 根据 ErrorCode 选择处理策略)
+// 编程技术: 枚举(12 值 5 元数据;元数据即分类依据,无需外部分类器,见 ADR-0001 D9 + ADR-0006 §2.1+2.2)
 public enum ErrorCode {
-    LOGIN_FAILED       (true,  false, true),
-    PASSWORD_INCORRECT (false, true,  true),
-    ACCOUNT_LOCKED    (false, true,  true),
-    CAPTCHA_REQUIRED   (false, true,  true),
-    PAGE_LOAD_TIMEOUT (true,  false, false),
-    ELEMENT_NOT_FOUND  (true,  false, true),
-    NO_AVAILABLE_SLOT  (true,  false, false),
-    SUBMIT_FAILED      (true,  false, true),
-    NETWORK_ERROR      (true,  false, false),
-    BROWSER_CRASHED    (true,  false, true),
-    UNKNOWN_ERROR      (false, false, true);
+    // 登录阶段
+    LOGIN_PAGE_LOAD_FAILED (Severity.HIGH,     true,  false, true,  "登录页加载失败"),
+    CAS_REDIRECT_TIMEOUT   (Severity.HIGH,     true,  false, true,  "CAS 重定向超时"),
+    PASSWORD_INCORRECT     (Severity.CRITICAL, false, true,  true,  "密码错误"),
+    ACCOUNT_LOCKED         (Severity.CRITICAL, false, true,  true,  "账号被锁"),
+    CAPTCHA_REQUIRED       (Severity.HIGH,     true,  false, true,  "触发图形验证码"),
+    // 选场地阶段
+    VENUE_OCCUPIED         (Severity.MEDIUM,   true,  false, false, "目标场地已被预约"),
+    NO_AVAILABLE_VENUE     (Severity.MEDIUM,   true,  false, false, "该时段无任何可用场地"),
+    ELEMENT_NOT_FOUND      (Severity.MEDIUM,   true,  false, true,  "未找到目标元素"),
+    // 网络 / 浏览器
+    NETWORK_TIMEOUT        (Severity.MEDIUM,   true,  false, false, "网络超时"),
+    BROWSER_CRASH          (Severity.HIGH,     true,  false, true,  "浏览器进程崩溃"),
+    // 业务编排
+    INVALID_REQUEST        (Severity.LOW,      false, false, false, "请求参数不合法"),
+    UNKNOWN                (Severity.HIGH,     true,  false, true,  "未知异常");
 
+    private final Severity severity;
     private final boolean retryable;
     private final boolean switchAccount;
     private final boolean screenshot;
+    private final String  hint;
 
-    ErrorCode(boolean retryable, boolean switchAccount, boolean screenshot) {
-        this.retryable = retryable;
-        this.switchAccount = switchAccount;
-        this.screenshot = screenshot;
-    }
+    ErrorCode(Severity severity, boolean retryable, boolean switchAccount,
+              boolean screenshot, String hint) { /* 字段赋值 */ }
 
-    public boolean isRetryable()       { return retryable; }
-    public boolean shouldSwitchAccount(){ return switchAccount; }
-    public boolean shouldScreenshot() { return screenshot; }
+    public Severity severity()            { return severity; }
+    public boolean  isRetryable()         { return retryable; }
+    public boolean  shouldSwitchAccount() { return switchAccount; }
+    public boolean  shouldScreenshot()    { return screenshot; }
+    public String   hint()                { return hint; }
 }
 ```
 
@@ -244,7 +248,7 @@ options:
   --date      日期索引(0=今天)
   --time-slot 时间段(如 19:00-20:00)
   --format    输出格式(json/human,默认 human)
-  --dry-run   干跑模式(FakeBrowser)
+  --dry-run   干跑模式(仅单元测试夹具,见 ADR-0001 D4;真演示默认走 Playwright)
   --help      显示帮助
 ```
 
@@ -397,23 +401,35 @@ options:
 
 ---
 
-### 6.7 静态工厂模式 (`ClientFactory`)
+### 6.7 ~~静态工厂模式 (`BrowserFactory`)~~ 已删除(ADR-0007 D1)
 
-**局限性:**
+**为什么删**:`BrowserFactory.create(Kind)` 3 行 switch,实现 ≈ 接口复杂度;**seam 在错位置**(调用方被迫"选择" Kind)。
+按 `LANGUAGE.md` 词汇,One adapter means a hypothetical seam — 调用方从不"挑",只是被告知。
 
-- 工厂类需要维护注册表,新增产品时必须修改工厂类(违反开闭原则的严格解释)
-- 字符串键(如 `"booking.venue"`)无编译时检查,拼写错误到运行时才暴露
-- 工厂方法无法表达构造参数(如需要传入 `ConfigManager` 的工厂)
+**改用 `ConfigManager` 配置注入**:
 
-**改进方向:**
+```yaml
+# src/main/resources/application.yml
+browser:
+  kind: PLAYWRIGHT    # 测试改 FAKE,生产不动
+```
 
-- 用 **Java `ServiceLoader`** 替代手写注册表,自动发现 `CampusTask` 实现
-- 用 `Enum` 作为工厂键,编译期检查拼写
-- 引入 **依赖注入**(Spring / Jakarta CDI),工厂由容器管理,消除硬编码注册
+```java
+// 业务方调用代码(无变化)
+BrowserLifecycle browser = ConfigManager.getInstance().browser();
+```
 
-**参考:**
-- "Effective Java" 第 3 版,Item 1-2: 静态工厂
-- Java ServiceLoader Specification
+**深度对比**:
+
+| 方案 | 接口复杂度 | 调用方决策 | 配置变更影响范围 |
+|---|---|---|---|
+| `BrowserFactory.create(Kind)` | 1 静态方法 + 1 enum | 必须知道 2 个 Kind | 改 Kind = 改代码 |
+| `ConfigManager.browser()` | 1 个 getter | 零决策 | 改 yml = 不改代码 |
+
+后者 seam 深度更高:调用方不学工厂,只学配置。
+
+> **5 模式 → 4 模式**(ADR-0007 D1):删 Static Factory 模式;其他 4 模式每个都有 2+ 处真业务落地。
+> 详细报告话术见 `docs/design-patterns.md` §5。
 
 ---
 
@@ -437,7 +453,7 @@ options:
 
 ---
 
-### 6.9 策略模式 (`RetryPolicy` / `Matcher` / `ErrorClassifier`)
+### 6.9 策略模式 (`Matcher` / `RetryPolicy`)
 
 **局限性:**
 
@@ -450,30 +466,40 @@ options:
 - 用 **sealed interface** 限制策略实现集合,编译器防止未知策略注入
 - 引入 **策略注册表 + 优先级机制**,由框架而非客户端选择策略
 - 用 **Java 17+ 的 pattern matching** 简化策略选择逻辑(`switch` 表达式模式匹配)
+- `RetryPolicy` 与 ADR-0006 retry 子决定协同:`execute(Supplier<T>)` 在 `e.code().isRetryable() == false` / 重试耗尽 时直接抛 `BookingException`,**不**调用 action 第三次以上
 
 **参考:**
 - "Head First Design Patterns": Strategy Pattern
 - JEP 441: Pattern Matching for switch (Java 21)
 
+> **历史变更**(ADR-0001 D9, 2026-06-11):原 `ErrorClassifier` 策略已删除 —
+> `ErrorCode` 枚举每个值自带 `isRetryable` / `shouldSwitchAccount` / `shouldScreenshot` 元数据,
+> 无需外部分类器。
+
 ---
 
-### 6.10 适配器模式 (`CloakBrowserAdapter`)
+### 6.10 适配器模式 (`PlaywrightBrowserAdapter`)
 
 **局限性:**
 
 - 适配器封装了第三方库的进阶能力(如网络拦截、请求重写),使用户无法访问
 - 适配层出错时,需要同时理解目标接口和被适配者 API,调试困难
-- Playwright/CloakBrowser 的 API 变化会直接冲击适配器层,维护成本高
+- Playwright 的 API 变化会直接冲击适配器层,维护成本高
+- 真演示唯一路径,任何 Adapter bug 都会让演示翻车(ADR-0001 D2)
 
 **改进方向:**
 
 - 引入 **Decorator** 分层(如 `LoggingBrowser`, `RateLimitBrowser`)分离横切关注点
 - 在适配器层暴露 **配置对象**(`BrowserConfig`),减少硬编码参数
 - 引入 **版本协商机制**:适配器声明支持的 API 版本,被适配者返回兼容实现
+- 适配失败时快速失败 + 清晰 trace(已点提交后不再重试,见 ADR-0001 OQ4)
 
 **参考:**
 - "Design Patterns: Elements of Reusable Object-Oriented Software": Adapter + Decorator
 - Playwright Java Official Documentation
+
+> **历史变更**(ADR-0001 D9, 2026-06-11):原 `CloakBrowserAdapter` 已重命名为
+> `PlaywrightBrowserAdapter` — 直接封装 Playwright Java 绑定,无中间层。
 
 ---
 
@@ -516,10 +542,11 @@ options:
 
 | ADR | 决策 | 文档 |
 |---|---|---|
-| ADR-001 | BrowserLifecycle 适配器模式 | `docs/architecture/ADR-001.md` |
-| ADR-002 | 使用 record 作为不可变值对象 | `docs/architecture/ADR-002.md` |
-| ADR-003 | 错误码枚举 + 策略模式处理 | `docs/architecture/ADR-003.md` |
-| ADR-004 | 静态工厂 + ServiceLoader 注册 Skill | `docs/architecture/ADR-004.md` |
-| ADR-005 | Singleton 双检查锁 + 延迟加载 | `docs/architecture/ADR-005.md` |
+| ADR-0001 | 项目方向校准(Grill 共识) | `docs/adr/0001-project-direction-recalibration.md` |
+| ADR-0002 | `BrowserLifecycle` 接口设计与 Playwright 适配细节(Phase 2 写) | `docs/adr/0002-*.md` |
+| ADR-0003 | `CampusTask<T>` 接口与扩展模式(P1 写) | `docs/adr/0003-*.md` |
+| ADR-0004 | Skill/MCP wrapper 协议契约(Phase 4 写,含 OQ1 凭证注入细节) | `docs/adr/0004-*.md` |
+| ADR-0005 | 凭证流转 + archunit 强制(Phase 0 收尾) | `docs/adr/0005-credential-and-logging-enforcement.md` |
 
-(ADR 文件在对应模块实现时创建)
+> 实际 ADR 文档在 `docs/adr/` 目录下,采用 `{NNNN}-{kebab-case-slug}.md` 命名。
+> 上表第 2-5 行是**预留槽位**,对应 ADR 在 Phase 启动时创建。

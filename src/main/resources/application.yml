@@ -1,0 +1,10 @@
+browser:
+  kind: PLAYWRIGHT
+
+retry:
+  default:
+    maxAttempts: 3
+    initialDelayMs: 2000
+
+logging:
+  level: INFO

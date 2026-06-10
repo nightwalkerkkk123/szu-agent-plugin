@@ -17,20 +17,36 @@
 
 ### 1.2 脱敏机制
 
-`LogMasker` 工具类集中处理所有日志输出：
+`LogMasker` 工具类集中处理所有日志输出（详见 `error/LogMasker.java`，12 个 Pattern：9 个字段名 + 2 个值 + 1 个 SZU_PASSWORD 变量名）：
 
 ```java
-// 编程技术: 注解 / Lambda
+// 编程技术: 枚举 / Lambda / 不可变 Pattern 集合
+// 强制约束:见 ADR-0005 D2,archunit 静态规则禁止业务代码绕过 LogMasker
 public final class LogMasker {
-    private static final Pattern SENSITIVE_PATTERN = Pattern.compile(
-        "(password|cookie|token|secret|key)\\s*[:=]\\s*[^,;\\s]+",
-        Pattern.CASE_INSENSITIVE
+
+    // 字段名正则(词边界,避免误伤 "pwdfile" 等)
+    private static final List<Pattern> SENSITIVE_KEYS = List.of(
+        Pattern.compile("(?i)password"),
+        Pattern.compile("(?i)\\bpwd\\b"),
+        Pattern.compile("(?i)secret"),
+        Pattern.compile("(?i)token"),
+        Pattern.compile("(?i)cookie"),
+        Pattern.compile("(?i)session"),
+        Pattern.compile("(?i)authorization"),
+        Pattern.compile("(?i)bearer"),
+        Pattern.compile("(?i)szu_password_\\d+")
     );
 
-    public static String mask(String message) {
-        if (message == null) return null;
-        return SENSITIVE_PATTERN.matcher(message).replaceAll("$1=***REDACTED***");
-    }
+    // 裸值正则(11 位学号 / 11 位手机号)
+    private static final List<Pattern> SENSITIVE_VALUES = List.of(
+        Pattern.compile("\\b20\\d{9}\\b"),
+        Pattern.compile("\\b1[3-9]\\d{9}\\b")
+    );
+
+    public static String scrub(String input) { /* replace 全部命中 → *** */ }
+
+    // 给 SLF4J 用的便捷入口,先 formatted 再 scrub
+    public static String fmt(String pattern, Object... args) { /* ... */ }
 }
 ```
 
@@ -39,9 +55,11 @@ public final class LogMasker {
 敏感信息通过环境变量注入，不硬编码：
 
 ```bash
-# 环境变量命名规范
-SZU_PASSWORD_XXXX    # XXXX = 学号后4位
+# 凭证(进程 env 由 Skill wrapper 注入,见 ADR-0005 D1)
+SZU_PASSWORD_XXXX    # XXXX = 学号后4位(例如 2023150090 → SZU_PASSWORD_0090)
 SZU_USERNAME_XXXX    # 同上
+
+# 非敏感配置(放 application.yml 或环境变量均可)
 BROWSER_HEADLESS     # 是否无头模式
 TRACE_LEVEL          # 日志级别
 ```
@@ -62,35 +80,37 @@ TRACE_LEVEL          # 日志级别
 
 ### 2.2 错误码枚举设计
 
+12 个常量(精简自 Python 参考 17 个,合并 retry 策略相同项;详见 `error/ErrorCode.java`):
+
 ```java
-// 编程技术: 枚举(每个枚举值携带元数据)
-// Design Pattern: Strategy (ErrorClassifier 根据 ErrorCode 选择处理策略)
+// 编程技术: 枚举(每个枚举值携带元数据;元数据即分类依据,
+//           无需外部分类器,见 ADR-0001 D9 + ADR-0006 error 子决定)
 public enum ErrorCode {
-    LOGIN_FAILED(true, false, true),
-    PASSWORD_INCORRECT(false, true, true),
-    ACCOUNT_LOCKED(false, true, true),
-    CAPTCHA_REQUIRED(false, true, false),
-    PAGE_LOAD_TIMEOUT(true, false, true),
-    ELEMENT_NOT_FOUND(true, false, true),
-    NO_AVAILABLE_SLOT(true, false, false),
-    SUBMIT_FAILED(true, false, true),
-    NETWORK_ERROR(true, false, false),
-    BROWSER_CRASHED(true, false, true),
-    UNKNOWN_ERROR(false, false, true);
+    // 登录阶段
+    LOGIN_PAGE_LOAD_FAILED (Severity.HIGH,     true,  false, true,  "登录页加载失败"),
+    CAS_REDIRECT_TIMEOUT   (Severity.HIGH,     true,  false, true,  "CAS 重定向超时"),
+    PASSWORD_INCORRECT     (Severity.CRITICAL, false, true,  true,  "密码错误"),
+    ACCOUNT_LOCKED         (Severity.CRITICAL, false, true,  true,  "账号被锁"),
+    CAPTCHA_REQUIRED       (Severity.HIGH,     true,  false, true,  "触发图形验证码"),
+    // 选场地阶段
+    VENUE_OCCUPIED         (Severity.MEDIUM,   true,  false, false, "目标场地已被预约"),
+    NO_AVAILABLE_VENUE     (Severity.MEDIUM,   true,  false, false, "该时段无任何可用场地"),
+    ELEMENT_NOT_FOUND      (Severity.MEDIUM,   true,  false, true,  "未找到目标元素"),
+    // 网络 / 浏览器
+    NETWORK_TIMEOUT        (Severity.MEDIUM,   true,  false, false, "网络超时"),
+    BROWSER_CRASH          (Severity.HIGH,     true,  false, true,  "浏览器进程崩溃"),
+    // 业务编排
+    INVALID_REQUEST        (Severity.LOW,      false, false, false, "请求参数不合法"),
+    UNKNOWN                (Severity.HIGH,     true,  false, true,  "未知异常");
 
-    private final boolean retryable;
-    private final boolean switchAccount;
-    private final boolean screenshot;
+    ErrorCode(Severity severity, boolean retryable, boolean switchAccount,
+              boolean screenshot, String hint) { /* 字段赋值 */ }
 
-    ErrorCode(boolean retryable, boolean switchAccount, boolean screenshot) {
-        this.retryable = retryable;
-        this.switchAccount = switchAccount;
-        this.screenshot = screenshot;
-    }
-
-    public boolean isRetryable() { return retryable; }
-    public boolean shouldSwitchAccount() { return switchAccount; }
-    public boolean shouldScreenshot() { return screenshot; }
+    public Severity severity()            { return severity; }
+    public boolean  isRetryable()         { return retryable; }
+    public boolean  shouldSwitchAccount() { return switchAccount; }
+    public boolean  shouldScreenshot()    { return screenshot; }
+    public String   hint()                { return hint; }
 }
 ```
 
@@ -107,12 +127,25 @@ public enum ErrorCode {
 - ❌ 发送敏感邮件或消息（只生成草稿，由用户确认）
 - ❌ 攻击性利用或安全测试
 
-### 3.2 干跑模式（dry-run）
+### 3.2 干跑模式（dry-run,仅作测试夹具）
 
-默认 `--dry-run` 模式使用 `FakeBrowser`，不访问真实系统。
-真实模式仅作技术验证，不在作业演示中触发。
+按 **ADR-0001 D4**:`--dry-run` 模式使用 `FakeBrowser`,**仅作单元测试夹具**,不出现在课堂演示。
+课堂演示默认走 `PlaywrightBrowserAdapter` 真跑(ADR-0001 D2)。
+CLI 不再暴露 `--dry-run` 为常规参数;仅在测试代码中通过 `BrowserFactory.create(Kind.FAKE)` 注入。
 
-### 3.3 用户授权
+### 3.3 archunit 静态规则强制(ADR-0005 D2)
+
+`mvn test` 阶段跑 archunit 规则,CI 必过:
+
+| 规则 | 命中即失败 |
+|---|---|
+| `LogMaskerRuleTest` | 任何业务代码 `log.info/debug/warn/error` 的字符串字面量含 `password` `pwd` `secret` `token` `cookie` `session` `authorization` `bearer` (词边界) |
+| `LogMaskerRuleTest` | 任何代码直接 `System.getenv("SZU_PASSWORD_*")`(必须走 `AccountResolver`) |
+| `SystemOutRuleTest` | `com.szu` 包下出现 `System.out.println` / `System.err.println` / `printStackTrace`(仅 `Main.main` 豁免) |
+
+补救措施:**所有** `log.info(...)` 入参必须先经 `LogMasker.scrub(msg)` 或 `LogMasker.fmt("...", args...)`,**约定**而非强制,见 README "开发约定"小节。
+
+### 3.4 用户授权
 
 浏览器操作在用户授权下进行，本项目不执行用户未知情的操作。
 

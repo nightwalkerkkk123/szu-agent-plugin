@@ -29,8 +29,12 @@ What the user asked for (original prompt or extracted intent).
 ## Design Patterns Used
 
 列出此 story 中使用的设计模式（如适用）：
-- `// Design Pattern: Static Factory` in `ClientFactory.java`
 - `// Design Pattern: Builder` in `BookingRequest.java`
+- `// Design Pattern: Singleton` in `ConfigManager.java` / `Tracer.java`
+- `// Design Pattern: Adapter` in `PlaywrightBrowserAdapter.java`
+
+> 模式落点按 **ADR-0001 D9** 校准。原 `ClientFactory` / `ErrorClassifier` /
+> `CloakBrowserAdapter` 已删除/重命名,新代码不应引用。
 
 ## Programming Techniques
 
@@ -44,7 +48,8 @@ What the user asked for (original prompt or extracted intent).
 ```bash
 mvn test                      # 单元测试
 mvn package                   # 构建 jar
-java -jar target/... --dry-run  # 功能验证
+java -jar target/...          # 功能验证(真演示路径,ADR-0001 D2)
+# --dry-run 仅作单元测试夹具(ADR-0001 D4),不在生产命令中使用
 ```
 
 ## Notes

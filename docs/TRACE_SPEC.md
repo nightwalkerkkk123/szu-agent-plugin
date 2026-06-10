@@ -61,7 +61,7 @@ mvn package  # ✅ Built szu-agent-plugin-0.1.0.jar
 ## Design Patterns Applied
 
 - `// Design Pattern: Builder` — `BookingRequest.java`
-- `// Design Pattern: Static Factory` — `ClientFactory.java`
+- `// Design Pattern: Singleton` — `ConfigManager.java` / `Tracer.java`
 
 ## Programming Techniques
 
@@ -69,7 +69,7 @@ mvn package  # ✅ Built szu-agent-plugin-0.1.0.jar
 - 枚举 (`TaskStatus`, `AccountState`)
 - 注解 (`@AgentTool`)
 - 重载 (Builder.campus(String) / campus(Campus))
-- 抽象类 (`AbstractBrowser`)
+- 抽象类 (Browser 基类 / `BookingException` 密封继承)
 - Lambda + Stream (`accounts.stream().filter(...)`)
 
 ## Friction (if any)
