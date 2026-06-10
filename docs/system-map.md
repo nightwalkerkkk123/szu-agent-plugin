@@ -34,10 +34,10 @@ edu.szu.agent
 │   └── GrowthPlanClient            # 成长方案
 │
 ├── browser/                        # 浏览器抽象层(适配器模式)
-│   ├── BrowserLifecycle            # 目标接口
-│   ├── CloakBrowserAdapter         # Playwright/CloakBrowser 适配器
-│   ├── FakeBrowser                 # 测试/干跑适配器
-│   └── AbstractBrowser             # 模板方法骨架
+│   ├── BrowserLifecycle            # 目标接口: launch/navigate/click/type/screenshot/close
+│   ├── PlaywrightBrowserAdapter    # Playwright 实现 BrowserLifecycle
+│   ├── FakeBrowser                 # 测试/干跑实现 BrowserLifecycle
+│   └── AbstractBrowser             # 模板方法骨架(可选)
 │
 ├── config/
 │   └── ConfigManager               # Design Pattern: Singleton
