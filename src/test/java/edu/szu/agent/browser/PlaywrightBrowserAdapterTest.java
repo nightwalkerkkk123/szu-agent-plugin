@@ -2,6 +2,7 @@ package edu.szu.agent.browser;
 
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
+import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import edu.szu.agent.error.BookingException;
@@ -44,6 +45,7 @@ class PlaywrightBrowserAdapterTest {
     @Mock BrowserType browserType;
     @Mock Browser browser;
     @Mock Page page;
+    @Mock Locator locator;
 
     /**
      * Wires the standard mock chain and returns an opened adapter.
@@ -144,5 +146,46 @@ class PlaywrightBrowserAdapterTest {
             .isInstanceOf(BookingException.class)
             .extracting(t -> ((BookingException) t).code())
             .isEqualTo(ErrorCode.BROWSER_CRASH);
+    }
+
+    // ----- Cycle 3: click(selector) -----
+
+    @Test
+    @DisplayName("click(selector) calls page.locator(selector).click()")
+    void clickCallsPageLocatorClick() {
+        when(page.locator(anyString())).thenReturn(locator);
+        PlaywrightBrowserAdapter adapter = openAdapter();
+        adapter.click("#submit-btn");
+
+        ArgumentCaptor<String> selectorCaptor = ArgumentCaptor.forClass(String.class);
+        verify(page).locator(selectorCaptor.capture());
+        assertThat(selectorCaptor.getValue()).isEqualTo("#submit-btn");
+        verify(locator).click();
+    }
+
+    @Test
+    @DisplayName("click() maps Playwright TimeoutError to BookingException(NETWORK_TIMEOUT)")
+    void clickMapsTimeoutErrorToNetworkTimeout() {
+        when(page.locator(anyString())).thenThrow(
+            new com.microsoft.playwright.TimeoutError("element not clickable in time"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.click("#submit-btn"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.NETWORK_TIMEOUT);
+    }
+
+    @Test
+    @DisplayName("click() maps exception with 'selector' in message to ELEMENT_NOT_FOUND")
+    void clickMapsSelectorErrorToElementNotFound() {
+        when(page.locator(anyString())).thenThrow(
+            new RuntimeException("selector '#missing' resolved to 0 elements"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.click("#missing"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.ELEMENT_NOT_FOUND);
     }
 }

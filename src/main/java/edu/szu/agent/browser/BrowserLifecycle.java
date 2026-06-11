@@ -45,6 +45,17 @@ public interface BrowserLifecycle {
      */
     void navigateTo(String url);
 
-    // Phase 2 Cycles 3-9 will add: click, fill, isVisible, textOf,
-    // allTextOf, currentUrl, screenshot — one method per TDD cycle.
+    /**
+     * Clicks the element matching {@code selector}. Waits for the
+     * element to be visible and clickable.
+     *
+     * @param selector CSS selector (e.g. "#submit-btn")
+     * @throws edu.szu.agent.error.BookingException with NETWORK_TIMEOUT
+     *         on click timeout, ELEMENT_NOT_FOUND if the selector
+     *         resolves to 0 elements, or BROWSER_CRASH for other failures
+     */
+    void click(String selector);
+
+    // Phase 2 Cycles 4-9 will add: fill, isVisible, textOf, allTextOf,
+    // currentUrl, screenshot — one method per TDD cycle.
 }
