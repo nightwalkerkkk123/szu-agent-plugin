@@ -1,0 +1,525 @@
+@startuml class-diagram
+' ============================================================
+'  SZU Agent Plugin — Class Diagram
+'  ------------------------------------------------------------
+'  Project : edu.szu.agent  v0.1.0
+'  Author  : 王子豪 (2023150090)
+'  Updated : 2026-06-12
+'
+'  Scope:
+'    - 24 implemented source types (Phase 0/1/2)
+'    - 13 planned types (Phase 3/4 + P1) marked «planned»
+'    - 4 design patterns tagged by stereotype + color
+'
+'  Render: PlantUML (https://plantuml.com/class-diagram)
+'    plantuml docs/class-diagram.puml  →  docs/class-diagram.png
+'    or use any IDE plugin (IntelliJ, VS Code)
+' ============================================================
+
+title SZU Agent Plugin — Class Diagram\n(solid = implemented · dashed border = planned P3/P4/P1)
+
+' ---------- visual settings ----------
+hide empty members
+hide circle
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam packageFontSize 14
+skinparam packageTitleFontSize 14
+skinparam shadowing false
+skinparam nodesep 60
+skinparam ranksep 50
+
+skinparam class {
+  BorderColor      #555
+  ArrowColor       #555
+  FontColor        #222
+
+  BackgroundColor              #FFFFFF
+  BackgroundColor<<Builder>>   #FFE0B2
+  BackgroundColor<<Singleton>> #C8E6C9
+  BackgroundColor<<Strategy>>  #BBDEFB
+  BackgroundColor<<Adapter>>   #F8BBD0
+  BackgroundColor<<sealed>>    #E1BEE7
+  BackgroundColor<<record>>    #F5F5F5
+  BackgroundColor<<enum>>      #FFF9C4
+  BackgroundColor<<external>>  #ECEFF1
+  BackgroundColor<<planned>>   #FAFAFA
+  BorderColor<<planned>>       #BDBDBD
+  BorderColor<<external>>      #90A4AE
+}
+
+' ============================================================
+'  CLUSTER 1 · domain/  — value types, no dependencies
+' ============================================================
+package "domain/" {
+
+  enum Campus <<enum>> {
+    YUEHAI
+    --
+    -displayName : String
+    -ehallCode   : String
+    --
+    +displayName() : String
+    +ehallCode()   : String
+  }
+
+  enum Sport <<enum>> {
+    TENNIS
+    --
+    -displayName : String
+    -ehallCode   : String
+    --
+    +displayName() : String
+    +ehallCode()   : String
+  }
+
+  class TimeSlot <<record>> {
+    +start : String
+    +end   : String
+    --
+    ' compact ctor: non-null + start<end
+  }
+
+  class BookingRequest <<Builder>> {
+    -username            : String
+    -campus              : Campus
+    -sport               : Sport
+    -date                : LocalDate
+    -timeSlot            : TimeSlot
+    -preferredVenueIndex : int
+    --
+    +builder() : Builder
+    +username() : String
+    +campus() : Campus
+    +sport() : Sport
+    +date() : LocalDate
+    +timeSlot() : TimeSlot
+    +preferredVenueIndex() : int
+  }
+
+  class BookingRequest$Builder <<Builder>> {
+    -campus              : Campus
+    -sport               : Sport
+    -date                : LocalDate
+    -timeSlot            : TimeSlot
+    -preferredVenueIndex : int = 1
+    --
+    +campus(Campus)              : Builder
+    +sport(Sport)                : Builder
+    +date(LocalDate)             : Builder
+    +timeSlot(TimeSlot)          : Builder
+    +preferredVenueIndex(int)    : Builder
+    +username(String)            : Builder
+    +build() : BookingRequest
+  }
+
+  interface BookingResult <<sealed>> {
+  }
+
+  class Success <<record>> {
+    +venueName    : String
+    +confirmation : String
+  }
+
+  class Failure <<record>> {
+    +code    : ErrorCode
+    +message : String
+  }
+}
+
+BookingRequest +-- BookingRequest$Builder : «inner static final»
+BookingRequest ..> Campus  : uses
+BookingRequest ..> Sport   : uses
+BookingRequest ..> TimeSlot : uses
+BookingResult <|.. Success
+BookingResult <|.. Failure
+Failure       ..> ErrorCode : carries
+
+' ============================================================
+'  CLUSTER 2 · error/  — exception + classifier
+' ============================================================
+package "error/" {
+
+  enum Severity <<enum>> {
+    LOW
+    MEDIUM
+    HIGH
+    CRITICAL
+  }
+
+  enum ErrorCode <<enum>> {
+    ' 12 constants, 5 metadata fields
+    LOGIN_PAGE_LOAD_FAILED
+    CAS_REDIRECT_TIMEOUT
+    PASSWORD_INCORRECT
+    ACCOUNT_LOCKED
+    CAPTCHA_REQUIRED
+    VENUE_OCCUPIED
+    NO_AVAILABLE_VENUE
+    ELEMENT_NOT_FOUND
+    NETWORK_TIMEOUT
+    BROWSER_CRASH
+    INVALID_REQUEST
+    UNKNOWN
+    --
+    -severity       : Severity
+    -retryable      : boolean
+    -switchAccount  : boolean
+    -screenshot     : boolean
+    -hint           : String
+    --
+    +severity()            : Severity
+    +isRetryable()         : boolean
+    +shouldSwitchAccount() : boolean
+    +shouldScreenshot()    : boolean
+    +hint()                : String
+  }
+
+  class BookingException {
+    -code : ErrorCode
+    --
+    +BookingException(ErrorCode, String)
+    +BookingException(ErrorCode, String, Throwable)
+    +code() : ErrorCode
+  }
+
+  class LogMasker <<utility>> {
+    -{static} SENSITIVE_KEYS   : List<Pattern>
+    -{static} SENSITIVE_VALUES : List<Pattern>
+    --
+    +{static} scrub(String) : String
+    +{static} fmt(String, Object...) : String
+  }
+}
+
+BookingException --|> RuntimeException
+BookingException ..> ErrorCode : carries
+ErrorCode        ..> Severity  : uses
+' Failure record imports ErrorCode — already shown above
+
+' ============================================================
+'  CLUSTER 3 · matcher/  — Strategy
+' ============================================================
+package "matcher/  (Strategy)" {
+
+  interface Matcher <<Strategy>> {
+    +matches(T) : boolean
+    +and(Matcher<T>)   : Matcher<T> «default»
+    +or(Matcher<T>)    : Matcher<T> «default»
+    +negate()          : Matcher<T> «default»
+    +andNot(Matcher<T>): Matcher<T> «default»
+  }
+
+  abstract class AbstractMatcher <<Strategy>> {
+    -description : String
+    --
+    +description() : String
+    +toString()    : String
+  }
+
+  class ExactMatcher <<Strategy>> {
+    -target : String
+    --
+    +ExactMatcher(String)
+    +matches(String) : boolean
+  }
+
+  class ContainsMatcher <<Strategy>> {
+    -substring  : String
+    -ignoreCase : boolean
+    --
+    +ContainsMatcher(String)
+    +ContainsMatcher(String, boolean)
+    +matches(String) : boolean
+  }
+
+  class RegexMatcher <<Strategy>> {
+    -pattern : Pattern
+    --
+    +RegexMatcher(String)
+    +RegexMatcher(Pattern)
+    +matches(String) : boolean
+  }
+
+  class VenueIndexMatcher <<Strategy>> {
+    -index    : int
+    -patterns : List<Pattern>
+    ' 4 precompiled regexes: N号 / 第N场 / (N) / bare N
+    --
+    +VenueIndexMatcher(int)
+    +matches(String) : boolean
+  }
+
+  class Matchers <<factory>> {
+    +{static} exact(String)              : Matcher<String>
+    +{static} contains(String)           : Matcher<String>
+    +{static} containsIgnoreCase(String) : Matcher<String>
+    +{static} regex(String)              : Matcher<String>
+    +{static} regex(Pattern)             : Matcher<String>
+    +{static} venueIndex(int)            : Matcher<String>
+    +{static} all(Matcher<String>...)    : Matcher<String>
+    +{static} any(Matcher<String>...)    : Matcher<String>
+  }
+}
+
+Matcher         <|.. AbstractMatcher
+AbstractMatcher <|-- ExactMatcher
+AbstractMatcher <|-- ContainsMatcher
+AbstractMatcher <|-- RegexMatcher
+AbstractMatcher <|-- VenueIndexMatcher
+Matchers        ..> Matcher : creates
+
+' ============================================================
+'  CLUSTER 4 · retry/  — Strategy (FunctionalInterface)
+' ============================================================
+package "retry/  (Strategy)" {
+
+  interface RetryPolicy <<Strategy>> {
+    +<T> execute(Supplier<T>) : T
+    +orElse(RetryPolicy) : RetryPolicy «default»
+  }
+
+  class FixedDelay <<Strategy>> {
+    -maxAttempts : int
+    -delay       : Duration
+    --
+    +FixedDelay(int, Duration)
+    +<T> execute(Supplier<T>) : T
+  }
+
+  class ExponentialBackoff <<Strategy>> {
+    -maxAttempts : int
+    -base        : Duration
+    -maxDelay    : Duration
+    -multiplier  : double
+    --
+    +ExponentialBackoff(int, Duration)
+    +ExponentialBackoff(int, Duration, Duration, double)
+    +<T> execute(Supplier<T>) : T
+  }
+
+  class NoRetry <<Strategy>> <<Singleton>> {
+    +{static} INSTANCE : NoRetry
+    --
+    +<T> execute(Supplier<T>) : T
+  }
+
+  class RetryPolicies <<factory>> {
+    +{static} defaultBooking() : RetryPolicy
+    +{static} login()          : RetryPolicy
+    +{static} quickFix()       : RetryPolicy
+  }
+}
+
+RetryPolicy   <|.. FixedDelay
+RetryPolicy   <|.. ExponentialBackoff
+RetryPolicy   <|.. NoRetry
+RetryPolicies ..> RetryPolicy : creates
+' Retry layer depends on BookingException + ErrorCode
+FixedDelay         ..> BookingException
+FixedDelay         ..> ErrorCode
+ExponentialBackoff ..> BookingException
+ExponentialBackoff ..> ErrorCode
+
+' ============================================================
+'  CLUSTER 5 · browser/  — Adapter
+' ============================================================
+package "browser/  (Adapter)" {
+
+  interface BrowserLifecycle <<Adapter>> {
+    +open() : void
+    +close() : void
+    +navigateTo(String url) : void
+    +click(String selector) : void
+    +fill(String selector, String value) : void
+    +isVisible(String selector) : boolean
+    +textOf(String selector)    : String
+    +allTextOf(String selector) : List<String>
+    +currentUrl() : String
+    +screenshot(String absolutePath) : void
+  }
+
+  class PlaywrightBrowserAdapter <<Adapter>> {
+    -playwright : Playwright
+    -browser    : Browser
+    -page       : Page
+    --
+    +PlaywrightBrowserAdapter(Playwright)
+    ' 10 @Override methods mapping Playwright → ErrorCode
+  }
+
+  class Playwright <<external>> {
+  }
+}
+
+BrowserLifecycle       <|.. PlaywrightBrowserAdapter
+PlaywrightBrowserAdapter o--> Playwright : adapts
+' PlaywrightBrowserAdapter also throws BookingException
+PlaywrightBrowserAdapter ..> BookingException : throws
+PlaywrightBrowserAdapter ..> ErrorCode        : maps to
+
+' ============================================================
+'  CLUSTER 6 · cli/  — entry point (Phase 4 BookingCommand planned)
+' ============================================================
+package "cli/" {
+
+  class Main {
+    --
+    +main(String[]) : void {static}
+    +call() : Integer
+  }
+}
+
+' ============================================================
+'  CLUSTER 7 · Phase 3 + 4 + P1  (planned, dashed border)
+' ============================================================
+package "Phase 3/4 + P1  (planned)" {
+
+  ' ----- config/ — Singleton -----
+  class ConfigManager <<Singleton>> <<planned>> {
+    -{static} instance : ConfigManager «volatile»
+    -config : Config
+    --
+    +{static} getInstance() : ConfigManager
+    +load(String path) : void
+    +get(String key)   : String
+    +browser()         : BrowserLifecycle
+  }
+
+  ' ----- observability/ — Singleton -----
+  class Tracer <<Singleton>> <<planned>> {
+    -{static} instance : Tracer «volatile»
+    -traceId : String
+    --
+    +{static} getInstance() : Tracer
+    +generateTraceId()      : String
+    +currentTraceId()       : String
+    +recordFailure(ErrorCode, String, Optional<Path>) : void
+    ' Per ADR-0007 D4: does NOT take Throwable/BookingException
+  }
+
+  ' ----- account/ — credential resolution (ADR-0005 D1) -----
+  class Account <<record>> <<planned>> {
+    +studentId  : String
+    +password   : String
+    +displayName : String
+  }
+
+  class AccountResolver <<planned>> {
+    +resolve(String studentId) : Account
+    ' resolution order: process env → --env-file → Skill injection
+  }
+
+  enum EnvVarName <<enum>> <<planned>> {
+    SZU_PASSWORD
+    --
+    +forStudentId(String) : String
+  }
+
+  ' ----- client/ — venue booking -----
+  class VenueBookingClient <<planned>> {
+    -browser     : BrowserLifecycle
+    -retry       : RetryPolicy
+    -tracer      : Tracer
+    --
+    +book(BookingRequest) : BookingResult
+  }
+
+  ' ----- cli/ — Phase 4 -----
+  class BookingCommand <<planned>> {
+    ' picocli @Command
+    --
+    +@Option --username : String
+    +@Option --campus   : String
+    +@Option --sport    : String
+    +@Option --date     : int
+    +@Option --time-slot: String
+    +@Option --format   : String
+    --
+    +call() : Integer
+  }
+
+  ' ----- skill/ + mcp/ — P1 thin wrappers (ADR-0001 D5) -----
+  interface Skill <<planned>> {
+    +name() : String
+    +run(String[]) : BookingResult
+  }
+
+  class SkillManager <<planned>> {
+    +register(Skill)        : void
+    +get(String name)       : Skill
+  }
+
+  annotation AgentTool <<planned>> {
+  }
+
+  class MCPToolProvider <<planned>> {
+    +listTools() : String
+    +call(String tool, String args) : String
+  }
+
+  ' ----- task/ — P1 extension point -----
+  interface CampusTask <<planned>> {
+    +name() : String
+    +execute() : TaskResult
+  }
+
+  class TaskResult <<record>> <<planned>> {
+    +success     : boolean
+    +data        : Object
+    +errorCode   : ErrorCode
+    +errorMessage: String
+    +traceId     : String
+    +elapsedMs   : long
+  }
+
+  enum TaskStatus <<enum>> <<planned>> {
+    PENDING
+    RUNNING
+    SUCCESS
+    FAILED
+  }
+
+  class TaskExecutor <<planned>> {
+    +execute(CampusTask, RetryPolicy) : TaskResult
+  }
+}
+
+' Phase 3/4 wiring
+ConfigManager       ..> BrowserLifecycle : injects (browser.kind)
+ConfigManager       ..> PlaywrightBrowserAdapter : creates
+AccountResolver     ..> Account          : returns
+AccountResolver     ..> EnvVarName       : uses
+VenueBookingClient  o--> BrowserLifecycle
+VenueBookingClient  o--> RetryPolicy
+VenueBookingClient  ..> BookingRequest   : accepts
+VenueBookingClient  ..> BookingResult    : returns
+VenueBookingClient  ..> Tracer           : logs
+Main                ..> BookingCommand   : routes
+BookingCommand      ..> VenueBookingClient : delegates
+BookingCommand      ..> BookingRequest    : Builder.build()
+SkillManager        o--> Skill
+MCPToolProvider     ..> Skill : exposes
+TaskExecutor        o--> CampusTask
+TaskExecutor        o--> RetryPolicy
+TaskResult          ..> ErrorCode : carries
+
+' ============================================================
+'  Legend
+' ============================================================
+legend right
+  | Stereotype | Meaning |
+  | <<Builder>>   | Builder pattern (BookingRequest.Builder) |
+  | <<Singleton>> | Singleton pattern (ConfigManager, Tracer) |
+  | <<Strategy>>  | Strategy pattern (Matcher, RetryPolicy) |
+  | <<Adapter>>   | Adapter pattern (PlaywrightBrowserAdapter) |
+  | <<sealed>>    | Sealed type (Java 17+) |
+  | <<record>>    | Record value type (Java 16+) |
+  | <<enum>>      | Enum (carries metadata fields) |
+  | <<factory>>   | Static factory (code organization, not a design pattern entry) |
+  | <<utility>>   | Static utility class (no instances) |
+  | <<planned>>   | Phase 3/4 + P1, not yet implemented |
+  | <<external>>  | Third-party SDK (Playwright) |
+endlegend
+
+@enduml
