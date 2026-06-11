@@ -108,6 +108,13 @@ public interface BrowserLifecycle {
      */
     List<String> allTextOf(String selector);
 
-    // Phase 2 Cycles 8-9 will add: currentUrl, screenshot — one method
-    // per TDD cycle.
+    /**
+     * Returns the current page URL. Used by business code to detect
+     * CAS-redirect landing (e.g. "did we end up at ehall after login?").
+     *
+     * @return the current URL (e.g. "https://ehall.szu.edu.cn/booking")
+     */
+    String currentUrl();
+
+    // Phase 2 Cycle 9 will add: screenshot — one method per TDD cycle.
 }

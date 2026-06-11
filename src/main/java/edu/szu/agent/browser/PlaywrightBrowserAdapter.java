@@ -131,6 +131,11 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
         }
     }
 
+    @Override
+    public String currentUrl() {
+        return page.url();
+    }
+
     /**
      * Maps a Playwright exception to a {@link BookingException} with
      * a canonical {@link ErrorCode}. Package-private for testability.

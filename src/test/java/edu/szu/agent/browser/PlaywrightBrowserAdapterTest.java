@@ -347,4 +347,25 @@ class PlaywrightBrowserAdapterTest {
             .extracting(t -> ((BookingException) t).code())
             .isEqualTo(ErrorCode.ELEMENT_NOT_FOUND);
     }
+
+    // ----- Cycle 8: currentUrl() -----
+
+    @Test
+    @DisplayName("currentUrl() returns page.url()")
+    void currentUrlReturnsPageUrl() {
+        when(page.url()).thenReturn("https://ehall.szu.edu.cn/booking");
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThat(adapter.currentUrl()).isEqualTo("https://ehall.szu.edu.cn/booking");
+    }
+
+    @Test
+    @DisplayName("currentUrl() is a pure getter — does not throw under normal page state")
+    void currentUrlDoesNotThrow() {
+        when(page.url()).thenReturn("about:blank");
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        // Should return the mocked URL, no exception
+        assertThat(adapter.currentUrl()).isEqualTo("about:blank");
+    }
 }
