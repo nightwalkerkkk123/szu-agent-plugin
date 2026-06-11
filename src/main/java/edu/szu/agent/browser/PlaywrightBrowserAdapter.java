@@ -7,6 +7,7 @@ import com.microsoft.playwright.Playwright;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
 
@@ -134,6 +135,17 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
     @Override
     public String currentUrl() {
         return page.url();
+    }
+
+    @Override
+    public void screenshot(String absolutePath) {
+        Objects.requireNonNull(absolutePath, "absolutePath");
+        try {
+            page.screenshot(
+                new Page.ScreenshotOptions().setPath(Paths.get(absolutePath)));
+        } catch (Exception e) {
+            throw mapException(e);
+        }
     }
 
     /**

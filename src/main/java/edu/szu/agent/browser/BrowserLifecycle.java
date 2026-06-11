@@ -116,5 +116,17 @@ public interface BrowserLifecycle {
      */
     String currentUrl();
 
-    // Phase 2 Cycle 9 will add: screenshot — one method per TDD cycle.
+    /**
+     * Saves a screenshot of the current page to {@code absolutePath}.
+     * Invoked when {@link edu.szu.agent.error.ErrorCode#shouldScreenshot()}
+     * returns true (per ADR-0002 D2 mapping).
+     *
+     * @param absolutePath absolute filesystem path (e.g. "/tmp/ehall-error.png")
+     * @throws edu.szu.agent.error.BookingException with NETWORK_TIMEOUT
+     *         on page-unresponsive timeout, BROWSER_CRASH on disk-write
+     *         failure or other Playwright errors
+     */
+    void screenshot(String absolutePath);
+
+    // Phase 2 complete: all 10 methods of ADR-0002 D1 implemented.
 }

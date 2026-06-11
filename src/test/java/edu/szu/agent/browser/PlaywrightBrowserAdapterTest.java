@@ -368,4 +368,35 @@ class PlaywrightBrowserAdapterTest {
         // Should return the mocked URL, no exception
         assertThat(adapter.currentUrl()).isEqualTo("about:blank");
     }
+
+    // ----- Cycle 9: screenshot(path) -----
+
+    @Test
+    @DisplayName("screenshot(path) calls page.screenshot with ScreenshotOptions.setPath(path)")
+    void screenshotCallsPageScreenshotWithPath() {
+        when(page.screenshot(any(Page.ScreenshotOptions.class)))
+            .thenReturn(new byte[]{1, 2, 3});
+        PlaywrightBrowserAdapter adapter = openAdapter();
+        adapter.screenshot("/tmp/ehall-error.png");
+
+        ArgumentCaptor<Page.ScreenshotOptions> optsCaptor =
+            ArgumentCaptor.forClass(Page.ScreenshotOptions.class);
+        verify(page).screenshot(optsCaptor.capture());
+        assertThat(optsCaptor.getValue().path)
+            .as("screenshot() must set the path on ScreenshotOptions")
+            .isEqualTo(java.nio.file.Paths.get("/tmp/ehall-error.png"));
+    }
+
+    @Test
+    @DisplayName("screenshot() maps Playwright TimeoutError to BookingException(NETWORK_TIMEOUT)")
+    void screenshotMapsTimeoutErrorToNetworkTimeout() {
+        when(page.screenshot(any(Page.ScreenshotOptions.class))).thenThrow(
+            new com.microsoft.playwright.TimeoutError("page unresponsive during screenshot"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.screenshot("/tmp/x.png"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.NETWORK_TIMEOUT);
+    }
 }
