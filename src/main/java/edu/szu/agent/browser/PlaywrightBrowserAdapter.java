@@ -7,6 +7,7 @@ import com.microsoft.playwright.Playwright;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -115,6 +116,16 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
         try {
             String text = page.locator(selector).textContent();
             return text == null ? "" : text;
+        } catch (Exception e) {
+            throw mapException(e);
+        }
+    }
+
+    @Override
+    public List<String> allTextOf(String selector) {
+        Objects.requireNonNull(selector, "selector");
+        try {
+            return page.locator(selector).allTextContents();
         } catch (Exception e) {
             throw mapException(e);
         }

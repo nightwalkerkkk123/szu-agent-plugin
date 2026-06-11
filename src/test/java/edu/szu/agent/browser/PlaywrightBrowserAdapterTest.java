@@ -15,6 +15,8 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -301,6 +303,46 @@ class PlaywrightBrowserAdapterTest {
         PlaywrightBrowserAdapter adapter = openAdapter();
 
         assertThatThrownBy(() -> adapter.textOf("#bad"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.ELEMENT_NOT_FOUND);
+    }
+
+    // ----- Cycle 7: allTextOf(selector) -----
+
+    @Test
+    @DisplayName("allTextOf(selector) returns list of all matching elements' text")
+    void allTextOfReturnsListOfTexts() {
+        when(page.locator(anyString())).thenReturn(locator);
+        when(locator.allTextContents()).thenReturn(
+            List.of("网球1号场", "网球2号场", "网球3号场"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThat(adapter.allTextOf(".venue-name"))
+            .containsExactly("网球1号场", "网球2号场", "网球3号场");
+    }
+
+    @Test
+    @DisplayName("allTextOf() maps Playwright TimeoutError to BookingException(NETWORK_TIMEOUT)")
+    void allTextOfMapsTimeoutErrorToNetworkTimeout() {
+        when(page.locator(anyString())).thenThrow(
+            new com.microsoft.playwright.TimeoutError("element not found"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.allTextOf("#missing"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.NETWORK_TIMEOUT);
+    }
+
+    @Test
+    @DisplayName("allTextOf() maps exception with 'selector' in message to ELEMENT_NOT_FOUND")
+    void allTextOfMapsSelectorErrorToElementNotFound() {
+        when(page.locator(anyString())).thenThrow(
+            new RuntimeException("selector '#bad' resolved to 0 elements"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.allTextOf("#bad"))
             .isInstanceOf(BookingException.class)
             .extracting(t -> ((BookingException) t).code())
             .isEqualTo(ErrorCode.ELEMENT_NOT_FOUND);

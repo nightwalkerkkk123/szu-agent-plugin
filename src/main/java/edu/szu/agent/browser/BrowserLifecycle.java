@@ -1,5 +1,7 @@
 package edu.szu.agent.browser;
 
+import java.util.List;
+
 /**
  * Browser lifecycle abstraction — thin facade over a real browser SDK
  * (currently Playwright) used by the booking flow.
@@ -94,6 +96,18 @@ public interface BrowserLifecycle {
      */
     String textOf(String selector);
 
-    // Phase 2 Cycles 7-9 will add: allTextOf, currentUrl, screenshot
-    // — one method per TDD cycle.
+    /**
+     * Returns the text content of all elements matching {@code selector},
+     * in DOM order. Used for listing venues / time slots / options.
+     *
+     * @param selector CSS selector
+     * @return list of text contents (never null, possibly empty)
+     * @throws edu.szu.agent.error.BookingException with NETWORK_TIMEOUT
+     *         on auto-wait timeout, ELEMENT_NOT_FOUND if the selector
+     *         is invalid, or BROWSER_CRASH for other failures
+     */
+    List<String> allTextOf(String selector);
+
+    // Phase 2 Cycles 8-9 will add: currentUrl, screenshot — one method
+    // per TDD cycle.
 }
