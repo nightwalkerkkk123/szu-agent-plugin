@@ -4,6 +4,8 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
+import edu.szu.agent.error.BookingException;
+import edu.szu.agent.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,26 +15,29 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for {@link PlaywrightBrowserAdapter} lifecycle methods.
+ * Tests for {@link PlaywrightBrowserAdapter}.
  *
- * <p>Per ADR-0002 D1: open() launches headless Chromium + creates a page;
- * close() releases page → browser. The Playwright instance itself is not
- * closed by the adapter — lifecycle is owned by the caller (Phase 4 Main).
+ * <p>Per ADR-0002 D1-D5, with one TDD cycle per method. Currently covers
+ * Cycles 1-2: lifecycle (open/close) and navigation (navigateTo).
  *
- * <p>Per ADR-0002 D5: uses Mockito mocks for Playwright SDK interfaces,
- * no real browser binary required.
+ * <p>Per ADR-0002 D5: uses Mockito mocks for Playwright SDK interfaces
+ * and the real {@code com.microsoft.playwright.TimeoutError} class
+ * for timeout mapping tests.
  *
  * @since 0.1.0
  * @author 王子豪
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("PlaywrightBrowserAdapter — lifecycle")
+@DisplayName("PlaywrightBrowserAdapter")
 class PlaywrightBrowserAdapterTest {
 
     @Mock Playwright playwright;
@@ -40,17 +45,26 @@ class PlaywrightBrowserAdapterTest {
     @Mock Browser browser;
     @Mock Page page;
 
-    @Test
-    @DisplayName("open() launches a headless Chromium and creates a new page")
-    void openLaunchesHeadlessBrowserAndCreatesPage() {
+    /**
+     * Wires the standard mock chain and returns an opened adapter.
+     * Saves 5 lines of setup boilerplate per test.
+     */
+    private PlaywrightBrowserAdapter openAdapter() {
         when(playwright.chromium()).thenReturn(browserType);
         when(browserType.launch(any())).thenReturn(browser);
         when(browser.newPage()).thenReturn(page);
-
         PlaywrightBrowserAdapter adapter = new PlaywrightBrowserAdapter(playwright);
         adapter.open();
+        return adapter;
+    }
 
-        // Verify headless=true was requested
+    // ----- Cycle 1: open() + close() -----
+
+    @Test
+    @DisplayName("open() launches a headless Chromium and creates a new page")
+    void openLaunchesHeadlessBrowserAndCreatesPage() {
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
         ArgumentCaptor<BrowserType.LaunchOptions> optsCaptor =
             ArgumentCaptor.forClass(BrowserType.LaunchOptions.class);
         verify(browserType).launch(optsCaptor.capture());
@@ -58,19 +72,13 @@ class PlaywrightBrowserAdapterTest {
             .as("open() must launch headless=true (per ADR-0002 D4)")
             .isTrue();
 
-        // Verify a page was created
         verify(browser).newPage();
     }
 
     @Test
     @DisplayName("close() releases page first, then browser (in order)")
     void closeReleasesPageThenBrowser() {
-        when(playwright.chromium()).thenReturn(browserType);
-        when(browserType.launch(any())).thenReturn(browser);
-        when(browser.newPage()).thenReturn(page);
-
-        PlaywrightBrowserAdapter adapter = new PlaywrightBrowserAdapter(playwright);
-        adapter.open();
+        PlaywrightBrowserAdapter adapter = openAdapter();
         adapter.close();
 
         InOrder order = inOrder(page, browser);
@@ -83,9 +91,58 @@ class PlaywrightBrowserAdapterTest {
     void closeWithoutOpenIsNoOp() {
         PlaywrightBrowserAdapter adapter = new PlaywrightBrowserAdapter(playwright);
 
-        // No exception, no interactions with Playwright SDK
         adapter.close();
 
-        verify(playwright, org.mockito.Mockito.never()).chromium();
+        verify(playwright, never()).chromium();
+    }
+
+    // ----- Cycle 2: navigateTo(url) -----
+
+    @Test
+    @DisplayName("navigateTo(url) calls page.navigate(url)")
+    void navigateToCallsPageNavigate() {
+        PlaywrightBrowserAdapter adapter = openAdapter();
+        adapter.navigateTo("https://ehall.szu.edu.cn");
+
+        verify(page).navigate("https://ehall.szu.edu.cn");
+    }
+
+    @Test
+    @DisplayName("navigateTo() maps Playwright TimeoutError to BookingException(NETWORK_TIMEOUT)")
+    void navigateToMapsTimeoutErrorToNetworkTimeout() {
+        when(page.navigate(anyString())).thenThrow(
+            new com.microsoft.playwright.TimeoutError("page load timed out"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.navigateTo("https://ehall.szu.edu.cn"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.NETWORK_TIMEOUT);
+    }
+
+    @Test
+    @DisplayName("navigateTo() maps exception with 'selector' in message to ELEMENT_NOT_FOUND")
+    void navigateToMapsSelectorErrorToElementNotFound() {
+        when(page.navigate(anyString())).thenThrow(
+            new RuntimeException("selector '.foo' not found"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.navigateTo("https://ehall.szu.edu.cn"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.ELEMENT_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("navigateTo() maps other exception to BROWSER_CRASH")
+    void navigateToMapsOtherErrorToBrowserCrash() {
+        when(page.navigate(anyString())).thenThrow(
+            new RuntimeException("browser disconnected"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.navigateTo("https://ehall.szu.edu.cn"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.BROWSER_CRASH);
     }
 }

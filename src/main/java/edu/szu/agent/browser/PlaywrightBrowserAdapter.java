@@ -7,7 +7,6 @@ import com.microsoft.playwright.Playwright;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -19,8 +18,8 @@ import java.util.Objects;
  * <p>Per ADR-0002 D2: maps Playwright exceptions to {@link ErrorCode}:
  * <ul>
  *   <li>{@code playwright.TimeoutError} → {@link ErrorCode#NETWORK_TIMEOUT}</li>
- *   <li>{@code playwright.Error} (selector-related) → {@link ErrorCode#ELEMENT_NOT_FOUND}</li>
- *   <li>other {@code playwright.Error} → {@link ErrorCode#BROWSER_CRASH}</li>
+ *   <li>exception with "selector" / "locator" in message → {@link ErrorCode#ELEMENT_NOT_FOUND}</li>
+ *   <li>anything else → {@link ErrorCode#BROWSER_CRASH}</li>
  * </ul>
  *
  * // Design Pattern: Adapter (concrete)
@@ -69,24 +68,37 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
         }
     }
 
+    @Override
+    public void navigateTo(String url) {
+        Objects.requireNonNull(url, "url");
+        try {
+            page.navigate(url);
+        } catch (Exception e) {
+            throw mapException(e);
+        }
+    }
+
     /**
      * Maps a Playwright exception to a {@link BookingException} with
      * a canonical {@link ErrorCode}. Package-private for testability.
+     *
+     * <p>Mapping rules (per ADR-0002 D2):
+     * <ul>
+     *   <li>{@code com.microsoft.playwright.TimeoutError} → {@code NETWORK_TIMEOUT}</li>
+     *   <li>exception with {@code "selector"} or {@code "locator"} in message → {@code ELEMENT_NOT_FOUND}</li>
+     *   <li>anything else → {@code BROWSER_CRASH}</li>
+     * </ul>
      *
      * @param e the caught Playwright exception
      * @return the mapped BookingException
      */
     static BookingException mapException(Exception e) {
-        String name = e.getClass().getSimpleName();
-        if ("TimeoutError".equals(name)) {
+        if (e instanceof com.microsoft.playwright.TimeoutError) {
             return new BookingException(ErrorCode.NETWORK_TIMEOUT, e.getMessage(), e);
         }
-        if ("Error".equals(name)) {
-            String msg = e.getMessage() == null ? "" : e.getMessage();
-            if (msg.contains("selector") || msg.contains("locator")) {
-                return new BookingException(ErrorCode.ELEMENT_NOT_FOUND, e.getMessage(), e);
-            }
-            return new BookingException(ErrorCode.BROWSER_CRASH, e.getMessage(), e);
+        String msg = e.getMessage() == null ? "" : e.getMessage();
+        if (msg.contains("selector") || msg.contains("locator")) {
+            return new BookingException(ErrorCode.ELEMENT_NOT_FOUND, e.getMessage(), e);
         }
         return new BookingException(ErrorCode.BROWSER_CRASH, e.getMessage(), e);
     }

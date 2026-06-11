@@ -34,6 +34,17 @@ public interface BrowserLifecycle {
      */
     void close();
 
-    // Phase 2 Cycles 2-9 will add: navigateTo, click, fill, isVisible,
-    // textOf, allTextOf, currentUrl, screenshot — one method per TDD cycle.
+    /**
+     * Navigates the current page to {@code url}, waiting for the load
+     * state to complete.
+     *
+     * @param url absolute URL (e.g. "https://ehall.szu.edu.cn")
+     * @throws edu.szu.agent.error.BookingException with NETWORK_TIMEOUT
+     *         on navigation timeout, ELEMENT_NOT_FOUND if a frame/selector
+     *         is involved, or BROWSER_CRASH for other failures
+     */
+    void navigateTo(String url);
+
+    // Phase 2 Cycles 3-9 will add: click, fill, isVisible, textOf,
+    // allTextOf, currentUrl, screenshot — one method per TDD cycle.
 }
