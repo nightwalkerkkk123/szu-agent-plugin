@@ -88,6 +88,17 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
         }
     }
 
+    @Override
+    public void fill(String selector, String value) {
+        Objects.requireNonNull(selector, "selector");
+        Objects.requireNonNull(value, "value");
+        try {
+            page.locator(selector).fill(value);
+        } catch (Exception e) {
+            throw mapException(e);
+        }
+    }
+
     /**
      * Maps a Playwright exception to a {@link BookingException} with
      * a canonical {@link ErrorCode}. Package-private for testability.

@@ -56,6 +56,18 @@ public interface BrowserLifecycle {
      */
     void click(String selector);
 
-    // Phase 2 Cycles 4-9 will add: fill, isVisible, textOf, allTextOf,
+    /**
+     * Fills the input matching {@code selector} with {@code value},
+     * clearing any prior content first.
+     *
+     * @param selector CSS selector for the input element
+     * @param value    text to type
+     * @throws edu.szu.agent.error.BookingException with NETWORK_TIMEOUT
+     *         on fill timeout, ELEMENT_NOT_FOUND if the selector
+     *         resolves to 0 elements, or BROWSER_CRASH for other failures
+     */
+    void fill(String selector, String value);
+
+    // Phase 2 Cycles 5-9 will add: isVisible, textOf, allTextOf,
     // currentUrl, screenshot — one method per TDD cycle.
 }

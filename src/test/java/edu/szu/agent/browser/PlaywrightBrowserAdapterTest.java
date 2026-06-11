@@ -188,4 +188,48 @@ class PlaywrightBrowserAdapterTest {
             .extracting(t -> ((BookingException) t).code())
             .isEqualTo(ErrorCode.ELEMENT_NOT_FOUND);
     }
+
+    // ----- Cycle 4: fill(selector, value) -----
+
+    @Test
+    @DisplayName("fill(selector, value) calls page.locator(selector).fill(value)")
+    void fillCallsPageLocatorFill() {
+        when(page.locator(anyString())).thenReturn(locator);
+        PlaywrightBrowserAdapter adapter = openAdapter();
+        adapter.fill("#username", "2023150090");
+
+        ArgumentCaptor<String> selectorCaptor = ArgumentCaptor.forClass(String.class);
+        verify(page).locator(selectorCaptor.capture());
+        assertThat(selectorCaptor.getValue()).isEqualTo("#username");
+
+        ArgumentCaptor<String> valueCaptor = ArgumentCaptor.forClass(String.class);
+        verify(locator).fill(valueCaptor.capture());
+        assertThat(valueCaptor.getValue()).isEqualTo("2023150090");
+    }
+
+    @Test
+    @DisplayName("fill() maps Playwright TimeoutError to BookingException(NETWORK_TIMEOUT)")
+    void fillMapsTimeoutErrorToNetworkTimeout() {
+        when(page.locator(anyString())).thenThrow(
+            new com.microsoft.playwright.TimeoutError("element not visible"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.fill("#username", "2023150090"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.NETWORK_TIMEOUT);
+    }
+
+    @Test
+    @DisplayName("fill() maps exception with 'selector' in message to ELEMENT_NOT_FOUND")
+    void fillMapsSelectorErrorToElementNotFound() {
+        when(page.locator(anyString())).thenThrow(
+            new RuntimeException("selector '#missing' resolved to 0 elements"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.fill("#missing", "x"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.ELEMENT_NOT_FOUND);
+    }
 }
