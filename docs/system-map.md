@@ -35,7 +35,9 @@ edu.szu.agent
 │   └── VenueBookingClient          # 体育场馆预约(核心实现)
 │
 ├── browser/                        # 浏览器抽象层(Adapter + ConfigManager 注入)
-│   ├── BrowserLifecycle            # Design Pattern: Adapter 目标接口(6 方法,见 ADR-0007 D3)
+│   ├── BrowserLifecycle            # Design Pattern: Adapter 目标接口(10 方法,见 ADR-0002 D1)
+│   │ // open / close / navigateTo / click / fill /
+│   │                                 // isVisible / textOf / allTextOf / currentUrl / screenshot
 │   ├── PlaywrightBrowserAdapter    # Design Pattern: Adapter,真演示唯一入口
 │   └── FakeBrowser                 # 单元测试夹具,不出现在课堂演示
 │   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager.browser() 注入

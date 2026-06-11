@@ -13,17 +13,10 @@ _手动维护。实际存在的文件列出，存在但为空的标注 (empty)�
 - `SECURITY.md` — 项目安全策略
 - `SOUL.md` — 项目灵魂文档
 - `WORKING-CONTEXT.md` — 工作上下文模板
-- `pom.xml` — Maven 构建配置 (empty，待创建)
-- `mvnw` / `mvnw.cmd` — Maven Wrapper (empty，待创建)
-
-## configs/
-
-- `configs/config.yaml` — 业务配置模板 (empty)
-- `configs/.env.example` — 环境变量模板 (empty)
-
-## design/
-
-- `design/2023150090_王子豪_大作业自拟题目.md` — 提案文档 (empty，待创建)
+- `pom.xml` — Maven 构建配置
+- `dependency-reduced-pom.xml` — Maven shade插件精简配置
+- `.env.example` — 环境变量模板
+- `logs/` — 运行时日志目录
 
 ## docs/
 
@@ -55,10 +48,9 @@ _手动维护。实际存在的文件列出，存在但为空的标注 (empty)�
 
 ## src/
 
-源代码目录（待实现）：
-- `src/main/java/edu/szu/agent/` — Java 源码
+- `src/main/java/edu/szu/agent/` — Java 源码 (13 packages)
 - `src/main/resources/` — 资源配置
-- `src/test/java/edu/szu/agent/` — 测试代码
+- `src/test/java/edu/szu/agent/` — 测试代码 (38 src + 20 test classes)
 
 ## .claude/agents/
 

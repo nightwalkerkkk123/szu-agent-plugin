@@ -1,7 +1,7 @@
 # Working Context
 
-> Last updated: 2026-06-11
-> 当前阶段: **方向已校准**(ADR-0001/0005/0006 均 Accepted),Phase 1 子决定固化完成,准备启动 Phase 0
+> Last updated: 2026-06-12
+> 当前阶段: **Phase 2 完成,Phase 3 进行中**(ADR-0001/0002/0005/0006/0007 均 Accepted)
 
 > ⚠️ **ADR 校准声明**(2026-06-11):本工作上下文已按 **ADR-0001 / 0005 / 0006** 重写。
 > - 5 模式落点重选:`BrowserFactory` 替代 `ClientFactory`,`PlaywrightBrowserAdapter` 替代 `CloakBrowserAdapter`,`ErrorClassifier` 删除
@@ -9,7 +9,7 @@
 > - 演示模式:真跑 Playwright(ADR-0001 D2),`--dry-run` 仅作测试夹具
 > - 凭证流转:Skill wrapper 传 `--env-file` 给 CLI(ADR-0005 D1),不走 cwd
 > - 日志强制:`LogMasker` 走 archunit 静态规则(ADR-0005 D2)
-> 详细理由见 `docs/adr/0001-project-direction-recalibration.md` / `0005-credential-and-logging-enforcement.md` / `0006-phase1-domain-error-retry-matcher.md`(待建)。
+> 详细理由见 `docs/adr/0001-project-direction-recalibration.md` / `0002-browser-lifecycle-and-playwright-adapter.md` / `0005-credential-and-logging-enforcement.md` / `0006-phase1-domain-error-retry-matcher.md` / `0007-architecture-deepening.md`。
 
 ---
 
@@ -24,30 +24,34 @@
 
 ## 当前状态
 
-### 阶段：方向已校准，准备启动 Phase 0（骨架）
+### 阶段：Phase 2 完成，Phase 3 进行中（2026-06-12）
 
 已完成：
+- [x] `pom.xml` — Maven 构建配置（Phase 0）
+- [x] Phase 0 骨架 + Phase 1 域模型/错误/重试/匹配器（38源码 + 20 测试）
+- [x] Phase 2 浏览器抽象（BrowserLifecycle 10 方法 + PlaywrightBrowserAdapter）
 - [x] `docs/adr/0001-project-direction-recalibration.md` — **方向校准 ADR (Accepted)**
+- [x] `docs/adr/0002-browser-lifecycle-and-playwright-adapter.md` — BrowserLifecycle(Accepted)
 - [x] `docs/adr/0005-credential-and-logging-enforcement.md` — 凭证流转 + archunit 强制 (Accepted)
-- [x] `docs/adr/0006-phase1-domain-error-retry-matcher.md` — Phase 1 子决定(待 Phase 1 收尾建)
-- [x] `docs/PRD.md` — 产品需求文档(已加 ADR 校准声明,已同步 `--env-file`)
-- [x] `docs/design-patterns.md` — 设计模式清单(5 种已重选,retry/matcher 子决定已同步)
-- [x] `docs/system-map.md` — 系统地图 + 局限性分析(retry/matcher/account 段已同步)
-- [x] `SECURITY.md` — LogMasker 12 Pattern + ErrorCode 12 元数据 + archunit 段(已同步)
+- [x] `docs/adr/0006-phase1-domain-error-retry-matcher.md` — Phase 1 子决定(Accepted)
+- [x] `docs/adr/0007-architecture-deepening.md` —架构深化(Accepted)
+- [x] `docs/PRD.md` — 产品需求文档(已加 ADR 校准声明)
+- [x] `docs/design-patterns.md` — 设计模式清单(4 种已重选)
+- [x] `docs/system-map.md` — 系统地图 + 局限性分析(已同步)
+- [x] `SECURITY.md` — LogMasker + ErrorCode + archunit 段(已同步)
 - [x] `docs/HARNESS_BACKLOG.md` — OQ1-OQ4 已登记
-- [x] `README.md` — 项目定位、架构、快速开始(已同步 ADR-0005/0006)
+- [x] `README.md` — 项目定位、架构、快速开始(已同步)
 - [x] `FILETREE.md` — 文件地图(已加 docs/adr/)
 - [x] `.claude/` — 规则 + agents + skills 基建
 
-待创建（Phase 0）：
-- [ ] `pom.xml` — Maven 构建配置
+待创建：
 - [ ] `design/2023150090_王子豪_大作业自拟题目.md` — 提案文档
 - [ ] `docs/class-diagram.puml` — PlantUML 类图
 
-待实现（按 5 天路径）：
-- [ ] Phase 0 骨架 + Phase 1 域模型/错误/重试/匹配器
-- [ ] Phase 2 浏览器抽象 + Phase 3 业务编排
-- [ ] Phase 4 CLI + Wrapper + Phase 5 测试/报告/演示
+进行中/待实现：
+- [ ] Phase 3 业务编排（client/ + config/ + observability/ + account/）
+- [ ] Phase 4 CLI + Wrapper（cli/ + skill/ + mcp/）
+- [ ] Phase 5 测试80% + 报告 + 演示脚本
 
 ---
 
@@ -85,10 +89,10 @@
 
 | Phase | 时长 | 内容 | 状态 |
 |---|---|---|---|
-| 0 | 0.5d | 骨架：pom.xml + 包结构 + Logback + dotenv-java | 待开始 |
-| 1 | 1.0d | 无依赖基础：domain/ + error/ + retry/ + matcher/ | 待开始 |
-| 2 | 1.0d | 浏览器抽象：browser/ + selectors/ | 待开始 |
-| 3 | 1.0d | 业务编排：client/ + config/ + observability/ + account/ | 待开始 |
+| 0 | 0.5d | 骨架：pom.xml + 包结构 + Logback + dotenv-java | ✅ 完成 |
+| 1 | 1.0d | 无依赖基础：domain/ + error/ + retry/ + matcher/ | ✅ 完成 |
+| 2 | 1.0d | 浏览器抽象：browser/ + BrowserLifecycle 10 方法 | ✅ 完成 |
+| 3 | 1.0d | 业务编排：client/ + config/ + observability/ + account/ | 🔄 进行中 |
 | 4 | 1.0d | CLI + Wrapper：cli/ + skill/ + mcp/ | 待开始 |
 | 5 | 0.5d | 收尾：测试 80% + 报告 + 演示脚本 | 待开始 |
 
@@ -130,16 +134,17 @@
 | `docs/system-map.md` | 系统架构 + 局限性分析 | ✅ retry/matcher/account 已同步 |
 | `docs/HARNESS_BACKLOG.md` | OQ1-OQ4 已登记 | ✅ |
 | `SECURITY.md` | LogMasker + ErrorCode + archunit 段 | ✅ 已同步 |
-| `MCP.md` | MCP 工具导出契约 | ⚠️ Phase 4 启动前同步 |
-| `SOUL.md` | 项目灵魂、核心原则 | ⚠️ 5 模式已重选,待确认 |
-| `RULES.md` | 项目规则汇总 | ⚠️ CloakBrowser 改名 Playwright,待确认 |
-| `CONTRIBUTING.md` | 教师评分指南 | ⚠️ demo 命令 `YUEHAI/TENNIS/LocalDate`,待确认 |
+| `MCP.md` | MCP 工具导出契约 | ✅ 已同步(dryRun 已移除) |
+| `SOUL.md` | 项目灵魂、核心原则 | ✅ 已同步(4 模式) |
+| `RULES.md` | 项目规则汇总 | ✅ 已同步(sealed → interface) |
+| `CONTRIBUTING.md` | 教师评分指南 | ✅ 已同步(4 模式) |
 
 ---
 
 ## 下一步
 
-1. 创建 `pom.xml` Maven 构建配置(Phase 0)
-2. 创建 ADR-0006 `Phase 1 子决定`(Phase 1 收尾建)
+1. Phase 3 业务编排（client/ + observability/ + account/）
+2. Phase 4 CLI + Skill/MCP wrapper
 3. 创建 `design/2023150090_王子豪_大作业自拟题目.md` 提案文档
-4. 从 `domain/` 域模型 records 开始 Phase 1 编码
+4. 创建 `docs/class-diagram.puml` PlantUML 类图
+5. Phase 5 测试 80% + 报告 + 演示脚本
