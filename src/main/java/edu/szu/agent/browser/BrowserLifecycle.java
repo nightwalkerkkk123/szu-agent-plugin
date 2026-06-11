@@ -68,6 +68,20 @@ public interface BrowserLifecycle {
      */
     void fill(String selector, String value);
 
-    // Phase 2 Cycles 5-9 will add: isVisible, textOf, allTextOf,
-    // currentUrl, screenshot — one method per TDD cycle.
+    /**
+     * Returns whether the element matching {@code selector} is visible
+     * in the DOM. Does not wait — returns immediately based on current
+     * state. Returns {@code false} (without throwing) if the element
+     * exists but is hidden.
+     *
+     * @param selector CSS selector
+     * @return {@code true} if visible, {@code false} if hidden or absent
+     * @throws edu.szu.agent.error.BookingException with NETWORK_TIMEOUT
+     *         on auto-wait timeout (element not in DOM), or BROWSER_CRASH
+     *         for other failures
+     */
+    boolean isVisible(String selector);
+
+    // Phase 2 Cycles 6-9 will add: textOf, allTextOf, currentUrl,
+    // screenshot — one method per TDD cycle.
 }

@@ -232,4 +232,39 @@ class PlaywrightBrowserAdapterTest {
             .extracting(t -> ((BookingException) t).code())
             .isEqualTo(ErrorCode.ELEMENT_NOT_FOUND);
     }
+
+    // ----- Cycle 5: isVisible(selector) -----
+
+    @Test
+    @DisplayName("isVisible(selector) returns true when element is visible")
+    void isVisibleReturnsTrueWhenElementVisible() {
+        when(page.locator(anyString())).thenReturn(locator);
+        when(locator.isVisible()).thenReturn(true);
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThat(adapter.isVisible("#login-btn")).isTrue();
+    }
+
+    @Test
+    @DisplayName("isVisible(selector) returns false when element is hidden (no throw)")
+    void isVisibleReturnsFalseWhenElementHidden() {
+        when(page.locator(anyString())).thenReturn(locator);
+        when(locator.isVisible()).thenReturn(false);
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThat(adapter.isVisible("#hidden-div")).isFalse();
+    }
+
+    @Test
+    @DisplayName("isVisible() maps Playwright TimeoutError to BookingException(NETWORK_TIMEOUT)")
+    void isVisibleMapsTimeoutErrorToNetworkTimeout() {
+        when(page.locator(anyString())).thenThrow(
+            new com.microsoft.playwright.TimeoutError("element not found in DOM"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.isVisible("#missing"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.NETWORK_TIMEOUT);
+    }
 }
