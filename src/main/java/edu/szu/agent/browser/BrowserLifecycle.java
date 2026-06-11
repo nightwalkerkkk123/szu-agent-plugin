@@ -1,0 +1,39 @@
+package edu.szu.agent.browser;
+
+/**
+ * Browser lifecycle abstraction — thin facade over a real browser SDK
+ * (currently Playwright) used by the booking flow.
+ *
+ * <p>Per ADR-0002 D1: 10 methods, exposing only what the booking flow
+ * needs. Other browser capabilities (hover, drag, keyboard, etc.) are
+ * YAGNI for P0.
+ *
+ * <p>Per ADR-0002 D2: methods throw {@link edu.szu.agent.error.BookingException}
+ * with a mapped {@link edu.szu.agent.error.ErrorCode} on failure.
+ *
+ * <p>Per ADR-0002 D3: lifecycle is owned by the caller — the adapter
+ * does not close the underlying browser SDK on {@link #close()}, only
+ * the page and browser it opened.
+ *
+ * // Design Pattern: Adapter (target interface)
+ * // 编程技术: 接口 + Java 21 sealed 候选(本接口暂不 sealed,等 Phase 3 FakeBrowser 加入再评估)
+ *
+ * @since 0.1.0
+ * @author 王子豪
+ */
+public interface BrowserLifecycle {
+
+    /**
+     * Opens a headless browser and creates a default page.
+     */
+    void open();
+
+    /**
+     * Closes the page and browser opened by {@link #open()}.
+     * Safe to call when {@link #open()} was never called.
+     */
+    void close();
+
+    // Phase 2 Cycles 2-9 will add: navigateTo, click, fill, isVisible,
+    // textOf, allTextOf, currentUrl, screenshot — one method per TDD cycle.
+}
