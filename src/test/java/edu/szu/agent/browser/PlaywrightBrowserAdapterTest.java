@@ -267,4 +267,42 @@ class PlaywrightBrowserAdapterTest {
             .extracting(t -> ((BookingException) t).code())
             .isEqualTo(ErrorCode.NETWORK_TIMEOUT);
     }
+
+    // ----- Cycle 6: textOf(selector) -----
+
+    @Test
+    @DisplayName("textOf(selector) returns locator.textContent()")
+    void textOfReturnsTextContent() {
+        when(page.locator(anyString())).thenReturn(locator);
+        when(locator.textContent()).thenReturn("网球1号场");
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThat(adapter.textOf(".venue-name")).isEqualTo("网球1号场");
+    }
+
+    @Test
+    @DisplayName("textOf() maps Playwright TimeoutError to BookingException(NETWORK_TIMEOUT)")
+    void textOfMapsTimeoutErrorToNetworkTimeout() {
+        when(page.locator(anyString())).thenThrow(
+            new com.microsoft.playwright.TimeoutError("element not found"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.textOf("#missing"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.NETWORK_TIMEOUT);
+    }
+
+    @Test
+    @DisplayName("textOf() maps exception with 'selector' in message to ELEMENT_NOT_FOUND")
+    void textOfMapsSelectorErrorToElementNotFound() {
+        when(page.locator(anyString())).thenThrow(
+            new RuntimeException("selector '#bad' resolved to 0 elements"));
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        assertThatThrownBy(() -> adapter.textOf("#bad"))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.ELEMENT_NOT_FOUND);
+    }
 }

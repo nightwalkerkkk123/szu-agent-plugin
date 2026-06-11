@@ -82,6 +82,18 @@ public interface BrowserLifecycle {
      */
     boolean isVisible(String selector);
 
-    // Phase 2 Cycles 6-9 will add: textOf, allTextOf, currentUrl,
-    // screenshot — one method per TDD cycle.
+    /**
+     * Returns the text content of the first element matching
+     * {@code selector}. Waits for the element to appear.
+     *
+     * @param selector CSS selector
+     * @return the element's text content (never null; empty string if none)
+     * @throws edu.szu.agent.error.BookingException with NETWORK_TIMEOUT
+     *         on auto-wait timeout, ELEMENT_NOT_FOUND if the selector
+     *         resolves to 0 elements, or BROWSER_CRASH for other failures
+     */
+    String textOf(String selector);
+
+    // Phase 2 Cycles 7-9 will add: allTextOf, currentUrl, screenshot
+    // — one method per TDD cycle.
 }
