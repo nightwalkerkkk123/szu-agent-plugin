@@ -1,0 +1,18 @@
+# Test-only application.yml
+# Lives on test classpath, shadows src/main/resources/application.yml
+#
+# Per ADR-0005 D1 + ADR-0007 D1: ConfigManager loads this on .load(),
+# browser().kind is the dispatch key for BrowserLifecycle factory.
+
+browser:
+  kind: PLAYWRIGHT
+
+retry:
+  default:
+    maxAttempts: 5
+    initialDelayMs: 100
+
+test:
+  fixture: test-fixture-value
+  nested:
+    deep: deep-value
