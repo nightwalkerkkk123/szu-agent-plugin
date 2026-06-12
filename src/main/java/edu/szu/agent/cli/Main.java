@@ -15,7 +15,8 @@ import java.util.concurrent.Callable;
     name = "szu-agent",
     mixinStandardHelpOptions = true,
     version = "0.1.0",
-    description = "SZU campus automation CLI tool"
+    description = "SZU campus automation CLI tool",
+    subcommands = {BookingCommand.class}
 )
 public class Main implements Callable<Integer> {
 
