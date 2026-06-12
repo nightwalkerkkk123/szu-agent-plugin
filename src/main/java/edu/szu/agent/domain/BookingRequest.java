@@ -11,7 +11,7 @@ import java.util.Objects;
  * <ul>
  *   <li>4 fields required non-null: {@code campus}, {@code sport}, {@code date}, {@code timeSlot}</li>
  *   <li>1 field with constraint: {@code preferredVenueIndex} &gt;= 1 (ehall 1-based)</li>
- *   <li>1 field optional: {@code username} (filled by {@code AccountResolver} later)</li>
+ *   <li>1 field optional: {@code username}</li>
  * </ul>
  *
  * // Design Pattern: Builder
