@@ -202,7 +202,12 @@ public final class ConfigManager {
         return Collections.unmodifiableMap(yamlProps);
     }
 
-    Map<String, String> envFileProps() {
+    /**
+     * Returns env-file properties as an unmodifiable map.
+     * Used by {@code VenueCommand} to build the effective env for
+     * {@code AccountResolver} (avoids double-loading the env file).
+     */
+    public Map<String, String> envFileProps() {
         return Collections.unmodifiableMap(envFileProps);
     }
 

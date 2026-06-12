@@ -2,8 +2,20 @@ package edu.szu.agent.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import edu.szu.agent.account.Account;
+import edu.szu.agent.account.AccountResolutionException;
+import edu.szu.agent.account.AccountResolver;
+import edu.szu.agent.client.VenueBookingClient;
 import edu.szu.agent.config.ConfigManager;
+import edu.szu.agent.domain.BookingRequest;
+import edu.szu.agent.domain.BookingResult;
+import edu.szu.agent.domain.Campus;
+import edu.szu.agent.domain.Sport;
+import edu.szu.agent.domain.TimeSlot;
+import edu.szu.agent.error.BookingException;
+import edu.szu.agent.error.ErrorCode;
 import edu.szu.agent.observability.Tracer;
+import edu.szu.agent.retry.RetryPolicies;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
@@ -13,6 +25,9 @@ import picocli.CommandLine.Spec;
 import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
@@ -103,20 +118,63 @@ public class VenueCommand implements Callable<Integer> {
                 ConfigManager.getInstance().loadEnvFile(envPath);
             }
 
-            // TODO: load config, resolve credentials, construct BookingRequest,
-            //       call VenueBookingClient in subsequent slices.
-            // For now: --dry-run returns a stub success.
+            // Build effective env: env-file values override process env
+            Map<String, String> effectiveEnv = new LinkedHashMap<>(System.getenv());
+            if (envFile != null) {
+                effectiveEnv.putAll(ConfigManager.getInstance().envFileProps());
+            }
 
-            ObjectNode data = JSON.createObjectNode();
-            data.put("venueName", "dry-run-stub");
-            data.put("confirmation", "DRY-RUN");
+            // Dry-run: skip credential resolution and real browser flow
+            if (dryRun) {
+                ObjectNode data = JSON.createObjectNode();
+                data.put("venueName", "dry-run-stub");
+                data.put("confirmation", "DRY-RUN");
+                long elapsed = System.currentTimeMillis() - startMs;
+                out.println(formatResult(true, data, null, null, traceId, elapsed));
+                return 0;
+            }
+
+            // Resolve credentials (per ADR-0005 D1: process env > env-file > Skill injection)
+            Account account = AccountResolver.resolve(username, effectiveEnv);
+
+            BookingRequest bookingRequest = BookingRequest.builder()
+                .username(username)
+                .campus(Campus.valueOf(campus.toUpperCase()))
+                .sport(Sport.valueOf(sport.toUpperCase()))
+                .date(LocalDate.now().plusDays(dateOffset))
+                .timeSlot(parseTimeSlot(timeSlot))
+                .preferredVenueIndex(preferredVenueIndex)
+                .build();
+
+            ConfigManager.getInstance().load();
+            VenueBookingClient bookingClient = new VenueBookingClient(
+                account,
+                ConfigManager.getInstance().browser(),
+                RetryPolicies.defaultBooking());
+
+            BookingResult result = bookingClient.book(bookingRequest);
 
             long elapsed = System.currentTimeMillis() - startMs;
-            out.println(formatResult(true, data, null, null, traceId, elapsed));
-            return 0;
+            return formatAndOutput(out, result, traceId, elapsed);
+        } catch (AccountResolutionException e) {
+            long elapsed = System.currentTimeMillis() - startMs;
+            out.println(formatResult(false, null,
+                "CREDENTIAL_NOT_FOUND", e.getMessage(), traceId, elapsed));
+            return 3;
+        } catch (BookingException e) {
+            long elapsed = System.currentTimeMillis() - startMs;
+            out.println(formatResult(false, null,
+                e.code().name(), e.getMessage(), traceId, elapsed));
+            return exitCodeFor(e.code());
+        } catch (IllegalArgumentException e) {
+            long elapsed = System.currentTimeMillis() - startMs;
+            out.println(formatResult(false, null,
+                "INVALID_REQUEST", e.getMessage(), traceId, elapsed));
+            return 2;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startMs;
-            out.println(formatResult(false, null, "UNKNOWN", e.getMessage(), traceId, elapsed));
+            out.println(formatResult(false, null,
+                "UNKNOWN", e.getMessage(), traceId, elapsed));
             return 1;
         }
     }
@@ -159,5 +217,44 @@ public class VenueCommand implements Callable<Integer> {
         sb.append("Trace: ").append(traceId).append('\n');
         sb.append("Elapsed: ").append(elapsedMs).append("ms");
         return sb.toString();
+    }
+
+    private int formatAndOutput(PrintWriter out, BookingResult result,
+                                String traceId, long elapsedMs) {
+        if (result instanceof BookingResult.Success s) {
+            ObjectNode data = JSON.createObjectNode();
+            data.put("venueName", s.venueName());
+            data.put("confirmation", s.confirmation());
+            out.println(formatResult(true, data, null, null, traceId, elapsedMs));
+            return 0;
+        } else if (result instanceof BookingResult.Failure f) {
+            out.println(formatResult(false, null,
+                f.code().name(), f.message(), traceId, elapsedMs));
+            return exitCodeFor(f.code());
+        }
+        out.println(formatResult(false, null, "UNKNOWN", "unexpected result type",
+            traceId, elapsedMs));
+        return 1;
+    }
+
+    private static TimeSlot parseTimeSlot(String raw) {
+        if (raw == null || !raw.contains("-")) {
+            throw new IllegalArgumentException(
+                "Invalid time-slot format (expected HH:mm-HH:mm): " + raw);
+        }
+        String[] parts = raw.split("-", 2);
+        return new TimeSlot(parts[0].trim(), parts[1].trim());
+    }
+
+    private static int exitCodeFor(ErrorCode code) {
+        return switch (code.severity()) {
+            case LOW -> 2;      // param error
+            case MEDIUM -> 1;   // business failure
+            case HIGH -> switch (code) {
+                case BROWSER_CRASH -> 4;
+                default -> 1;
+            };
+            case CRITICAL -> 3; // env / account error
+        };
     }
 }
