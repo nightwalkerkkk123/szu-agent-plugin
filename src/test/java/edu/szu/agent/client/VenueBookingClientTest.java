@@ -1,5 +1,6 @@
 package edu.szu.agent.client;
 
+import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.domain.*;
 import edu.szu.agent.error.BookingException;
@@ -44,12 +45,14 @@ class VenueBookingClientTest {
     private RetryPolicy noRetry;
     private VenueBookingClient client;
     private BookingRequest request;
+    private Account account;
 
     @BeforeEach
     void setUp() {
         Tracer.getInstance().reset();
         noRetry = RetryPolicies.quickFix();
-        client = new VenueBookingClient(browser, noRetry);
+        account = new Account("2023150090", "test-pwd", "test-user");
+        client = new VenueBookingClient(account, browser, noRetry);
         request = BookingRequest.builder()
             .username("2023150090")
             .campus(Campus.YUEHAI)
@@ -181,7 +184,7 @@ class VenueBookingClientTest {
 
         // Use a policy that retries once
         RetryPolicy retryOnce = RetryPolicies.login();
-        VenueBookingClient retryClient = new VenueBookingClient(browser, retryOnce);
+        VenueBookingClient retryClient = new VenueBookingClient(account, browser, retryOnce);
 
         BookingResult result = retryClient.book(request);
 

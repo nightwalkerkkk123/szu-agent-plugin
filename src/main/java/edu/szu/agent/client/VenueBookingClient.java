@@ -1,10 +1,9 @@
 package edu.szu.agent.client;
 
+import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
-import edu.szu.agent.domain.Campus;
-import edu.szu.agent.domain.Sport;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 import edu.szu.agent.observability.Tracer;
@@ -52,15 +51,26 @@ public class VenueBookingClient {
     static final String SEL_VENUE_LIST = ".venue-list";
     static final String SEL_CONFIRM_BUTTON = "#confirm-btn";
     static final String EHALL_BASE_URL = "https://ehall.szu.edu.cn";
+    // Design Pattern: Adapter (adapts Playwright to BrowserLifecycle)
+    // 编程技术: 泛型 / 枚举 / 注解 / 重载 / 抽象类 / Lambda+Stream
 
+    // ---- CAS login selectors ----
+    static final String SEL_USERNAME = "#username";
+    static final String SEL_PASSWORD = "#password";
+    static final String SEL_LOGIN_SUBMIT = "button[type='submit'], input[type='submit']";
+    static final String CAS_LOGIN_URL = EHALL_BASE_URL + "/login";
+
+    private final Account account;
     private final BrowserLifecycle browser;
     private final RetryPolicy retryPolicy;
 
     /**
+     * @param account      resolved credentials (from AccountResolver)
      * @param browser      the browser adapter (injected by ConfigManager.browser())
      * @param retryPolicy  retry policy for the booking flow
      */
-    public VenueBookingClient(BrowserLifecycle browser, RetryPolicy retryPolicy) {
+    public VenueBookingClient(Account account, BrowserLifecycle browser, RetryPolicy retryPolicy) {
+        this.account = Objects.requireNonNull(account, "account");
         this.browser = Objects.requireNonNull(browser, "browser");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
     }
@@ -71,6 +81,10 @@ public class VenueBookingClient {
      * <p>The caller is responsible for closing the browser after this method
      * returns (success or failure). This method guarantees
      * {@link BrowserLifecycle#close()} is called in a finally block.
+     *
+     * <p>Step 0: CAS login (per ADR-0005 D1 — credentials come from
+     * {@code AccountResolver} three-layer lookup).
+     * Steps 1–6: campus → sport → time slot → venue → confirm.
      *
      * @param request the booking request (non-null, fully populated)
      * @return {@link BookingResult.Success} on confirmation,
@@ -118,7 +132,10 @@ public class VenueBookingClient {
             request.date(),
             request.timeSlot());
 
-        // Step 1: Navigate to ehall
+        // Step 0: CAS login (per ADR-0005 D1)
+        doLogin();
+
+        // Step 1: Navigate to ehall booking page
         browser.navigateTo(EHALL_BASE_URL + "/booking");
 
         // Step 2: Select campus
@@ -138,6 +155,19 @@ public class VenueBookingClient {
 
         log.info("Booking confirmed: venue={}", venueName);
         return new BookingResult.Success(venueName, "CONFIRMED-" + System.currentTimeMillis());
+    }
+
+    /**
+     * Performs CAS login — Step 0 of the booking flow.
+     * Navigates to CAS login page, fills credentials, submits.
+     */
+    private void doLogin() {
+        log.info("Logging in as {}", account.studentId());
+        browser.navigateTo(CAS_LOGIN_URL);
+        browser.fill(SEL_USERNAME, account.studentId());
+        browser.fill(SEL_PASSWORD, account.password());
+        browser.click(SEL_LOGIN_SUBMIT);
+        log.info("CAS login submitted for {}", account.studentId());
     }
 
     private void selectTimeSlot(BookingRequest request) {

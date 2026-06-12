@@ -2,6 +2,9 @@ package edu.szu.agent.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import edu.szu.agent.account.Account;
+import edu.szu.agent.account.AccountResolutionException;
+import edu.szu.agent.account.AccountResolver;
 import edu.szu.agent.client.VenueBookingClient;
 import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.domain.BookingRequest;
@@ -22,6 +25,8 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
@@ -112,10 +117,6 @@ public class VenueCommand implements Callable<Integer> {
                 ConfigManager.getInstance().loadEnvFile(envPath);
             }
 
-            // TODO: load config, resolve credentials, construct BookingRequest,
-            //       call VenueBookingClient in subsequent slices.
-            // For now: --dry-run returns a stub success.
-
             if (dryRun) {
                 ObjectNode data = JSON.createObjectNode();
                 data.put("venueName", "dry-run-stub");
@@ -126,7 +127,15 @@ public class VenueCommand implements Callable<Integer> {
                 return 0;
             }
 
-            // Real booking flow
+            // Build effective env: env-file values override process env (same precedence as ConfigManager)
+            Map<String, String> effectiveEnv = new LinkedHashMap<>(System.getenv());
+            if (envFile != null) {
+                effectiveEnv.putAll(ConfigManager.getInstance().envFileProps());
+            }
+
+            // Resolve credentials (per ADR-0005 D1: process env > env-file > Skill injection)
+            Account account = AccountResolver.resolve(username, effectiveEnv);
+
             BookingRequest bookingRequest = BookingRequest.builder()
                 .username(username)
                 .campus(Campus.valueOf(campus.toUpperCase()))
@@ -138,6 +147,7 @@ public class VenueCommand implements Callable<Integer> {
 
             ConfigManager.getInstance().load();
             VenueBookingClient bookingClient = new VenueBookingClient(
+                account,
                 ConfigManager.getInstance().browser(),
                 edu.szu.agent.retry.RetryPolicies.defaultBooking());
 
@@ -145,6 +155,11 @@ public class VenueCommand implements Callable<Integer> {
 
             long elapsed = System.currentTimeMillis() - startMs;
             return formatAndOutput(out, result, traceId, elapsed);
+        } catch (AccountResolutionException e) {
+            long elapsed = System.currentTimeMillis() - startMs;
+            out.println(formatResult(false, null,
+                "CREDENTIAL_NOT_FOUND", e.getMessage(), traceId, elapsed));
+            return 3; // env error (same as missing env-file)
         } catch (BookingException e) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(formatResult(false, null,
