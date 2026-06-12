@@ -70,10 +70,10 @@
 
 #### F3. 浏览器适配器(适配器模式)
 
-- **F3.1** `BrowserLifecycle` 抽象接口:`launch / navigate / click / type / screenshot / close`
+- **F3.1** `BrowserLifecycle` 抽象接口(10 方法,见 ADR-0002 D1):`open / close / navigateTo / click / fill / isVisible / textOf / allTextOf / currentUrl / screenshot`
 - **F3.2** `PlaywrightBrowserAdapter` 实现该接口,内部封装 Playwright Java 绑定,**真演示唯一入口**
 - **F3.3** `FakeBrowser` 内存实现,**仅供单元测试夹具使用,不出现在课堂演示**
-- **F3.4** 业务层(`VenueBookingClient`)只依赖 `BrowserLifecycle`,不感知具体浏览器
+- **F3.4** 业务层只依赖 `BrowserLifecycle`,不感知具体浏览器
 
 #### F4. 配置 / 日志 / 追踪 / 错误
 

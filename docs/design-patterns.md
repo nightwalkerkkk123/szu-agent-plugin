@@ -383,16 +383,22 @@ edu.szu.agent.browser.FakeBrowser               (测试适配器,仅单元测试
 ### 类图
 
 ```
-BrowserLifecycle  ────────────── «interface»
-  + launch(): void
-  + navigate(url): void
-  + click(selector): void
-  + type(selector, text): void
-  + screenshot(): byte[]
+BrowserLifecycle  ────────────── «interface»  (10 methods, ADR-0002 D1)
+  + open(): void
   + close(): void
+  + navigateTo(url): void
+  + click(selector): void
+  + fill(selector, value): void
+  + isVisible(selector): boolean
+  + textOf(selector): String
+  + allTextOf(selector): List<String>
+  + currentUrl(): String
+  + screenshot(absolutePath): void
 
 PlaywrightBrowserAdapter  ──► BrowserLifecycle
   - playwright: Playwright
+  - browser: Browser
+  - page: Page
 
 FakeBrowser  ──► BrowserLifecycle
   - mockState: Map<String, Object>
@@ -402,69 +408,84 @@ FakeBrowser  ──► BrowserLifecycle
 
 ```java
 // Design Pattern: Adapter
-// 编程技术: 抽象类 / 泛型 / 注解
+// 编程技术: 接口 + 泛型 + Java 21 record
 public interface BrowserLifecycle {
-    void launch();
-    void navigate(String url);
-    void click(String selector);
-    void type(String selector, String text);
-    byte[] screenshot();
+    void open();
     void close();
+    void navigateTo(String url);
+    void click(String selector);
+    void fill(String selector, String value);
+    boolean isVisible(String selector);
+    String textOf(String selector);
+    List<String> allTextOf(String selector);
+    String currentUrl();
+    void screenshot(String absolutePath);
 }
 ```
 
 ```java
 // Design Pattern: Adapter
-// 编程技术: 抽象类 / Lambda
+// 编程技术: 不可变构造器注入 + 显式状态管理
 public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
 
-    private Playwright playwright;
+    private final Playwright playwright;
     private Browser browser;
     private Page page;
 
-    @Override
-    public void launch() {
-        this.playwright = Playwright.create();
-        this.browser = playwright.chromium().launch(
-            new BrowserType.LaunchOptions().setHeadless(true)
-        );
-        this.page = browser.newPage();
+    public PlaywrightBrowserAdapter(Playwright playwright) {
+        this.playwright = Objects.requireNonNull(playwright, "playwright");
     }
 
     @Override
-    public void navigate(String url) {
-        page.navigate(url);
-    }
-
-    @Override
-    public void click(String selector) {
-        page.click(selector);
-    }
-
-    @Override
-    public void type(String selector, String text) {
-        page.fill(selector, text);
-    }
-
-    @Override
-    public byte[] screenshot() {
-        return page.screenshot();
+    public void open() {
+        browser = playwright.chromium().launch(
+            new BrowserType.LaunchOptions().setHeadless(true));
+        page = browser.newPage();
     }
 
     @Override
     public void close() {
-        page.close();
-        browser.close();
-        playwright.close();
+        if (page != null) { page.close(); page = null; }
+        if (browser != null) { browser.close(); browser = null; }
+    }
+
+    @Override
+    public void navigateTo(String url) { page.navigate(url); }
+
+    @Override
+    public void click(String selector) { page.locator(selector).click(); }
+
+    @Override
+    public void fill(String selector, String value) { page.locator(selector).fill(value); }
+
+    @Override
+    public boolean isVisible(String selector) { return page.locator(selector).isVisible(); }
+
+    @Override
+    public String textOf(String selector) {
+        String text = page.locator(selector).textContent();
+        return text == null ? "" : text;
+    }
+
+    @Override
+    public List<String> allTextOf(String selector) { return page.locator(selector).allTextContents(); }
+
+    @Override
+    public String currentUrl() { return page.url(); }
+
+    @Override
+    public void screenshot(String absolutePath) {
+        page.screenshot(new Page.ScreenshotOptions().setPath(Paths.get(absolutePath)));
     }
 }
 ```
 
 ### 为什么选它
 
-- 业务层(`VenueBookingClient`)只依赖 `BrowserLifecycle` 接口,不感知 Playwright 的具体 API
+- 业务层只依赖 `BrowserLifecycle` 接口(10 方法),不感知 Playwright fluent API
 - 业务层与第三方浏览器库解耦 — 换 Selenium / 其他实现只需新写一个 Adapter
 - `FakeBrowser` 单元测试夹具,CI 环境无需安装 Playwright 即可跑业务测试
+- ADR-0002 D2 统一异常映射:Playwright TimeoutError → `NETWORK_TIMEOUT`, selector 错 → `ELEMENT_NOT_FOUND`
 
 ### 局限性
 

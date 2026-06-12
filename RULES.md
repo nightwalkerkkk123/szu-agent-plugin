@@ -46,8 +46,13 @@
 
 ```java
 // Design Pattern: Adapter
-// 编程技术: sealed interface / Lambda
-public sealed interface BrowserLifecycle permits PlaywrightBrowserAdapter, FakeBrowser { ... }
+// 编程技术: 接口 / 泛型
+public interface BrowserLifecycle {
+    void open();
+    void close();
+    void navigateTo(String url);
+    // ...
+}
 ```
 
 > **历史变更**(ADR-0007 D1):原 `BrowserFactory` / Static Factory 已删除,改 `ConfigManager` 配置注入。5 模式 → 4 模式。

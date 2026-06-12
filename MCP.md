@@ -134,7 +134,6 @@
           "sport": { "type": "string" },
           "date": { "type": "string", "format": "date", "description": "ISO 8601 格式,如 2026-06-12" },
           "timeSlot": { "type": "object", "properties": { "start": {"type":"string"}, "end": {"type":"string"} } },
-          "dryRun": { "type": "boolean" }
         },
         "required": ["username", "campus", "sport", "date", "timeSlot"]
       }

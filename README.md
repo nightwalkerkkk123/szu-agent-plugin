@@ -34,21 +34,18 @@
 
 ## 项目状态
 
-**当前阶段：方向已校准（ADR-0001, 2026-06-11 Accepted）**
+**当前阶段：Phase 2 完成，Phase 3 进行中（ADR-0001/0002/0005/0006/0007 Accepted）**
 
-项目方向已通过 grill 拷问重新对齐，详见 [`docs/adr/0001-project-direction-recalibration.md`](docs/adr/0001-project-direction-recalibration.md)：
-- **真演示优先**：课堂演示真跑 Playwright 完整预约流程（不再以 `--dry-run` 为默认）
-- **5 模式重选**：Builder / Singleton / Strategy / Adapter(4 模式,见 ADR-0007)
-- **业务聚焦**：P0 仅 `book` 一个业务跑通；`CampusTask<T>` 保留为 P1 扩展点
+项目已完成 Phase 0骨架（pom.xml + 13 packages + Logback）和 Phase 1 核心域（domain/ + error/ + retry/ + matcher/），Phase 2 浏览器抽象（BrowserLifecycle 10 方法 + PlaywrightBrowserAdapter）已完成。
 
 **实施路径**（5 天）：
 
 | Phase | 时长 | 内容 | 状态 |
 |---|---|---|---|
-| P0 | 0.5d | 骨架（pom.xml + 包结构 + Logback + dotenv-java） | 待开始 |
-| P1 | 1.0d | 无依赖基础（domain/ + error/ + retry/ + matcher/） | 待开始 |
-| P2 | 1.0d | 浏览器抽象（browser/ + selectors/） | 待开始 |
-| P3 | 1.0d | 业务编排（task/ + client/ + config/ + observability/ + account/） | 待开始 |
+| P0 | 0.5d | 骨架（pom.xml + 包结构 + Logback + dotenv-java） | ✅ 完成 |
+| P1 | 1.0d | 无依赖基础（domain/ + error/ + retry/ + matcher/） | ✅ 完成 |
+| P2 | 1.0d | 浏览器抽象（browser/ + BrowserLifecycle 10 方法） | ✅ 完成 |
+| P3 | 1.0d | 业务编排（client/ + config/ + observability/ + account/） | 🔄 进行中 |
 | P4 | 1.0d | CLI + Wrapper（cli/ + skill/ + mcp/） | 待开始 |
 | P5 | 0.5d | 收尾（测试 80% + 报告 + 演示脚本） | 待开始 |
 
@@ -62,7 +59,7 @@
 | **P1 扩展接口** | `CampusTask<T>` 扩展点、公文通查询、畅课任务、成长方案、邮件草稿、企业微信摘要 | roadmap，不实现 |
 | **P2 未来** | 校园小巴、电费、报修、Dashboard、任务队列、Docker | 不做 |
 
-## 快速开始（待实现后可用）
+## 快速开始
 
 ```bash
 # 编译
@@ -91,11 +88,11 @@ Agent 端只需 `exec` 本 CLI 并解析 stdout JSON / 退出码。
 ## 架构概览
 
 ```
-com.szu.agent
+edu.szu.agent
 ├── Main.java                          # picocli 入口
-├── cli/           BookingCommand / SkillCommand / McpCommand(第一性工作单元,ADR-0001 D1)
-├── domain/        Campus / Sport / TimeSlot / BookingRequest(Builder) / BookingResult(sealed)
-├── browser/       BrowserLifecycle(sealed, 6 方法,见 ADR-0007 D3) + PlaywrightBrowserAdapter + FakeBrowser
+├── cli/           Main / BookingCommand(第一性工作单元,ADR-0001 D1)
+├── domain/        Campus / Sport / TimeSlot / BookingRequest(Builder) / BookingResult
+├── browser/       BrowserLifecycle(10 方法,见 ADR-0002 D1) + PlaywrightBrowserAdapter
 │   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager 配 browser.kind 注入
 ├── matcher/       Matcher<T>(Strategy) + AbstractMatcher + Exact/Contains/Regex/VenueIndex
 ├── retry/         RetryPolicy(Strategy,3 实现:FixedDelay/ExponentialBackoff/NoRetry,见 ADR-0007 D2) + RetryPolicies
@@ -103,9 +100,8 @@ com.szu.agent
 ├── config/        ConfigManager(单例,Singleton)
 ├── observability/ Tracer(单例,Singleton) + RunRecord(JSON 落盘)
 ├── account/       Account + AccountResolver(3 层凭证,ADR-0005 D1) + EnvVarName
-├── selectors/     Select.Login / Campus / Sport / ...(ehall selector 常量集中)
-├── client/        BookingClient(P0 唯一业务)
-├── task/          CampusTask<T> + BookingTask(P1 扩展点,代码层保留)
+├── client/        VenueBookingClient(P0 唯一业务,Phase 3)
+├── task/          CampusTask<T>(P1 扩展点,代码层保留)
 ├── skill/         Skill + SkillManager(P1 薄壳 wrapper)
 └── mcp/           MCPToolProvider(P1 薄壳 wrapper,ADR-0001 D5)
 ```
@@ -116,7 +112,7 @@ com.szu.agent
 > `CloakBrowserAdapter` 改名为 `PlaywrightBrowserAdapter`。
 > `CampusTask<T>` 保留为 P1 扩展点(不算第 6 个模式)。
 
-## 设计模式（4 种）
+## 设计模式（4 种，ADR-0001 D9 + ADR-0007 D1）
 
 | 模式 | 落点 | 作用 |
 |---|---|---|
@@ -137,7 +133,7 @@ com.szu.agent
 | **枚举** | `TaskStatus` / `AccountState` / `ErrorCode`（每个枚举值携带元数据） |
 | **注解** | `@AgentTool` 标记可暴露给 Agent 的方法，运行期反射生成 Skill / MCP schema |
 | **重载** | `BookingRequest.Builder.addAccount(String)` / `.addAccount(Account)` 等多形式构造 |
-| **抽象类** | `AbstractBrowser` 模板方法，子类实现 `doLaunch` / `doClose` |
+| **抽象类** | `AbstractMatcher<T>` 抽象基类，`Matcher<T>` 接口 default 方法组合 |
 | **Lambda + Stream** | 账号过滤、结果聚合、观察者通知 |
 
 ## 局限性分析与改进
@@ -206,6 +202,10 @@ szu-agent-plugin/
 ├── RULES.md                 项目规则汇总
 ├── WORKING-CONTEXT.md       工作上下文
 ├── CONTRIBUTING.md          教师评分指南
+├── pom.xml                  Maven 构建配置
+├── dependency-reduced-pom.xml
+├── .env.example             环境变量模板
+├── logs/                    运行时日志
 ├── docs/
 │   ├── PRD.md               产品需求文档
 │   ├── design-patterns.md   设计模式应用清单
@@ -216,19 +216,22 @@ szu-agent-plugin/
 │   ├── HARNESS_BACKLOG.md   Harness 改进 backlog
 │   ├── plans/               功能规划说明
 │   ├── templates/           Story packet 模板
-│   ├── stories/             Story packets（待填充）
 │   └── adr/                 Architecture Decision Records
-│       └── 0001-project-direction-recalibration.md  方向校准(Accepted)
+│       ├── 0001-project-direction-recalibration.md
+│       ├── 0002-browser-lifecycle-and-playwright-adapter.md
+│       ├── 0005-credential-and-logging-enforcement.md
+│       ├── 0006-phase1-domain-error-retry-matcher.md
+│       └── 0007-architecture-deepening.md
 ├── harness-records/         持久化记录（类比 repository-harness SQLite）
 │   ├── traces/              每次任务的 trace 记录
 │   └── friction/            摩擦记录
-├── design/                  提案文档（待创建）
-├── configs/                 业务配置模板（待创建）
-├── pom.xml                  Maven 构建配置（待创建）
-├── src/                     Java 源码（待实现）
+├── src/
+│   ├── main/java/edu/szu/agent/   (38 source files, 13 packages)
+│   ├── main/resources/
+│   └── test/java/edu/szu/agent/   (20 test files)
 └── .claude/                 Claude Code subagent 基建
 
-## 依赖（待配置）
+## 依赖
 
 - Java 21
 - Maven 3.9+

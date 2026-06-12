@@ -69,10 +69,10 @@ java -jar target/szu-agent-plugin.jar skill list --format json
 | **枚举** | `grep -rn "enum" src/` 应找到 `ErrorCode`、`TaskStatus`、`AccountState`，每个枚举值携带方法 |
 | **注解** | `grep -rn "@interface" src/` 应找到 `@AgentTool` 自定义注解 |
 | **重载** | `grep -rn "public.*(" src/` 应找到同名方法不同参数形式 |
-| **抽象类** | `grep -rn "abstract class" src/` 应找到抽象浏览器基类或类似 |
+| **抽象类** | `grep -rn "abstract class" src/` 应找到 `AbstractMatcher<T>` 抽象基类 |
 | **Lambda + Stream** | `grep -rn "\.stream\(\)" src/` 应找到列表过滤/映射/聚合 |
 
-### 设计模式（≥5 种，每种必须在代码中显式可见）
+### 设计模式（4 种，每种必须在代码中显式可见）
 
 在 `src/main/java/` 下搜索：
 
@@ -80,14 +80,14 @@ java -jar target/szu-agent-plugin.jar skill list --format json
 grep -rn "Design Pattern:" src/
 ```
 
-预期找到至少 5 个标注（**按 ADR-0001 D9 落点**）：
+预期找到至少 4 个标注（**按 ADR-0001 D9 + ADR-0007 D1 落点**）：
 
 | 模式 | 类 |
 |---|---|
 | Builder | `BookingRequest.Builder` |
 | 单例 | `ConfigManager`、`Tracer` |
-| 策略 | `Matcher`、`RetryPolicy` |
-| 适配器 | `PlaywrightBrowserAdapter`、`FakeBrowser` |
+| 策略 | `Matcher<T>`、`RetryPolicy` |
+| 适配器 | `PlaywrightBrowserAdapter` |
 
 > ADR-0007 D1:删 Static Factory / `BrowserFactory`,改 `ConfigManager` 配置注入,5 模式 → 4 模式
 
@@ -146,56 +146,17 @@ grep -rn "Design Pattern:" src/
 
 ## 当前实现状态
 
-本项目**方向已校准**（ADR-0001, 2026-06-11 Accepted），准备按 5 天路径启动编码。
-所有设计模式、编程技术的落点已按 ADR 重选：
-- `docs/adr/0001-project-direction-recalibration.md` — 方向校准
+本项目 Phase 0 骨架和 Phase 1 核心域已完成（2026-06-12），Phase 2 浏览器抽象进行中。
+38 个源码文件，20 个测试文件，`mvn test`全部通过。
+
+设计模式已按 ADR 重选（4 种）：
+- `docs/adr/0001-project-direction-recalibration.md` — 方向校准（Accepted）
+- `docs/adr/0002-browser-lifecycle-and-playwright-adapter.md` — BrowserLifecycle 10 方法（Accepted）
+- `docs/adr/0005-credential-and-logging-enforcement.md` — 凭证流转（Accepted）
+- `docs/adr/0006-phase1-domain-error-retry-matcher.md` — Phase 1 子决定（Accepted）
+- `docs/adr/0007-architecture-deepening.md` —架构深化（Accepted）
 - `docs/PRD.md` — 产品需求（含 ADR 校准声明）
-- `docs/design-patterns.md` — 5 模式落点（已重选）
+- `docs/design-patterns.md` — 4 模式落点（已同步）
 - `docs/system-map.md` — 系统架构 + 局限性分析（已同步）
-- `CLAUDE.md` — 5 天实施路径
 
-实施完成后的目录结构（按 ADR-0001）：
-
-```
-src/main/java/edu/szu/agent/
-├── task/                          # P1 扩展点
-│   ├── CampusTask.java
-│   ├── TaskResult.java
-│   ├── TaskStatus.java
-│   └── TaskExecutor.java
-├── domain/
-│   ├── Campus.java, Sport.java, TimeSlot.java, Venue.java
-│   └── BookingRequest.java        # Builder
-├── client/
-│   └── VenueBookingClient.java    # P0 唯一业务
-├── browser/
-│   ├── BrowserLifecycle.java
-│   ├── PlaywrightBrowserAdapter.java  # 真演示入口
-│   └── FakeBrowser.java              # 测试夹具
-│   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager 注入
-├── config/ConfigManager.java          # 单例
-├── account/                           # P1 扩展
-├── retry/
-│   ├── RetryPolicy.java           # 策略接口(OQ4 有界)
-│   ├── FixedDelayRetry.java
-│   └── ExponentialBackoff.java
-├── error/
-│   ├── ErrorCode.java             # 枚举自带元数据
-│   └── BookingException.java      # 密封继承(OQ3)
-├── matcher/
-│   ├── Matcher.java               # 策略接口
-│   ├── TextMatcher.java
-│   ├── RegexMatcher.java
-│   ├── ContainsMatcher.java
-│   └── CompositeMatcher.java
-├── observability/
-│   ├── Tracer.java                # 单例
-│   └── MetricsCollector.java
-├── skill/                              # P1 薄壳 wrapper
-├── mcp/MCPToolProvider.java           # P1 薄壳 wrapper
-└── cli/
-    ├── Main.java                  # picocli 入口
-    └── BookingCommand.java        # P0 唯一业务命令
-```
-
-> ⚠️ `AgentToolPlatform` Facade / `ClientFactory` / `ErrorClassifier` / `NoticeQueryClient` / `ChaoxingCourseClient` / `GrowthPlanClient` / `CloakBrowserAdapter` 已删除/重命名,**评分 grep 不应再找到这些类名**。
+> ⚠️ `AgentToolPlatform` Facade / `ClientFactory` / `ErrorClassifier` / `NoticeQueryClient` / `ChaoxingCourseClient` / `GrowthPlanClient` / `CloakBrowserAdapter` 已删除/重命名，**评分 grep 不应再找到这些类名**。
