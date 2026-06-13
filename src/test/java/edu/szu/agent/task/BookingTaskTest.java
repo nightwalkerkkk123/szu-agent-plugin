@@ -123,7 +123,14 @@ class BookingTaskTest {
      */
     private static BookingTask newTask() {
         BrowserLifecycle mockBrowser = mock(BrowserLifecycle.class);
-        RetryPolicy noRetry = action -> action.get();
+        // RetryPolicy's SAM is a generic method <T> T execute(Supplier<T>),
+        // so a lambda can't infer T — use an anonymous class (see ADR-0006 §3.3).
+        RetryPolicy noRetry = new RetryPolicy() {
+            @Override
+            public <T> T execute(java.util.function.Supplier<T> action) {
+                return action.get();
+            }
+        };
         Account placeholder = new Account("p", "p", "test");
         VenueBookingClient client = new VenueBookingClient(
             placeholder, mockBrowser, noRetry);
