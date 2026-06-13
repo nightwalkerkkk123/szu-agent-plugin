@@ -14,8 +14,14 @@ import java.util.List;
  *   <li>{@link #fill(String, String)} — record the field
  *   <li>{@link #click(String)} — record the click
  *   <li>{@link #isVisible(String)} — always returns {@code true}
- *   <li>{@link #allTextOf(String)} — returns {@link #venueOptions}
- *       (default: ["网球场1号", "网球场2号", "网球场3号"])
+ *   <li>{@link #allTextOf(String)} — returns the configured option
+ *       list for the matching selector prefix. The 7-step pipeline
+ *       uses two distinct selector families:
+ *       <ul>
+ *         <li>time-slot selectors (containing {@code "time"}) → {@link #timeSlots}
+ *         <li>venue selectors (containing {@code "venue"} or {@code "li"} alone) → {@link #venueOptions}
+ *       </ul>
+ *       Override either constructor to customize.
  *   <li>{@link #textOf(String)} / {@link #currentUrl()} — return placeholder
  *   <li>{@link #screenshot(String)} — no-op
  * </ul>
@@ -33,16 +39,23 @@ import java.util.List;
 public class FakeBrowser implements BrowserLifecycle {
 
     private final List<String> venueOptions;
+    private final List<String> timeSlots;
     private final List<String> clicked = new ArrayList<>();
     private final List<String> filled = new ArrayList<>();
     private boolean opened;
 
     public FakeBrowser() {
-        this(List.of("网球场1号", "网球场2号", "网球场3号"));
+        this(List.of("网球场1号", "网球场2号", "网球场3号"),
+             List.of("19:00-20:00", "20:00-21:00"));
     }
 
     public FakeBrowser(List<String> venueOptions) {
+        this(venueOptions, List.of("19:00-20:00", "20:00-21:00"));
+    }
+
+    public FakeBrowser(List<String> venueOptions, List<String> timeSlots) {
         this.venueOptions = List.copyOf(venueOptions);
+        this.timeSlots = List.copyOf(timeSlots);
     }
 
     @Override
@@ -82,6 +95,11 @@ public class FakeBrowser implements BrowserLifecycle {
 
     @Override
     public List<String> allTextOf(String selector) {
+        // Dispatch by selector content: time-slot selectors return timeSlots;
+        // everything else (venue selectors, generic li queries) returns venueOptions.
+        if (selector != null && (selector.contains("time") || selector.contains("slot"))) {
+            return timeSlots;
+        }
         return venueOptions;
     }
 

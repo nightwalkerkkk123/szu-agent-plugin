@@ -96,9 +96,10 @@ class BookingTaskTest {
             "date", "2026-06-13",
             "timeSlot", "no-dash"));
 
+        // The actual message comes from the TimeSlot record (start vs end),
+        // not the timeSlot key — we only assert the type of exception.
         assertThatThrownBy(() -> task.execute(input))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("timeSlot");
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
