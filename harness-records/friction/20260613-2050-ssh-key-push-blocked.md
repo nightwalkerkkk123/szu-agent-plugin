@@ -4,6 +4,8 @@
 **Lane:** normal
 **Category:** tool-missing (or: external-credential)
 
+**Status:** ✅ **RESOLVED 2026-06-14** — see Resolution at the bottom
+
 ---
 
 ## What happened
@@ -76,3 +78,54 @@ user must have already done `gh auth login` once.
   another key"
 - Local-master-only state is **not** the same as published
   state; the difference is the user's deployment, not the agent's
+
+---
+
+## Resolution (2026-06-14)
+
+The push was unblocked by switching the remote from SSH to HTTPS
+and letting the `gh` CLI's stored OAuth token handle authentication:
+
+```bash
+# Before: SSH remote, key mapped to wrong GitHub account
+git remote -v
+# origin  git@github.com:nightwalkerkkk123/szu-agent-plugin.git
+
+# After: HTTPS remote, gh's keyring token used
+git remote set-url origin https://github.com/nightwalkerkkk123/szu-agent-plugin.git
+git push origin master
+# To https://github.com/nightwalkerkkk123/szu-agent-plugin.git
+#    7a23146..c832493  master -> master  ✓
+```
+
+**11 commits pushed** in one push:
+```
+c832493  test: add FakeBrowser + BookingTask integration test
+bb87323  feat(p1): add skill/mcp/task thin wrappers
+86d83c7  docs(trace): record Phase 5 cleanup trace + refresh WORKING-CONTEXT
+b7932b2  docs: add grep-evidence.md + grep-runs.sh + fix泛型 annotations
+f3e99f3  feat(scripts): add demo.sh — classroom demo flow
+65a6ef6  docs(patterns): align with 4-pattern decision
+eeff327  docs(design): add 大作业自拟题目 proposal
+87547cf  docs(working-context): mark Phase 1-4 complete
+9c19773  test(cli): add VenueCommandTest
+6cde07c  build(jacoco): add code coverage plugin
+9ac7f15  fix(packaging): remove logback relocation
+```
+
+**Adopted improvement (was: Option C from original proposal)**:
+- Use `gh` CLI exclusively (HTTPS-based auth flow that goes
+  through the user's `gh auth login` session)
+- Avoids SSH key ambiguity entirely
+- Cost: `gh` must be installed and the user must have already
+  done `gh auth login` once
+
+**Future agent guidance**: if `git push origin` fails with
+`Permission denied to <wrong-account>`, before trying random SSH
+keys, check `gh auth status`. If `gh` is logged in as the right
+account, switch the remote to HTTPS and let git's credential
+helper (which delegates to `gh`) handle auth.
+
+**Remote URL is now permanently**:
+`https://github.com/nightwalkerkkk123/szu-agent-plugin.git`
+(documented in WORKING-CONTEXT.md).
