@@ -23,7 +23,8 @@ import java.util.function.Supplier;
  * be able to retry; now we can't."
  *
  * // Design Pattern: Strategy
- * // 编程技术: @FunctionalInterface + 默认方法(orElse 链式组合)
+ * // 编程技术: 泛型 / @FunctionalInterface / Lambda(默认方法 orElse 返回匿名内部类 —
+ * 不可用 Lambda 因为 SAM 是泛型方法 <T> T execute(Supplier<T>),Lambda 推断不到 T)
  *
  * @since 0.1.0
  * @author 王子豪

@@ -15,7 +15,7 @@ import java.util.Objects;
  * false ({@code any()} with zero matchers matches nothing).
  *
  * // Design Pattern: Strategy
- * // 编程技术: @FunctionalInterface + 4 默认方法(Lambda 链式组合)
+ * // 编程技术: 泛型 / @FunctionalInterface / Lambda / Stream(默认方法和 Matchers.all/any)
  *
  * @param <T> the type of value being matched
  * @since 0.1.0
