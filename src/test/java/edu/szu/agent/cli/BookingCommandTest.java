@@ -164,8 +164,7 @@ class BookingCommandTest {
         int exit = runCli("booking", "venue",
             "--campus", "YUEHAI", "--sport", "TENNIS",
             "--time-slot", "19:00-20:00",
-            "--env-file", "/nonexistent/.env",
-            "--dry-run");
+            "--env-file", "/nonexistent/.env");
 
         assertThat(exit).isEqualTo(3);
 

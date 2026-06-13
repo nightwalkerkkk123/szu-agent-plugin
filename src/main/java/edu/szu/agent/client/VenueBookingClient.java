@@ -49,17 +49,16 @@ public class VenueBookingClient {
     private final List<BookingStep> steps;
 
     /**
+     * Production constructor — uses the default 7-step pipeline.
+     *
      * @param account      resolved credentials (from AccountResolver)
      * @param browser      the browser adapter (injected by ConfigManager.browser())
-     * @param retryPolicy retry policy for the booking flow
+     * @param retryPolicy  retry policy for the booking flow
      */
     public VenueBookingClient(Account account,
                                BrowserLifecycle browser,
                                RetryPolicy retryPolicy) {
-        this.account = Objects.requireNonNull(account, "account");
-        this.browser = Objects.requireNonNull(browser, "browser");
-        this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
-        this.steps = List.of(
+        this(account, browser, retryPolicy, List.of(
             new CasLoginStep(),
             new NavigateToBookingStep(),
             new SelectCampusStep(),
@@ -67,7 +66,25 @@ public class VenueBookingClient {
             new SelectTimeSlotStep(),
             new SelectVenueStep(),
             new ConfirmBookingStep()
-        );
+        ));
+    }
+
+    /**
+     * Full DI constructor — for testing with custom step lists.
+     *
+     * @param account      resolved credentials (from AccountResolver)
+     * @param browser      the browser adapter
+     * @param retryPolicy  retry policy for the booking flow
+     * @param steps        the booking steps to execute in order
+     */
+    VenueBookingClient(Account account,
+                        BrowserLifecycle browser,
+                        RetryPolicy retryPolicy,
+                        List<BookingStep> steps) {
+        this.account = Objects.requireNonNull(account, "account");
+        this.browser = Objects.requireNonNull(browser, "browser");
+        this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
+        this.steps = List.copyOf(steps);
     }
 
     /**

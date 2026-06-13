@@ -105,6 +105,17 @@ public class VenueCommand implements Callable<Integer> {
         String traceId = Tracer.getInstance().generateTraceId();
 
         try {
+            // Per ADR-0001 D2: --dry-run is a test fixture only — short-circuit
+            // before any I/O (no AccountResolver, no browser, no env-file).
+            if (dryRun) {
+                ObjectNode data = JSON.createObjectNode();
+                data.put("venueName", "dry-run-stub");
+                data.put("confirmation", "DRY-RUN");
+                long elapsed = System.currentTimeMillis() - startMs;
+                out.println(formatResult(true, data, null, null, traceId, elapsed));
+                return 0;
+            }
+
             // Per ADR-0005 D1: --env-file loads credentials before business logic
             if (envFile != null) {
                 Path envPath = Path.of(envFile);
@@ -122,16 +133,6 @@ public class VenueCommand implements Callable<Integer> {
             Map<String, String> effectiveEnv = new LinkedHashMap<>(System.getenv());
             if (envFile != null) {
                 effectiveEnv.putAll(ConfigManager.getInstance().envFileProps());
-            }
-
-            // Dry-run: skip credential resolution and real browser flow
-            if (dryRun) {
-                ObjectNode data = JSON.createObjectNode();
-                data.put("venueName", "dry-run-stub");
-                data.put("confirmation", "DRY-RUN");
-                long elapsed = System.currentTimeMillis() - startMs;
-                out.println(formatResult(true, data, null, null, traceId, elapsed));
-                return 0;
             }
 
             // Resolve credentials (per ADR-0005 D1: process env > env-file > Skill injection)
