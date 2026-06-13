@@ -37,8 +37,8 @@
 | 测试 | ✅ 213 通过 0 失败 | `mvn test` 2026-06-13T20:44 跑过(worktree) |
 | 覆盖率 | ✅ 84.58% 行 / 84.39% 指令 | `target/site/jacoco/jacoco.csv` 631/746 |
 | 打包 | ✅ `target/szu-agent-plugin.jar` 169MB | `scripts/demo.sh --smoke-only` 跑通 |
-| 4 模式 grep 命中 | ✅ 23 文件 | `docs/grep-evidence.md` 静态守卫 |
-| 6 技术 grep 命中 | ✅ 36 文件 / 38 注释 | `docs/grep-evidence.md` 静态守卫 |
+| 4 模式 grep 命中 | ✅ 24 文件 | `docs/grep-evidence.md` 静态守卫 |
+| 6 技术 grep 命中 | ✅ 46 文件 | `docs/grep-evidence.md` 静态守卫 |
 | 演示脚本 | ✅ `scripts/demo.sh` 4 步 | `bash scripts/demo.sh --smoke-only` 退出 0 |
 | grep 复现脚本 | ✅ `scripts/grep-runs.sh` | `bash scripts/grep-runs.sh` ALL OK |
 | 演示兜底 | ✅ ADR-0001 D8 落实(4 步流程 + HARNESS_BACKLOG ID-002 清理提醒) | `scripts/demo.sh` 内含 4 步流程 |
@@ -59,11 +59,19 @@ eeff327  docs(design): add 大作业自拟题目 proposal document
 9ac7f15  fix(packaging): remove logback relocation to fix RollingFileAppender ClassNotFoundException
 ```
 
-**未做(P1 候选,Phase 6+ 可选)**:
+**P1 wrapper 已做,未提交(2026-06-14)**:
+- `task/CampusTask.java` + `TaskInput.java` + `BookingTask.java` — 抽象层 + 1 示例
+- `skill/Skill.java` + `Skills.java` — 注册中心
+- `mcp/ToolSchema.java` + `MCPToolProvider.java` + `MCPToolCallHandler.java` — MCP 协议
+- `cli/SkillCommand.java` + `MCPCommand.java` + 修改 `Main.java` — 挂子命令
+- 测试:`SkillsTest`、`TaskInputTest`、`MCPToolCallHandlerTest`、`ToolSchemaTest`、`SkillCommandTest`、`BookingTaskTest`(未跑,等用户执行 mvn test)
+- grep 数字: 模式 23 → 24(+1 Singleton),技术 36 → 46(+10,见 grep-evidence §五)
 
-- [ ] `skill/` `mcp/` `task/` 三个空包的薄壳 wrapper(原属 Phase 4 P1,挪到 P1 backlog)
-- [ ] 课堂报告 HTML(`/article-to-html` skill 转 proposal + grep-evidence)
+**未做(用户动作)**:
+
 - [ ] `git push origin master`(用户本机有 owner 凭据时手动执行 — SSH 凭据指向 `Autur-wang`,需切换)
+- [ ] **跑 mvn test + jacoco 验证 P1 wrapper 后覆盖率** — 预计 79.7%(跌破 80% 红线,因 P1 wrapper 演示代码稀释了总量;补救路径见 `harness-records/traces/20260613-204600-phase5-cleanup.md` Friction 5)
+- [ ] 课堂报告 HTML(`/article-to-html` skill 转 proposal + grep-evidence)
 
 ---
 
@@ -82,10 +90,10 @@ eeff327  docs(design): add 大作业自拟题目 proposal document
 | 模式 | grep 命中 | 关键类 |
 |---|---|---|
 | Builder | 1 文件 | `domain.BookingRequest.Builder` |
-| 单例 | 2 文件 | `config.ConfigManager` / `observability.Tracer`(均双检锁 + volatile) |
+| 单例 | 3 文件 | `config.ConfigManager` / `observability.Tracer` / `skill.Skills`(均双检锁 + volatile,P1 增) |
 | 策略 | 18 文件 | `Matcher<T>`(5)+ `RetryPolicy`(3)+ `BookingStep`(9 含 Context) |
 | 适配器 | 2 文件 | `browser.BrowserLifecycle`(目标)+ `PlaywrightBrowserAdapter`(适配) |
-| **合计** | **23 文件** | `docs/grep-evidence.md` 静态守卫 |
+| **合计** | **24 文件** | `docs/grep-evidence.md` 静态守卫 |
 
 > ⚠️ `ErrorClassifier` 已删除(枚举自带元数据);`ClientFactory` 已删除(只 1 个 Skill 无业务价值);
 > `BrowserFactory` 已删除(ADR-0007 D1),改 `ConfigManager` 配 `browser.kind` 注入;
@@ -100,15 +108,15 @@ eeff327  docs(design): add 大作业自拟题目 proposal document
 
 | 技术 | grep 命中 | 关键示例 |
 |---|---|---|
-| 泛型 | 3 文件 | `Matcher<T>` / `RetryPolicy.execute(Supplier<T>)` / `BookingStep<T>` |
-| 枚举 | 13 文件 | `ErrorCode` 12 错误码挂 5 字段元数据 / `Severity` 4 级 / `Campus`/`Sport` |
-| 注解 | 2 文件 | picocli `@Command/@Option/@Spec` 在 CLI 类 |
-| 重载 | 4 文件 | `AccountResolver.resolve` / `ConfigManager.load` / `ExponentialBackoff` / `ContainsMatcher` |
+| 泛型 | 9 文件 | P0: `Matcher<T>` / `RetryPolicy` / `BookingStep<T>` · P1: `Skill<T>` / `CampusTask<T>` / `BookingTask<T>` / `MCPToolCallHandler` / `MCPToolProvider` / `Skills` |
+| 枚举 | 16 文件 | P0: 13 文件 · P1: `MCPToolCallHandler` / `Skills` / `BookingTask` |
+| 注解 | 4 文件 | picocli `@Command/@Option/@Spec/@Parameters` 在 CLI 类(P0 + P1) |
+| 重载 | 4 文件 | `AccountResolver.resolve` / `ConfigManager.load` / `ExponentialBackoff` / `FixedDelay` |
 | 抽象类 | 1 文件 | `AbstractMatcher`(4 个具体 Matcher 继承) |
-| Lambda+Stream | 12 文件 | `Matcher.and/or/negate` / `Matchers.all/any` / `RetryPolicy.orElse` |
-| **合计** | **36 文件 / 38 注释** | `docs/grep-evidence.md` 静态守卫 |
+| Lambda+Stream | 17 文件 | P0: 12 文件 · P1: `SkillCommand` / `MCPCommand` / `MCPToolCallHandler` / `Skills` / `BookingTask` |
+| **合计** | **46 文件** | `docs/grep-evidence.md` 静态守卫 |
 
-> 注: `@FunctionalInterface` 出现在 matcher/retry/matcher,散落在 Strategy 模式命中文件中,未单独计入"注解"类。JUnit 注解在测试代码,未计入。
+> 注: `@FunctionalInterface` 出现在 matcher/retry/task,散落在 Strategy/CampusTask 接口命中文件中,未单独计入"注解"类。JUnit 注解在测试代码,未计入。
 
 ---
 

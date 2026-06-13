@@ -1,5 +1,12 @@
 package edu.szu.agent.cli;
 
+import edu.szu.agent.account.Account;
+import edu.szu.agent.client.VenueBookingClient;
+import edu.szu.agent.config.ConfigManager;
+import edu.szu.agent.retry.RetryPolicies;
+import edu.szu.agent.skill.Skill;
+import edu.szu.agent.skill.Skills;
+import edu.szu.agent.task.BookingTask;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
@@ -7,6 +14,20 @@ import java.util.concurrent.Callable;
 
 /**
  * CLI entry point for SZU Agent Plugin.
+ *
+ * <p>Subcommands:
+ * <ul>
+ *   <li>{@code booking venue ...} — P0 business (Playwright real run)
+ *   <li>{@code skill list|call} — Skill registry access (P1)
+ *   <li>{@code mcp list|call} — MCP protocol surface (P1)
+ * </ul>
+ *
+ * <p>On startup, the main task(s) are eagerly registered with the
+ * Skills singleton so {@code skill list} / {@code mcp list} reflect
+ * the current build. The {@link BookingTask} is constructed with
+ * a default {@link VenueBookingClient} using {@link RetryPolicies#defaultBooking()}
+ * and a placeholder account — actual account resolution happens
+ * per-call inside the task (matches the existing CLI flow).
  *
  * @since 0.1.0
  * @author 王子豪
@@ -16,7 +37,11 @@ import java.util.concurrent.Callable;
     mixinStandardHelpOptions = true,
     version = "0.1.0",
     description = "SZU campus automation CLI tool",
-    subcommands = {BookingCommand.class}
+    subcommands = {
+        BookingCommand.class,
+        SkillCommand.class,
+        MCPCommand.class
+    }
 )
 public class Main implements Callable<Integer> {
 
@@ -27,12 +52,41 @@ public class Main implements Callable<Integer> {
     }
 
     /**
+     * Registers the default Skills at startup. Idempotent — safe to
+     * call multiple times (subsequent calls are no-ops if the same
+     * name is already registered). Public for test setup.
+     *
+     * @since 0.1.0
+     */
+    public static void registerDefaultSkills() {
+        Skills registry = Skills.getInstance();
+        // Defensive: skip if already registered (e.g. from a test)
+        for (Skill<?> existing : registry.all()) {
+            if ("booking_venue".equals(existing.name())) {
+                return;
+            }
+        }
+        ConfigManager.getInstance().load();
+        // Placeholder account — Account requires non-blank studentId/password.
+        // Real credentials are resolved per-call from env-file / process env
+        // inside BookingTask. Account record's compact constructor enforces
+        // non-blank, so we use dummy non-blank values here.
+        Account placeholder = new Account("placeholder", "placeholder", "P1-stub");
+        VenueBookingClient client = new VenueBookingClient(
+            placeholder,
+            ConfigManager.getInstance().browser(),
+            RetryPolicies.defaultBooking());
+        registry.register(new Skill<>("booking_venue", "体育场馆定时预约", new BookingTask(client, placeholder)));
+    }
+
+    /**
      * Main entry point.
      *
      * @param args command-line arguments
      * @since 0.1.0
      */
     public static void main(String[] args) {
+        registerDefaultSkills();
         int exitCode = new CommandLine(new Main()).execute(args);
         System.exit(exitCode);
     }

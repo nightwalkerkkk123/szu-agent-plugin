@@ -8,6 +8,7 @@
 #        1 = 不一致(打印差异并列出实际命中文件)
 #
 # 关联文档:docs/grep-evidence.md §三
+#          设计模式 24 文件 / 编程技术 46 文件(2026-06-14 P1 wrapper 后)
 
 set -euo pipefail
 
@@ -19,12 +20,12 @@ fi
 
 # 文档里登记的预期值
 declare -A EXPECTED=(
-    [Builder]=1 [Singleton]=2 [Strategy]=18 [Adapter]=2
-    [泛型]=3 [枚举]=13 [注解]=2 [重载]=4 [抽象类]=1 [Lambda]=12
+    [Builder]=1 [Singleton]=3 [Strategy]=18 [Adapter]=2
+    [泛型]=9 [枚举]=16 [注解]=4 [重载]=4 [抽象类]=1 [Lambda]=17
 )
 
-PATTERNS_TOTAL=23
-TECHNIQUES_TOTAL=36
+PATTERNS_TOTAL=24
+TECHNIQUES_TOTAL=46
 
 failures=0
 
