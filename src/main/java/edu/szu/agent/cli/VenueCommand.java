@@ -238,7 +238,7 @@ public class VenueCommand implements Callable<Integer> {
         return 1;
     }
 
-    private static TimeSlot parseTimeSlot(String raw) {
+    static TimeSlot parseTimeSlot(String raw) {
         if (raw == null || !raw.contains("-")) {
             throw new IllegalArgumentException(
                 "Invalid time-slot format (expected HH:mm-HH:mm): " + raw);
@@ -247,7 +247,7 @@ public class VenueCommand implements Callable<Integer> {
         return new TimeSlot(parts[0].trim(), parts[1].trim());
     }
 
-    private static int exitCodeFor(ErrorCode code) {
+    static int exitCodeFor(ErrorCode code) {
         return switch (code.severity()) {
             case LOW -> 2;      // param error
             case MEDIUM -> 1;   // business failure
