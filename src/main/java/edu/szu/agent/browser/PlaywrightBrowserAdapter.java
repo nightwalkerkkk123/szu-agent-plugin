@@ -33,6 +33,7 @@ import java.util.Objects;
 public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
 
     private final Playwright playwright;
+    private final boolean headless;
     private Browser browser;
     private Page page;
 
@@ -40,15 +41,48 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
      * @param playwright the SDK entry point; must not be null
      */
     public PlaywrightBrowserAdapter(Playwright playwright) {
+        this(playwright, resolveHeadless());
+    }
+
+    /**
+     * @param playwright the SDK entry point; must not be null
+     * @param headless   if {@code false}, browser window is shown (useful for
+     *                   manual debugging / captcha solving)
+     */
+    public PlaywrightBrowserAdapter(Playwright playwright, boolean headless) {
         this.playwright = Objects.requireNonNull(playwright, "playwright");
+        this.headless = headless;
+    }
+
+    /**
+     * Resolves the headless flag from the {@code SZU_HEADLESS} env var and
+     * the {@code szu.agent.headless} system property. Defaults to {@code true}
+     * (matches ADR-0002 D4). Any value other than {@code "false"} / {@code "0"}
+     * (case-insensitive) keeps headless enabled.
+     */
+    static boolean resolveHeadless() {
+        String env = System.getenv("SZU_HEADLESS");
+        String prop = System.getProperty("szu.agent.headless");
+        String raw = (prop != null && !prop.isBlank()) ? prop : env;
+        if (raw == null) {
+            return true;
+        }
+        String v = raw.trim().toLowerCase();
+        return !("false".equals(v) || "0".equals(v));
     }
 
     @Override
     public void open() {
         try {
             browser = playwright.chromium().launch(
-                new BrowserType.LaunchOptions().setHeadless(true));
+                new BrowserType.LaunchOptions().setHeadless(headless));
             page = browser.newPage();
+            // ehall pages are heavy (CAS redirect + Angular SPA + iframe); give
+            // navigation a generous budget. 60s default unless overridden via
+            // -Dszu.agent.nav-timeout-ms=NNN.
+            long navTimeout = Long.getLong("szu.agent.nav-timeout-ms", 60_000L);
+            page.setDefaultNavigationTimeout(navTimeout);
+            page.setDefaultTimeout(navTimeout);
         } catch (Exception e) {
             throw mapException(e);
         }
@@ -135,6 +169,17 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
     @Override
     public String currentUrl() {
         return page.url();
+    }
+
+    @Override
+    public String evaluate(String script) {
+        Objects.requireNonNull(script, "script");
+        try {
+            Object result = page.evaluate(script);
+            return result == null ? "" : result.toString();
+        } catch (Exception e) {
+            throw mapException(e);
+        }
     }
 
     @Override

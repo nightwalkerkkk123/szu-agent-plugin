@@ -141,12 +141,13 @@ public class VenueCommand implements Callable<Integer> {
             // Resolve credentials (per ADR-0005 D1: process env > env-file > Skill injection)
             Account account = AccountResolver.resolve(username, effectiveEnv);
 
+            Campus campusEnum = Campus.valueOf(campus.toUpperCase());
             BookingRequest bookingRequest = BookingRequest.builder()
                 .username(username)
-                .campus(Campus.valueOf(campus.toUpperCase()))
-                .sport(Sport.valueOf(sport.toUpperCase()))
+                .campus(campusEnum)
+                .sport(Sport.of(campusEnum, sport.toUpperCase()))
                 .date(LocalDate.now().plusDays(dateOffset))
-                .timeSlot(parseTimeSlot(timeSlot))
+                .timeSlot(TimeSlot.of(timeSlot))
                 .preferredVenueIndex(preferredVenueIndex)
                 .build();
 
@@ -242,12 +243,7 @@ public class VenueCommand implements Callable<Integer> {
     }
 
     static TimeSlot parseTimeSlot(String raw) {
-        if (raw == null || !raw.contains("-")) {
-            throw new IllegalArgumentException(
-                "Invalid time-slot format (expected HH:mm-HH:mm): " + raw);
-        }
-        String[] parts = raw.split("-", 2);
-        return new TimeSlot(parts[0].trim(), parts[1].trim());
+        return TimeSlot.of(raw);
     }
 
     static int exitCodeFor(ErrorCode code) {

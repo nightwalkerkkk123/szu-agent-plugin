@@ -22,7 +22,12 @@ public final class ConfirmBookingStep implements BookingStep {
 
     private static final Logger log = LoggerFactory.getLogger(ConfirmBookingStep.class);
 
-    static final String SEL_CONFIRM_BUTTON = "#confirm-btn";
+    /**
+     * The page renders two large buttons: 取消 (white) and 提交预约 (red).
+     * Match by visible text — class set is identical for both.
+     */
+    static final String SEL_CONFIRM_BUTTON =
+        "button.bh-btn.bh-btn-large:has-text(\"提交预约\")";
 
     @Override
     public String name() {

@@ -6,6 +6,7 @@ import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Campus;
 import edu.szu.agent.domain.Sport;
+import edu.szu.agent.domain.YuehaiSport;
 import edu.szu.agent.domain.TimeSlot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -32,34 +32,42 @@ class SelectTimeSlotStepTest {
 
     @BeforeEach
     void setUp() {
+        // Cap the slot-render wait so the negative-path test runs in ms, not 8s.
+        System.setProperty("szu.agent.slot-wait-ms", "0");
         BookingRequest request = BookingRequest.builder()
             .campus(Campus.YUEHAI)
-            .sport(Sport.TENNIS)
+            .sport(YuehaiSport.TENNIS)
             .date(LocalDate.now())
-            .timeSlot(new TimeSlot("19:00", "20:00"))
+            .timeSlot(TimeSlot.T19_20)
             .preferredVenueIndex(1)
             .build();
         account = new Account("2023150090", "test-pwd", "test-user");
         ctx = new BookingContext(request, account);
     }
 
-    @Test
-    @DisplayName("execute() finds and clicks the matching time slot li")
-    void executeClicksMatchingSlot() {
-        when(browser.isVisible(SelectTimeSlotStep.SEL_TIME_SLOT_AREA)).thenReturn(true);
-        when(browser.allTextOf(SelectTimeSlotStep.SEL_TIME_SLOT_AREA + " li"))
-            .thenReturn(List.of("19:00-20:00", "20:00-21:00"));
+    private static String labelSel(String slotId) {
+        return String.format(SelectTimeSlotStep.SEL_SLOT_LABEL_TEMPLATE, slotId);
+    }
 
-        new SelectTimeSlotStep().execute(browser, ctx);
-
-        verify(browser).click(SelectTimeSlotStep.SEL_TIME_SLOT_AREA
-            + " li:has-text('19:00-20:00')");
+    private static String availableSel(String slotId) {
+        return String.format(SelectTimeSlotStep.SEL_SLOT_AVAILABLE_TEMPLATE, slotId);
     }
 
     @Test
-    @DisplayName("execute() returns BookingResult.Failure when area is not visible")
-    void executeReturnsFailureWhenAreaNotVisible() {
-        when(browser.isVisible(SelectTimeSlotStep.SEL_TIME_SLOT_AREA)).thenReturn(false);
+    @DisplayName("execute() clicks the (可预约) label for the requested slot")
+    void executeClicksAvailableSlot() {
+        when(browser.isVisible(labelSel("19:00-20:00"))).thenReturn(true);
+        when(browser.isVisible(availableSel("19:00-20:00"))).thenReturn(true);
+
+        new SelectTimeSlotStep().execute(browser, ctx);
+
+        verify(browser).click(availableSel("19:00-20:00"));
+    }
+
+    @Test
+    @DisplayName("execute() returns Failure when the slot label is missing entirely")
+    void executeReturnsFailureWhenLabelMissing() {
+        when(browser.isVisible(labelSel("19:00-20:00"))).thenReturn(false);
 
         BookingResult result = new SelectTimeSlotStep().execute(browser, ctx);
 
@@ -67,11 +75,10 @@ class SelectTimeSlotStepTest {
     }
 
     @Test
-    @DisplayName("execute() returns BookingResult.Failure when slot not found in list")
-    void executeReturnsFailureWhenSlotNotFound() {
-        when(browser.isVisible(SelectTimeSlotStep.SEL_TIME_SLOT_AREA)).thenReturn(true);
-        when(browser.allTextOf(SelectTimeSlotStep.SEL_TIME_SLOT_AREA + " li"))
-            .thenReturn(List.of("20:00-21:00")); // missing 19:00-20:00
+    @DisplayName("execute() returns Failure when the slot is 已满员/无开放场地")
+    void executeReturnsFailureWhenNotBookable() {
+        when(browser.isVisible(labelSel("19:00-20:00"))).thenReturn(true);
+        when(browser.isVisible(availableSel("19:00-20:00"))).thenReturn(false);
 
         BookingResult result = new SelectTimeSlotStep().execute(browser, ctx);
 
@@ -81,9 +88,8 @@ class SelectTimeSlotStepTest {
     @Test
     @DisplayName("execute() returns null on success")
     void executeReturnsNullOnSuccess() {
-        when(browser.isVisible(SelectTimeSlotStep.SEL_TIME_SLOT_AREA)).thenReturn(true);
-        when(browser.allTextOf(SelectTimeSlotStep.SEL_TIME_SLOT_AREA + " li"))
-            .thenReturn(List.of("19:00-20:00"));
+        when(browser.isVisible(labelSel("19:00-20:00"))).thenReturn(true);
+        when(browser.isVisible(availableSel("19:00-20:00"))).thenReturn(true);
 
         assertThat(new SelectTimeSlotStep().execute(browser, ctx)).isNull();
     }

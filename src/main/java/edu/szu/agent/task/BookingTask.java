@@ -58,14 +58,14 @@ public class BookingTask implements CampusTask<BookingResult> {
     public BookingResult execute(TaskInput input) {
         // Parse — fail fast with IllegalArgumentException (CLI maps to exit 2)
         Campus campus = Campus.valueOf(input.require("campus").toUpperCase());
-        Sport sport = Sport.valueOf(input.require("sport").toUpperCase());
+        Sport sport = Sport.of(campus, input.require("sport").toUpperCase());
         LocalDate date;
         try {
             date = LocalDate.parse(input.require("date"));
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("date must be ISO 8601: " + e.getMessage());
         }
-        TimeSlot slot = parseTimeSlot(input.require("timeSlot"));
+        TimeSlot slot = TimeSlot.of(input.require("timeSlot"));
 
         int preferredVenue = input.getInt("preferredVenue", 1);
 
@@ -79,21 +79,5 @@ public class BookingTask implements CampusTask<BookingResult> {
             .build();
 
         return client.book(request);
-    }
-
-    /**
-     * Parses "HH:mm-HH:mm" into a {@link TimeSlot}. Reused from
-     * {@code VenueCommand.parseTimeSlot} semantics so CLI and Skill
-     * layers share one validation path.
-     *
-     * @since 0.1.0
-     */
-    private static TimeSlot parseTimeSlot(String raw) {
-        if (raw == null || !raw.contains("-")) {
-            throw new IllegalArgumentException(
-                "Invalid time-slot format (expected HH:mm-HH:mm): " + raw);
-        }
-        String[] parts = raw.split("-", 2);
-        return new TimeSlot(parts[0].trim(), parts[1].trim());
     }
 }

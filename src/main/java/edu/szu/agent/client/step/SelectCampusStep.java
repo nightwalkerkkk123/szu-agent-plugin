@@ -18,7 +18,12 @@ public final class SelectCampusStep implements BookingStep {
 
     private static final Logger log = LoggerFactory.getLogger(SelectCampusStep.class);
 
-    static final String SEL_CAMPUS_DROPDOWN = "select#campus";
+    /**
+     * Campus selection page renders two button-like {@code <div>}s
+     * (粤海校区 / 丽湖校区). Click by visible text.
+     */
+    static final String SEL_CAMPUS_BUTTON_TEMPLATE =
+        "div.bh-btn.bh-btn-primary:has-text(\"%s\")";
 
     @Override
     public String name() {
@@ -29,7 +34,8 @@ public final class SelectCampusStep implements BookingStep {
     public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
         var campus = ctx.request().campus();
         log.info("Selecting campus: {} ({})", campus.displayName(), campus.ehallCode());
-        browser.fill(SEL_CAMPUS_DROPDOWN, campus.ehallCode());
+        String selector = String.format(SEL_CAMPUS_BUTTON_TEMPLATE, campus.displayName());
+        browser.click(selector);
         return null;
     }
 }

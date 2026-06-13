@@ -129,6 +129,12 @@ public final class BookingRequest {
             Objects.requireNonNull(sport, "BookingRequest.sport must not be null");
             Objects.requireNonNull(date, "BookingRequest.date must not be null");
             Objects.requireNonNull(timeSlot, "BookingRequest.timeSlot must not be null");
+            if (sport.campus() != campus) {
+                throw new IllegalStateException(
+                    "BookingRequest.sport (" + sport + ") belongs to campus "
+                        + sport.campus() + " but campus parameter is " + campus
+                        + ". Use Sport.of(campus, name) to route correctly.");
+            }
             if (preferredVenueIndex < 1) {
                 throw new IllegalStateException(
                     "BookingRequest.preferredVenueIndex must be >= 1 (ehall 1-based), got: "

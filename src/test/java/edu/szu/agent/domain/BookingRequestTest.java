@@ -21,9 +21,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class BookingRequestTest {
 
     private static final Campus CAMPUS = Campus.YUEHAI;
-    private static final Sport SPORT = Sport.TENNIS;
+    private static final Sport SPORT = YuehaiSport.TENNIS;
     private static final LocalDate DATE = LocalDate.of(2026, 6, 12);
-    private static final TimeSlot SLOT = new TimeSlot("19:00", "20:00");
+    private static final TimeSlot SLOT = TimeSlot.T19_20;
 
     @Test
     @DisplayName("Builder builds valid request")
@@ -119,6 +119,22 @@ class BookingRequestTest {
             .build())
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("preferredVenueIndex");
+    }
+
+    @Test
+    @DisplayName("rejects (campus, sport) mismatch — sport.campus() must equal campus")
+    void rejectsCrossCampusMismatch() {
+        // Build with LIHU campus but YuehaiSport.TENNIS — should fail.
+        assertThatThrownBy(() -> BookingRequest.builder()
+            .campus(Campus.LIHU)
+            .sport(YuehaiSport.TENNIS)
+            .date(DATE)
+            .timeSlot(SLOT)
+            .preferredVenueIndex(1)
+            .build())
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("YUEHAI")
+            .hasMessageContaining("LIHU");
     }
 
     @Test

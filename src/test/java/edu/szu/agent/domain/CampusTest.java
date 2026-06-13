@@ -24,9 +24,19 @@ class CampusTest {
     }
 
     @Test
+    @DisplayName("LIHU exposes displayName and ehallCode")
+    void lihuMetadata() {
+        Campus campus = Campus.LIHU;
+
+        assertThat(campus.displayName()).isEqualTo("丽湖校区");
+        assertThat(campus.ehallCode()).isEqualTo("lihu");
+    }
+
+    @Test
     @DisplayName("valueOf resolves constant by English identifier")
     void valueOfByEnglishName() {
         assertThat(Campus.valueOf("YUEHAI")).isEqualTo(Campus.YUEHAI);
+        assertThat(Campus.valueOf("LIHU")).isEqualTo(Campus.LIHU);
     }
 
     @Test

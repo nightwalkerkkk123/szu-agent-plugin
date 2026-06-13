@@ -17,7 +17,8 @@ public final class NavigateToBookingStep implements BookingStep {
 
     private static final Logger log = LoggerFactory.getLogger(NavigateToBookingStep.class);
 
-    static final String EHALL_BOOKING_URL = "https://ehall.szu.edu.cn/booking";
+    static final String EHALL_BOOKING_URL =
+        "https://ehall.szu.edu.cn/qljfwapp/sys/lwSzuCgyy/index.do#/sportVenue";
 
     @Override
     public String name() {

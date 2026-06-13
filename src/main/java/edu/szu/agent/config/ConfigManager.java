@@ -142,9 +142,10 @@ public final class ConfigManager {
         if (envFile == null || !Files.exists(envFile)) {
             throw new IllegalStateException("env file does not exist: " + envFile);
         }
+        Path absoluteEnv = envFile.toAbsolutePath();
         Dotenv dotenv = Dotenv.configure()
-            .filename(envFile.getFileName().toString())
-            .directory(envFile.getParent().toString())
+            .filename(absoluteEnv.getFileName().toString())
+            .directory(absoluteEnv.getParent().toString())
             .load();
         envFileProps.clear();
         dotenv.entries().forEach(e -> envFileProps.put(e.getKey(), e.getValue()));

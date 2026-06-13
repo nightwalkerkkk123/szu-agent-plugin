@@ -5,6 +5,7 @@ import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.Campus;
 import edu.szu.agent.domain.Sport;
+import edu.szu.agent.domain.YuehaiSport;
 import edu.szu.agent.domain.TimeSlot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,9 +33,9 @@ class SelectCampusStepTest {
     void setUp() {
         BookingRequest request = BookingRequest.builder()
             .campus(Campus.YUEHAI)
-            .sport(Sport.TENNIS)
+            .sport(YuehaiSport.TENNIS)
             .date(LocalDate.now())
-            .timeSlot(new TimeSlot("19:00", "20:00"))
+            .timeSlot(TimeSlot.T19_20)
             .preferredVenueIndex(1)
             .build();
         account = new Account("2023150090", "test-pwd", "test-user");
@@ -42,10 +43,11 @@ class SelectCampusStepTest {
     }
 
     @Test
-    @DisplayName("execute() fills campus dropdown with ehall code")
+    @DisplayName("execute() clicks the campus button matching displayName")
     void executeFillsCampusDropdown() {
         new SelectCampusStep().execute(browser, ctx);
-        verify(browser).fill(SelectCampusStep.SEL_CAMPUS_DROPDOWN, "yuehai");
+        String expected = String.format(SelectCampusStep.SEL_CAMPUS_BUTTON_TEMPLATE, "粤海校区");
+        verify(browser).click(expected);
     }
 
     @Test

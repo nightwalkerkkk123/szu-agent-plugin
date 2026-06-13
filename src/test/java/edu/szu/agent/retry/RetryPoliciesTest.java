@@ -20,9 +20,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RetryPoliciesTest {
 
     @Test
-    @DisplayName("defaultBooking returns an ExponentialBackoff")
-    void defaultBookingIsExponential() {
-        assertThat(RetryPolicies.defaultBooking()).isInstanceOf(ExponentialBackoff.class);
+    @DisplayName("defaultBooking returns NoRetry (single attempt — pipeline can't restart)")
+    void defaultBookingIsNoRetry() {
+        assertThat(RetryPolicies.defaultBooking()).isSameAs(NoRetry.INSTANCE);
+    }
+
+    @Test
+    @DisplayName("exponentialBackoff factory still available for stateless flows")
+    void exponentialBackoffStillAvailable() {
+        assertThat(RetryPolicies.exponentialBackoff()).isInstanceOf(ExponentialBackoff.class);
     }
 
     @Test

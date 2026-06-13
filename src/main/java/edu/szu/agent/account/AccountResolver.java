@@ -72,9 +72,10 @@ public final class AccountResolver {
 
         // Layer 2: --env-file
         if (envFile != null && Files.exists(envFile)) {
+            Path absoluteEnv = envFile.toAbsolutePath();
             Dotenv dotenv = Dotenv.configure()
-                .filename(envFile.getFileName().toString())
-                .directory(envFile.getParent().toString())
+                .filename(absoluteEnv.getFileName().toString())
+                .directory(absoluteEnv.getParent().toString())
                 .load();
             String fromFile = dotenv.get(key);
             if (fromFile != null) {

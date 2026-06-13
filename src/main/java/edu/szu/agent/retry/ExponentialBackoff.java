@@ -84,7 +84,8 @@ public final class ExponentialBackoff implements RetryPolicy {
         }
         throw new BookingException(
             ErrorCode.NETWORK_TIMEOUT,
-            "ExponentialBackoff 重试 " + maxAttempts + " 次耗尽",
+            "ExponentialBackoff 重试 " + maxAttempts + " 次耗尽 (last="
+                + (last == null ? "n/a" : last.code() + ": " + last.getMessage()) + ")",
             last);
     }
 

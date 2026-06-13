@@ -18,7 +18,13 @@ public final class SelectSportStep implements BookingStep {
 
     private static final Logger log = LoggerFactory.getLogger(SelectSportStep.class);
 
-    static final String SEL_SPORT_DROPDOWN = "select#sport";
+    /**
+     * Sport tile rendered as {@code <div class="frame-4">} containing
+     * {@code <div class="text-wrapper-7">网球</div>}. We match the tile by
+     * its inner sport name. Pattern: {@code %s} → displayName like 网球.
+     */
+    static final String SEL_SPORT_TILE_TEMPLATE =
+        "div.frame-4:has(div.text-wrapper-7:has-text(\"%s\"))";
 
     @Override
     public String name() {
@@ -29,7 +35,8 @@ public final class SelectSportStep implements BookingStep {
     public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
         var sport = ctx.request().sport();
         log.info("Selecting sport: {} ({})", sport.displayName(), sport.ehallCode());
-        browser.fill(SEL_SPORT_DROPDOWN, sport.ehallCode());
+        String selector = String.format(SEL_SPORT_TILE_TEMPLATE, sport.displayName());
+        browser.click(selector);
         return null;
     }
 }

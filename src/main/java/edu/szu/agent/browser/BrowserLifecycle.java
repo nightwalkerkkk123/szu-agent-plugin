@@ -117,6 +117,19 @@ public interface BrowserLifecycle {
     String currentUrl();
 
     /**
+     * Evaluates {@code script} in the current page context and returns
+     * the result as a String. Used for DOM manipulations that aren't
+     * covered by click/fill (e.g. removing a {@code readonly} attribute
+     * the ehall CAS form puts on the password field).
+     *
+     * @param script JavaScript source to evaluate
+     * @return the script's return value, coerced to String
+     * @throws edu.szu.agent.error.BookingException with BROWSER_CRASH
+     *         on evaluation failure
+     */
+    String evaluate(String script);
+
+    /**
      * Saves a screenshot of the current page to {@code absolutePath}.
      * Invoked when {@link edu.szu.agent.error.ErrorCode#shouldScreenshot()}
      * returns true (per ADR-0002 D2 mapping).

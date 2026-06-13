@@ -79,6 +79,12 @@ public class FakeBrowser implements BrowserLifecycle {
     }
 
     @Override
+    public String evaluate(String script) {
+        // no-op stub: tests don't assert on script content
+        return "";
+    }
+
+    @Override
     public void fill(String selector, String value) {
         filled.add(selector + "=" + value);
     }

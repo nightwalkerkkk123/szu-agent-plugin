@@ -5,6 +5,7 @@ import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.Campus;
 import edu.szu.agent.domain.Sport;
+import edu.szu.agent.domain.YuehaiSport;
 import edu.szu.agent.domain.TimeSlot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,9 +33,9 @@ class CasLoginStepTest {
         BookingRequest request = BookingRequest.builder()
             .username("2023150090")
             .campus(Campus.YUEHAI)
-            .sport(Sport.TENNIS)
+            .sport(YuehaiSport.TENNIS)
             .date(LocalDate.now())
-            .timeSlot(new TimeSlot("19:00", "20:00"))
+            .timeSlot(TimeSlot.T19_20)
             .preferredVenueIndex(1)
             .build();
         Account account = new Account("2023150090", "secret123", "test-user");
@@ -42,24 +43,32 @@ class CasLoginStepTest {
     }
 
     @Test
-    @DisplayName("execute() fills username, password, then clicks submit")
-    void executeFillsCredentialsAndSubmits() {
+    @DisplayName("execute() navigates to ehall, evaluates DOM-injection script, then probes login indicator")
+    void executeNavigatesAndInjectsLoginScript() {
         new CasLoginStep().execute(browser, ctx);
 
-        verify(browser).fill(CasLoginStep.SEL_USERNAME, "2023150090");
-        verify(browser).fill(CasLoginStep.SEL_PASSWORD, "secret123");
-        verify(browser).click(CasLoginStep.SEL_LOGIN_SUBMIT);
+        verify(browser).navigateTo(CasLoginStep.EHALL_VENUE_URL);
+        verify(browser).evaluate(CasLoginStep.buildLoginScript("2023150090", "secret123"));
+        verify(browser).isVisible(CasLoginStep.SEL_LOGGED_IN_INDICATOR);
     }
 
     @Test
-    @DisplayName("execute() calls browser in correct order: fill username → fill password → click submit")
+    @DisplayName("execute() calls browser in order: navigate → evaluate → isVisible")
     void executeCallsInOrder() {
         new CasLoginStep().execute(browser, ctx);
 
         var inOrder = inOrder(browser);
-        inOrder.verify(browser).fill(CasLoginStep.SEL_USERNAME, "2023150090");
-        inOrder.verify(browser).fill(CasLoginStep.SEL_PASSWORD, "secret123");
-        inOrder.verify(browser).click(CasLoginStep.SEL_LOGIN_SUBMIT);
+        inOrder.verify(browser).navigateTo(CasLoginStep.EHALL_VENUE_URL);
+        inOrder.verify(browser).evaluate(CasLoginStep.buildLoginScript("2023150090", "secret123"));
+        inOrder.verify(browser).isVisible(CasLoginStep.SEL_LOGGED_IN_INDICATOR);
+    }
+
+    @Test
+    @DisplayName("buildLoginScript() embeds credentials safely (single-quote escaping)")
+    void buildLoginScriptEscapesQuotes() {
+        String script = CasLoginStep.buildLoginScript("user'X", "pwd\\\"Y");
+        assertThat(script).contains("u.value='user\\'X'");
+        assertThat(script).contains("p.value='pwd\\\\\"Y'");
     }
 
     @Test

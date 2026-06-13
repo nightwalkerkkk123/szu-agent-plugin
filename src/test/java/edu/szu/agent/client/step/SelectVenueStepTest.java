@@ -6,6 +6,7 @@ import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Campus;
 import edu.szu.agent.domain.Sport;
+import edu.szu.agent.domain.YuehaiSport;
 import edu.szu.agent.domain.TimeSlot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,11 +33,13 @@ class SelectVenueStepTest {
 
     @BeforeEach
     void setUp() {
+        // Cap the venue-render wait so negative-path tests run in ms, not 8s.
+        System.setProperty("szu.agent.slot-wait-ms", "0");
         BookingRequest request = BookingRequest.builder()
             .campus(Campus.YUEHAI)
-            .sport(Sport.TENNIS)
+            .sport(YuehaiSport.TENNIS)
             .date(LocalDate.now())
-            .timeSlot(new TimeSlot("19:00", "20:00"))
+            .timeSlot(TimeSlot.T19_20)
             .preferredVenueIndex(1)
             .build();
         account = new Account("2023150090", "test-pwd", "test-user");
@@ -44,43 +47,45 @@ class SelectVenueStepTest {
     }
 
     @Test
-    @DisplayName("execute() clicks the 1-based venue index (nth-child)")
-    void executeClicksVenueByIndex() {
-        when(browser.isVisible(SelectVenueStep.SEL_VENUE_LIST)).thenReturn(true);
-        when(browser.allTextOf(SelectVenueStep.SEL_VENUE_LIST + " li"))
-            .thenReturn(List.of("网球1号场", "网球2号场"));
+    @DisplayName("execute() clicks the N-th (可预约) court via :nth-match")
+    void executeClicksAvailableCourtByIndex() {
+        when(browser.isVisible(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE)).thenReturn(true);
+        when(browser.allTextOf(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE + " div.element"))
+            .thenReturn(List.of("北区网球1号场(可预约)", "北区网球3号场(可预约)"));
 
         new SelectVenueStep().execute(browser, ctx);
 
-        verify(browser).click(SelectVenueStep.SEL_VENUE_LIST + " li:nth-child(1)");
+        verify(browser).click(":nth-match("
+            + SelectVenueStep.SEL_COURT_LABEL_AVAILABLE + ", 1)");
     }
 
     @Test
-    @DisplayName("execute() stores selected venue name in context")
-    void executeStoresVenueNameInContext() {
-        when(browser.isVisible(SelectVenueStep.SEL_VENUE_LIST)).thenReturn(true);
-        when(browser.allTextOf(SelectVenueStep.SEL_VENUE_LIST + " li"))
-            .thenReturn(List.of("网球1号场", "网球2号场"));
+    @DisplayName("execute() strips trailing (可预约) when storing venue name")
+    void executeStripsStateAnnotationFromVenueName() {
+        when(browser.isVisible(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE)).thenReturn(true);
+        when(browser.allTextOf(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE + " div.element"))
+            .thenReturn(List.of("北区网球1号场(可预约)"));
 
         new SelectVenueStep().execute(browser, ctx);
 
-        assertThat(ctx.selectedVenue()).isEqualTo("网球1号场");
+        assertThat(ctx.selectedVenue()).isEqualTo("北区网球1号场");
     }
 
     @Test
-    @DisplayName("execute() returns BookingResult.Failure when venue list not visible")
-    void executeReturnsFailureWhenListNotVisible() {
-        when(browser.isVisible(SelectVenueStep.SEL_VENUE_LIST)).thenReturn(false);
+    @DisplayName("execute() returns Failure when no (可预约) courts present")
+    void executeReturnsFailureWhenNothingAvailable() {
+        when(browser.isVisible(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE)).thenReturn(false);
 
         BookingResult result = new SelectVenueStep().execute(browser, ctx);
         assertThat(result).isInstanceOf(BookingResult.Failure.class);
     }
 
     @Test
-    @DisplayName("execute() returns BookingResult.Failure when no venues available")
-    void executeReturnsFailureWhenNoVenues() {
-        when(browser.isVisible(SelectVenueStep.SEL_VENUE_LIST)).thenReturn(true);
-        when(browser.allTextOf(SelectVenueStep.SEL_VENUE_LIST + " li")).thenReturn(List.of());
+    @DisplayName("execute() returns Failure when court list reads empty")
+    void executeReturnsFailureWhenListEmpty() {
+        when(browser.isVisible(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE)).thenReturn(true);
+        when(browser.allTextOf(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE + " div.element"))
+            .thenReturn(List.of());
 
         BookingResult result = new SelectVenueStep().execute(browser, ctx);
         assertThat(result).isInstanceOf(BookingResult.Failure.class);

@@ -1,39 +1,53 @@
 package edu.szu.agent.domain;
 
 /**
- * Sport enum — sports supported by the SZU ehall booking system.
+ * Sport — booking domain. Each campus has its own sport offering, and
+ * the offerings overlap only by name (e.g. "网球" exists at both campuses
+ * but maps to different physical courts and different ehall back-ends),
+ * so we model {@code Sport} as a sealed type with one enum per campus.
  *
- * <p>Per ADR-0006 §一.1: English constant name; {@code displayName} for humans;
- * {@code ehallCode} for the ehall wire format.
+ * <p>Compile-time consequence: a {@code (Campus, Sport)} pair is
+ * impossible to misalign — every {@code Sport} carries its own campus
+ * via {@link #campus()}, and the {@code BookingRequest} builder rejects
+ * any mismatch between its campus parameter and {@code sport.campus()}.
  *
- * <p>Per ADR-0001 D3: multiple sports enable demo rotation when one slot is
- * already booked.
+ * <p>To add a new campus, declare a new enum permitted by this sealed
+ * interface and update {@link Campus} accordingly.
  *
- * // 编程技术: 枚举(携带元数据字段)
+ * // Design Pattern: Strategy (each campus = a different concrete strategy
+ * // for the sport list); also Type Object (each enum constant carries
+ * // displayName + ehallCode metadata).
+ * // 编程技术: sealed interface (Java 17+) / 枚举 / 接口默认方法 / 模式匹配 (Java 21)
  *
  * @since 0.1.0
  * @author 王子豪
  */
-public enum Sport {
+public sealed interface Sport permits YuehaiSport, LihuSport {
 
-    /** 网球. */
-    TENNIS("网球", "tennis");
+    /** Human-readable Chinese name, matches the page tile text. */
+    String displayName();
 
-    private final String displayName;
-    private final String ehallCode;
+    /** Wire-format code; lowercase ASCII, used for logging and APIs. */
+    String ehallCode();
 
-    Sport(String displayName, String ehallCode) {
-        this.displayName = displayName;
-        this.ehallCode = ehallCode;
-    }
+    /** The campus this sport belongs to. Never null. */
+    Campus campus();
 
-    /** Human-readable sport name (Chinese). */
-    public String displayName() {
-        return displayName;
-    }
-
-    /** Wire-format code sent to ehall. */
-    public String ehallCode() {
-        return ehallCode;
+    /**
+     * Resolves a sport by its campus and English identifier (enum name),
+     * routing to the correct campus-specific enum. Used by CLI / Skill
+     * input parsing.
+     *
+     * @param campus the booking campus
+     * @param name   the enum constant name (e.g. {@code "TENNIS"})
+     * @return the resolved {@code Sport}
+     * @throws IllegalArgumentException if {@code name} is not a constant
+     *                                  of the campus's sport enum
+     */
+    static Sport of(Campus campus, String name) {
+        return switch (campus) {
+            case YUEHAI -> YuehaiSport.valueOf(name);
+            case LIHU -> LihuSport.valueOf(name);
+        };
     }
 }

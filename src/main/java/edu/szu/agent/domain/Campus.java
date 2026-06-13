@@ -7,6 +7,9 @@ package edu.szu.agent.domain;
  * {@code ehallCode} for the ehall wire format. Wire format is the English
  * constant name (Jackson default).
  *
+ * <p>Each campus has an independent sport offering; see {@link Sport} for
+ * how the (campus → sport set) mapping is enforced at compile time.
+ *
  * // 编程技术: 枚举(携带元数据字段)
  *
  * @since 0.1.0
@@ -14,8 +17,11 @@ package edu.szu.agent.domain;
  */
 public enum Campus {
 
-    /** 粤海校区 — primary campus supported in Phase 1. */
-    YUEHAI("粤海校区", "yuehai");
+    /** 粤海校区. Sports listed in {@link YuehaiSport}. */
+    YUEHAI("粤海校区", "yuehai"),
+
+    /** 丽湖校区. Sports listed in {@link LihuSport}. */
+    LIHU("丽湖校区", "lihu");
 
     private final String displayName;
     private final String ehallCode;

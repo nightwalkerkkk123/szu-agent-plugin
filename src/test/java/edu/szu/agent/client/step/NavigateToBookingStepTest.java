@@ -6,6 +6,7 @@ import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Campus;
 import edu.szu.agent.domain.Sport;
+import edu.szu.agent.domain.YuehaiSport;
 import edu.szu.agent.domain.TimeSlot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,9 +39,9 @@ class NavigateToBookingStepTest {
     void setUp() {
         BookingRequest request = BookingRequest.builder()
             .campus(Campus.YUEHAI)
-            .sport(Sport.TENNIS)
+            .sport(YuehaiSport.TENNIS)
             .date(LocalDate.now())
-            .timeSlot(new TimeSlot("19:00", "20:00"))
+            .timeSlot(TimeSlot.T19_20)
             .preferredVenueIndex(1)
             .build();
         ctx = new BookingContext(request, new Account("2023150090", "secret", "test"));
