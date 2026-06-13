@@ -36,8 +36,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *       paths that don't need a real browser.</li>
  * </ul>
  *
- * <p>设计模式: Command (picocli) — CLI tests run the full picocli dispatch.
- * <br>编程技术: Lambda / @Nested / @ParameterizedTest / @TempDir
+ * <p>编程技术: Lambda / @Nested / @ParameterizedTest / @TempDir
+ * <br>(picocli @Command 是框架机制,不计入项目 4 模式 — 见 ADR-0007 D1)
  *
  * @since 0.1.0
  * @author 王子豪

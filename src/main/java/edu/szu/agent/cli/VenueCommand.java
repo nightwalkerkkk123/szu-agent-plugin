@@ -53,7 +53,10 @@ import java.util.concurrent.Callable;
  * }
  * }</pre>
  *
- * // Design Pattern: Command (picocli @Command)
+ * <p>Uses picocli's {@code @Command} annotation as a CLI dispatch mechanism;
+ * picocli is the framework, not a project-level design pattern (per ADR-0007 D1
+ * the project commits to 4 patterns: Builder / Singleton / Strategy / Adapter).
+ *
  * // 编程技术: 注解 / 枚举 / Lambda / record
  *
  * @since 0.1.0
