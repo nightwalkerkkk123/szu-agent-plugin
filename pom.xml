@@ -171,10 +171,16 @@
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
               </transformers>
+              <!--
+                只 relocate Jackson(用户进程可能带另一份 Jackson 引发冲突)。
+                SLF4J + logback 不 relocate:logback-classic 内部引用 SLF4J 接口,
+                必须同进退;且本 jar 是 executable,无第三方调用方,无冲突风险。
+                历史背景:旧版本同时 relocate logback 导致 logback.xml 启动时
+                引用 ch.qos.logback.* 触发 ClassNotFoundException(资源文件不被 shade 重写)。
+                LogbackShadeConsistencyTest 静态守卫这一点。
+              -->
               <relocations>
                 <relocation><pattern>com.fasterxml.jackson</pattern><shadedPattern>edu.szu.agent.shade.jackson</shadedPattern></relocation>
-                <relocation><pattern>org.slf4j</pattern><shadedPattern>edu.szu.agent.shade.slf4j</shadedPattern></relocation>
-                <relocation><pattern>ch.qos.logback</pattern><shadedPattern>edu.szu.agent.shade.logback</shadedPattern></relocation>
               </relocations>
               <filters>
                 <filter>
