@@ -1,7 +1,7 @@
 # Working Context
 
-> Last updated: 2026-06-12
-> 当前阶段: **Phase 2 完成,Phase 3 进行中**(ADR-0001/0002/0005/0006/0007 均 Accepted)
+> Last updated: 2026-06-13
+> 当前阶段: **Phase 1-4 全部完成,Phase 5 收尾中**(ADR-0001/0002/0005/0006/0007 均 Accepted)
 
 > ⚠️ **ADR 校准声明**(2026-06-11):本工作上下文已按 **ADR-0001 / 0005 / 0006** 重写。
 > - 5 模式落点重选:`BrowserFactory` 替代 `ClientFactory`,`PlaywrightBrowserAdapter` 替代 `CloakBrowserAdapter`,`ErrorClassifier` 删除
@@ -24,34 +24,39 @@
 
 ## 当前状态
 
-### 阶段：Phase 2 完成，Phase 3 进行中（2026-06-12）
+### 阶段:Phase 1-4 全部完成,Phase 5 收尾中(2026-06-13)
 
-已完成：
-- [x] `pom.xml` — Maven 构建配置（Phase 0）
-- [x] Phase 0 骨架 + Phase 1 域模型/错误/重试/匹配器（38源码 + 20 测试）
-- [x] Phase 2 浏览器抽象（BrowserLifecycle 10 方法 + PlaywrightBrowserAdapter）
-- [x] `docs/adr/0001-project-direction-recalibration.md` — **方向校准 ADR (Accepted)**
-- [x] `docs/adr/0002-browser-lifecycle-and-playwright-adapter.md` — BrowserLifecycle(Accepted)
+已完成:
+- [x] `pom.xml` — Maven 构建配置(Phase 0)+ JaCoCo 0.8.13 接入
+- [x] Phase 0 骨架 + Phase 1 域模型/错误/重试/匹配器(38 源 + 20 测试)
+- [x] Phase 2 浏览器抽象(BrowserLifecycle 10 方法 + PlaywrightBrowserAdapter)
+- [x] **Phase 3 业务编排** — VenueBookingClient + 7 步 BookingStep 流水线 + ConfigManager + Tracer + AccountResolver
+- [x] **Phase 4 CLI 接线** — Main + BookingCommand + VenueCommand(picocli @Command),JSON/human 双格式,退出码 0-4 映射
+- [x] **Phase 5 收尾(进行中)**:
+  - [x] 修复 logback shade ClassNotFoundException bug + 静态守卫测试 (`LogbackShadeConsistencyTest`)
+  - [x] JaCoCo 接入 + 基线 81.5% → **当前 84.58%** 行覆盖率(超 PRD §4 80% 红线)
+  - [x] `VenueCommandTest` 29 个测试覆盖 parseTimeSlot/exitCodeFor/JSON envelope/human format/env-file
+  - [x] 测试总数:182 → **213**
+- [x] `docs/adr/0001-project-direction-recalibration.md` — 方向校准 ADR (Accepted)
+- [x] `docs/adr/0002-browser-lifecycle-and-playwright-adapter.md` — BrowserLifecycle (Accepted)
 - [x] `docs/adr/0005-credential-and-logging-enforcement.md` — 凭证流转 + archunit 强制 (Accepted)
-- [x] `docs/adr/0006-phase1-domain-error-retry-matcher.md` — Phase 1 子决定(Accepted)
-- [x] `docs/adr/0007-architecture-deepening.md` —架构深化(Accepted)
+- [x] `docs/adr/0006-phase1-domain-error-retry-matcher.md` — Phase 1 子决定 (Accepted)
+- [x] `docs/adr/0007-architecture-deepening.md` — 架构深化 (Accepted)
 - [x] `docs/PRD.md` — 产品需求文档(已加 ADR 校准声明)
 - [x] `docs/design-patterns.md` — 设计模式清单(4 种已重选)
 - [x] `docs/system-map.md` — 系统地图 + 局限性分析(已同步)
+- [x] `docs/class-diagram.puml` — PlantUML 类图(525 行)
 - [x] `SECURITY.md` — LogMasker + ErrorCode + archunit 段(已同步)
 - [x] `docs/HARNESS_BACKLOG.md` — OQ1-OQ4 已登记
 - [x] `README.md` — 项目定位、架构、快速开始(已同步)
 - [x] `FILETREE.md` — 文件地图(已加 docs/adr/)
 - [x] `.claude/` — 规则 + agents + skills 基建
 
-待创建：
+待创建/进行中:
 - [ ] `design/2023150090_王子豪_大作业自拟题目.md` — 提案文档
-- [ ] `docs/class-diagram.puml` — PlantUML 类图
-
-进行中/待实现：
-- [ ] Phase 3 业务编排（client/ + config/ + observability/ + account/）
-- [ ] Phase 4 CLI + Wrapper（cli/ + skill/ + mcp/）
-- [ ] Phase 5 测试80% + 报告 + 演示脚本
+- [ ] 演示脚本 (`scripts/demo.sh`) + 课堂演示真跑预案
+- [ ] 课堂报告 HTML(用 `/article-to-html` 生成)
+- [ ] (可选 P1) `skill/` `mcp/` `task/` 三个空包的薄壳 wrapper
 
 ---
 
@@ -85,16 +90,16 @@
 
 ---
 
-## 实现顺序（按 ADR-0001 5 天路径）
+## 实现顺序(按 ADR-0001 5 天路径)
 
 | Phase | 时长 | 内容 | 状态 |
 |---|---|---|---|
-| 0 | 0.5d | 骨架：pom.xml + 包结构 + Logback + dotenv-java | ✅ 完成 |
-| 1 | 1.0d | 无依赖基础：domain/ + error/ + retry/ + matcher/ | ✅ 完成 |
-| 2 | 1.0d | 浏览器抽象：browser/ + BrowserLifecycle 10 方法 | ✅ 完成 |
-| 3 | 1.0d | 业务编排：client/ + config/ + observability/ + account/ | 🔄 进行中 |
-| 4 | 1.0d | CLI + Wrapper：cli/ + skill/ + mcp/ | 待开始 |
-| 5 | 0.5d | 收尾：测试 80% + 报告 + 演示脚本 | 待开始 |
+| 0 | 0.5d | 骨架:pom.xml + 包结构 + Logback + dotenv-java | ✅ 完成 |
+| 1 | 1.0d | 无依赖基础:domain/ + error/ + retry/ + matcher/ | ✅ 完成 |
+| 2 | 1.0d | 浏览器抽象:browser/ + BrowserLifecycle 10 方法 | ✅ 完成 |
+| 3 | 1.0d | 业务编排:client/ + config/ + observability/ + account/ | ✅ 完成 |
+| 4 | 1.0d | CLI + Wrapper:cli/ + skill/ + mcp/ | ✅ CLI 完成;skill/mcp 是 P1 薄壳 |
+| 5 | 0.5d | 收尾:测试 80% + 报告 + 演示脚本 | 🔄 进行中(测试 84.58% ✅) |
 
 > ⚠️ 旧的 14 步顺序（含 `ClientFactory` / `AgentToolPlatform` / `ErrorClassifier` / `Notice*` / `Chaoxing*` / `Growth*`）已废弃。
 > `task/` 整个包移到 P1。
@@ -143,8 +148,11 @@
 
 ## 下一步
 
-1. Phase 3 业务编排（client/ + observability/ + account/）
-2. Phase 4 CLI + Skill/MCP wrapper
+1. ~~Phase 3 业务编排(client/ + observability/ + account/)~~ ✅ 完成
+2. ~~Phase 4 CLI + Skill/MCP wrapper~~ ✅ CLI 完成
 3. 创建 `design/2023150090_王子豪_大作业自拟题目.md` 提案文档
-4. 创建 `docs/class-diagram.puml` PlantUML 类图
-5. Phase 5 测试 80% + 报告 + 演示脚本
+4. ~~创建 `docs/class-diagram.puml` PlantUML 类图~~ ✅ 完成
+5. Phase 5 收尾:
+   - ~~测试覆盖率 ≥ 80%~~ ✅ 84.58%
+   - 演示脚本 + 课堂演示真跑预案
+   - 课堂报告 HTML(`/article-to-html`)
