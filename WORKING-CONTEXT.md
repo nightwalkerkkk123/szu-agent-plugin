@@ -34,8 +34,8 @@
 | 项 | 状态 | 证据 |
 |---|---|---|
 | 编译 | ✅ `mvn compile` 零警告 | `9c19773` `mvn test` 输出 |
-| 测试 | ✅ 213 通过 0 失败 | `mvn test` 2026-06-13T20:44 跑过(worktree) |
-| 覆盖率 | ✅ 84.58% 行 / 84.39% 指令 | `target/site/jacoco/jacoco.csv` 631/746 |
+| 测试 | ✅ 250 通过 0 失败 | `mvn test` 2026-06-14T01:13 跑过(worktree) |
+| 覆盖率 | ✅ 87.80% 行 / 87.96% 指令 | `target/site/jacoco/jacoco.csv` 878/1000 |
 | 打包 | ✅ `target/szu-agent-plugin.jar` 169MB | `scripts/demo.sh --smoke-only` 跑通 |
 | 4 模式 grep 命中 | ✅ 24 文件 | `docs/grep-evidence.md` 静态守卫 |
 | 6 技术 grep 命中 | ✅ 46 文件 | `docs/grep-evidence.md` 静态守卫 |
@@ -70,7 +70,7 @@ eeff327  docs(design): add 大作业自拟题目 proposal document
 **未做(用户动作)**:
 
 - [x] ~~`git push origin master`~~ — ✅ **已完成 2026-06-14**,11 个 commit 推到 origin(7a23146 → c832493)。remote 切到 HTTPS 走 `gh` OAuth token 绕过 SSH 错账号;详见 `harness-records/friction/20260613-2050-ssh-key-push-blocked.md`
-- [ ] **跑 mvn test + jacoco 验证 P1 wrapper 后覆盖率** — FakeBrowser + BookingTaskIntegrationTest 已加(预计覆盖率回升到 ~83-85%);用户需自己跑测试确认
+- [x] ~~**跑 mvn test + jacoco 验证 P1 wrapper 后覆盖率**~~ — ✅ **已完成 2026-06-14T01:13**,250 通过 0 失败,**87.80% 行覆盖率** (878/1000),远高于 80% 红线;FakeBrowser 修复了 allTextOf 按 selector 分发,覆盖了 7-step pipeline 完整路径
 - [ ] 课堂报告 HTML(`/article-to-html` skill 转 proposal + grep-evidence)
 
 ---
@@ -180,7 +180,7 @@ eeff327  docs(design): add 大作业自拟题目 proposal document
 ## 下一步(P1 候选)
 
 1. **真演示执行** — 课堂演示日运行 `bash scripts/demo.sh --full`,走 Playwright 真路径;演示后 5 分钟内访问 ehall 手工取消占位场地(HARNESS_BACKLOG ID-002)
-2. ~~**`git push origin master`**~~ — ✅ 已完成(2026-06-14,11 commits pushed via gh OAuth)
-3. **跑 mvn test** 验证 FakeBrowser 集成测试通过 + 看实际覆盖率(预计 83-85%)
+2. ~~**`git push origin master`**~~ — ✅ 已完成(2026-06-14,13 commits pushed via gh OAuth)
+3. ~~**跑 mvn test** 验证 FakeBrowser 集成测试~~ — ✅ 已完成(2026-06-14T01:13,250/0/0/0,87.80% 行)
 4. **课堂报告 HTML** — `/article-to-html` skill 把 `design/.../大作业自拟题目.md` + `docs/grep-evidence.md` 转精美 HTML
 5. **课堂问答准备** — 类图、设计模式、ADR 决策、复现命令(grep-runs.sh)
