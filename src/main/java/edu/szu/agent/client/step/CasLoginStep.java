@@ -109,6 +109,12 @@ public final class CasLoginStep implements BookingStep {
 
     @Override
     public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+        if (ctx.sessionOk()) {
+            log.info("Skipping CAS login, persisted state valid for {}",
+                ctx.account() != null ? ctx.account().studentId() : "unknown");
+            return null;
+        }
+
         var account = ctx.account();
         if (account == null) {
             throw new IllegalStateException(
