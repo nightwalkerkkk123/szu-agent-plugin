@@ -1,5 +1,7 @@
 package edu.szu.agent.domain;
 
+import edu.szu.agent.client.step.VenueSelector;
+
 /**
  * Sport — booking domain. Each campus has its own sport offering, and
  * the offerings overlap only by name (e.g. "网球" exists at both campuses
@@ -32,6 +34,17 @@ public sealed interface Sport permits YuehaiSport, LihuSport {
 
     /** The campus this sport belongs to. Never null. */
     Campus campus();
+
+    /**
+     * Returns the venue-selection strategy for this sport's ehall page.
+     *
+     * <p>Court-style sports use a list selector; capacity-style sports
+     * (e.g. gym) use a single-item selector. Binding the strategy to the
+     * sport enum keeps the booking step free of sport-specific conditionals.
+     *
+     * @return the {@link VenueSelector} for this sport
+     */
+    VenueSelector venueSelector();
 
     /**
      * Resolves a sport by its campus and English identifier (enum name),

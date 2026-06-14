@@ -5,7 +5,6 @@ import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Campus;
-import edu.szu.agent.domain.Sport;
 import edu.szu.agent.domain.YuehaiSport;
 import edu.szu.agent.domain.TimeSlot;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,46 +34,53 @@ class SelectVenueStepTest {
     void setUp() {
         // Cap the venue-render wait so negative-path tests run in ms, not 8s.
         System.setProperty("szu.agent.slot-wait-ms", "0");
+        account = new Account("2023150090", "test-pwd", "test-user");
+    }
+
+    private BookingContext contextFor(YuehaiSport sport) {
         BookingRequest request = BookingRequest.builder()
             .campus(Campus.YUEHAI)
-            .sport(YuehaiSport.TENNIS)
+            .sport(sport)
             .date(LocalDate.now())
             .timeSlot(TimeSlot.T19_20)
             .preferredVenueIndex(1)
             .build();
-        account = new Account("2023150090", "test-pwd", "test-user");
-        ctx = new BookingContext(request, account);
+        return new BookingContext(request, account);
     }
 
     @Test
-    @DisplayName("execute() clicks the N-th (可预约) court via :nth-match")
-    void executeClicksAvailableCourtByIndex() {
-        when(browser.isVisible(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE)).thenReturn(true);
-        when(browser.allTextOf(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE + " div.element"))
+    @DisplayName("execute() uses CourtListSelector for tennis and stores venue name")
+    void executeTennisPath() {
+        ctx = contextFor(YuehaiSport.TENNIS);
+        when(browser.isVisible(CourtListSelector.SEL_COURT_LABEL_AVAILABLE)).thenReturn(true);
+        when(browser.allTextOf(CourtListSelector.SEL_COURT_LABEL_AVAILABLE + " div.element"))
             .thenReturn(List.of("北区网球1号场(可预约)", "北区网球3号场(可预约)"));
 
         new SelectVenueStep().execute(browser, ctx);
 
         verify(browser).click(":nth-match("
-            + SelectVenueStep.SEL_COURT_LABEL_AVAILABLE + ", 1)");
+            + CourtListSelector.SEL_COURT_LABEL_AVAILABLE + ", 1)");
+        assertThat(ctx.selectedVenue()).isEqualTo("北区网球1号场");
     }
 
     @Test
-    @DisplayName("execute() strips trailing (可预约) when storing venue name")
-    void executeStripsStateAnnotationFromVenueName() {
-        when(browser.isVisible(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE)).thenReturn(true);
-        when(browser.allTextOf(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE + " div.element"))
-            .thenReturn(List.of("北区网球1号场(可预约)"));
+    @DisplayName("execute() uses CapacityVenueSelector for gym and stores venue name")
+    void executeGymPath() {
+        ctx = contextFor(YuehaiSport.GYM_AEROBIC);
+        when(browser.isVisible(CapacityVenueSelector.SEL_VENUE_LABEL)).thenReturn(true);
+        when(browser.allTextOf(CapacityVenueSelector.SEL_VENUE_LABEL + " div.element"))
+            .thenReturn(List.of("二楼健身房(42/50)"));
 
         new SelectVenueStep().execute(browser, ctx);
 
-        assertThat(ctx.selectedVenue()).isEqualTo("北区网球1号场");
+        assertThat(ctx.selectedVenue()).isEqualTo("二楼健身房");
     }
 
     @Test
     @DisplayName("execute() returns Failure when no (可预约) courts present")
     void executeReturnsFailureWhenNothingAvailable() {
-        when(browser.isVisible(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE)).thenReturn(false);
+        ctx = contextFor(YuehaiSport.TENNIS);
+        when(browser.isVisible(CourtListSelector.SEL_COURT_LABEL_AVAILABLE)).thenReturn(false);
 
         BookingResult result = new SelectVenueStep().execute(browser, ctx);
         assertThat(result).isInstanceOf(BookingResult.Failure.class);
@@ -83,9 +89,22 @@ class SelectVenueStepTest {
     @Test
     @DisplayName("execute() returns Failure when court list reads empty")
     void executeReturnsFailureWhenListEmpty() {
-        when(browser.isVisible(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE)).thenReturn(true);
-        when(browser.allTextOf(SelectVenueStep.SEL_COURT_LABEL_AVAILABLE + " div.element"))
+        ctx = contextFor(YuehaiSport.TENNIS);
+        when(browser.isVisible(CourtListSelector.SEL_COURT_LABEL_AVAILABLE)).thenReturn(true);
+        when(browser.allTextOf(CourtListSelector.SEL_COURT_LABEL_AVAILABLE + " div.element"))
             .thenReturn(List.of());
+
+        BookingResult result = new SelectVenueStep().execute(browser, ctx);
+        assertThat(result).isInstanceOf(BookingResult.Failure.class);
+    }
+
+    @Test
+    @DisplayName("execute() returns Failure when gym venue capacity is zero")
+    void executeReturnsFailureWhenGymFull() {
+        ctx = contextFor(YuehaiSport.GYM_AEROBIC);
+        when(browser.isVisible(CapacityVenueSelector.SEL_VENUE_LABEL)).thenReturn(true);
+        when(browser.allTextOf(CapacityVenueSelector.SEL_VENUE_LABEL + " div.element"))
+            .thenReturn(List.of("二楼健身房(0/50)"));
 
         BookingResult result = new SelectVenueStep().execute(browser, ctx);
         assertThat(result).isInstanceOf(BookingResult.Failure.class);

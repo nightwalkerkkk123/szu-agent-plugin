@@ -1,5 +1,7 @@
 package edu.szu.agent.domain;
 
+import edu.szu.agent.client.step.CapacityVenueSelector;
+import edu.szu.agent.client.step.CourtListSelector;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -61,6 +63,7 @@ class SportTest {
             assertThat(sport.displayName()).as(sport.name()).isNotBlank();
             assertThat(sport.ehallCode()).as(sport.name()).isNotBlank();
             assertThat(sport.campus()).isEqualTo(Campus.YUEHAI);
+            assertThat(sport.venueSelector()).as(sport.name()).isNotNull();
         }
     }
 
@@ -71,7 +74,20 @@ class SportTest {
             assertThat(sport.displayName()).as(sport.name()).isNotBlank();
             assertThat(sport.ehallCode()).as(sport.name()).isNotBlank();
             assertThat(sport.campus()).isEqualTo(Campus.LIHU);
+            assertThat(sport.venueSelector()).as(sport.name()).isNotNull();
         }
+    }
+
+    @Test
+    @DisplayName("Court sports bind CourtListSelector; gym sports bind CapacityVenueSelector")
+    void venueSelectorBindings() {
+        assertThat(YuehaiSport.TENNIS.venueSelector()).isInstanceOf(CourtListSelector.class);
+        assertThat(YuehaiSport.GYM_AEROBIC.venueSelector())
+            .isInstanceOf(CapacityVenueSelector.class);
+        assertThat(YuehaiSport.GYM_HEAVY.venueSelector())
+            .isInstanceOf(CapacityVenueSelector.class);
+        assertThat(LihuSport.GYM.venueSelector()).isInstanceOf(CapacityVenueSelector.class);
+        assertThat(LihuSport.TENNIS.venueSelector()).isInstanceOf(CourtListSelector.class);
     }
 
     @Test

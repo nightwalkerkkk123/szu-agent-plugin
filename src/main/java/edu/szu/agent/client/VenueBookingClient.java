@@ -63,6 +63,7 @@ public class VenueBookingClient {
             new NavigateToBookingStep(),
             new SelectCampusStep(),
             new SelectSportStep(),
+            new SelectDateStep(),
             new SelectTimeSlotStep(),
             new SelectVenueStep(),
             new ConfirmBookingStep()

@@ -34,7 +34,7 @@ import java.util.concurrent.Callable;
  * {@code booking venue} subcommand — P0 core demo path.
  *
  * <p>Per ADR-0001 D1/D2: {@code java -jar szu-agent-plugin.jar booking venue
- * --campus YUEHAI --sport TENNIS --date 0 --time-slot 19:00-20:00}
+ * --campus YUEHAI --sport TENNIS --date today --time-slot 19:00-20:00}
  * is the end-to-end demo command that drives Playwright to book a venue.
  *
  * <p>Per PRD §5.1: all parameters come via command-line flags (no stdin).
@@ -83,7 +83,10 @@ public class VenueCommand implements Callable<Integer> {
     @Option(names = {"-s", "--sport"}, description = "Sport name (TENNIS)", required = true)
     private String sport;
 
-    @Option(names = {"-d", "--date"}, description = "Date offset from today (0=today, 1=tomorrow)", defaultValue = "0")
+    @Option(names = {"-d", "--date"},
+        description = "Booking date: 0/today/今天 or 1/tomorrow/明天",
+        defaultValue = "0",
+        converter = DateOffsetConverter.class)
     private int dateOffset;
 
     @Option(names = {"-t", "--time-slot"}, description = "Time slot (e.g. 19:00-20:00)", required = true)
