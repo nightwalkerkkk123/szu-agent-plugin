@@ -27,6 +27,8 @@ public final class BookingContext {
     private String selectedVenue;
     private BookingResult lastFailure;
     private List<Homework> homeworks;
+    private boolean sessionOk;
+    private String username;
 
     public BookingContext(BookingRequest request, Account account) {
         this.request = request;
@@ -74,6 +76,22 @@ public final class BookingContext {
 
     public void homeworks(List<Homework> homeworks) {
         this.homeworks = homeworks;
+    }
+
+    public boolean sessionOk() {
+        return sessionOk;
+    }
+
+    public void sessionOk(boolean sessionOk) {
+        this.sessionOk = sessionOk;
+    }
+
+    public String username() {
+        return username;
+    }
+
+    public void username(String username) {
+        this.username = username;
     }
 
     public BookingResult.Success success(String venueName, String confirmation) {
