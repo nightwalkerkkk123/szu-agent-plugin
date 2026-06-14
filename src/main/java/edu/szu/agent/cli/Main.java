@@ -1,15 +1,18 @@
 package edu.szu.agent.cli;
 
 import edu.szu.agent.account.Account;
+import edu.szu.agent.client.ChaoxingHomeworkClient;
 import edu.szu.agent.client.VenueBookingClient;
 import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.retry.RetryPolicies;
 import edu.szu.agent.skill.Skill;
 import edu.szu.agent.skill.Skills;
 import edu.szu.agent.task.BookingTask;
+import edu.szu.agent.task.HomeworkTask;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 /**
@@ -39,6 +42,7 @@ import java.util.concurrent.Callable;
     description = "SZU campus automation CLI tool",
     subcommands = {
         BookingCommand.class,
+        HomeworkCommand.class,
         SkillCommand.class,
         MCPCommand.class
     }
@@ -60,23 +64,31 @@ public class Main implements Callable<Integer> {
      */
     public static void registerDefaultSkills() {
         Skills registry = Skills.getInstance();
-        // Defensive: skip if already registered (e.g. from a test)
-        for (Skill<?> existing : registry.all()) {
-            if ("booking_venue".equals(existing.name())) {
-                return;
-            }
+        Set<String> existing = registry.all().stream()
+            .map(Skill::name)
+            .collect(java.util.stream.Collectors.toSet());
+        if (existing.contains("booking_venue") && existing.contains("homework_list")) {
+            return;
         }
+
         ConfigManager.getInstance().load();
-        // Placeholder account — Account requires non-blank studentId/password.
-        // Real credentials are resolved per-call from env-file / process env
-        // inside BookingTask. Account record's compact constructor enforces
-        // non-blank, so we use dummy non-blank values here.
         Account placeholder = new Account("placeholder", "placeholder", "P1-stub");
-        VenueBookingClient client = new VenueBookingClient(
-            placeholder,
-            ConfigManager.getInstance().browser(),
-            RetryPolicies.defaultBooking());
-        registry.register(new Skill<>("booking_venue", "体育场馆定时预约", new BookingTask(client, placeholder)));
+
+        if (!existing.contains("booking_venue")) {
+            VenueBookingClient client = new VenueBookingClient(
+                placeholder,
+                ConfigManager.getInstance().browser(),
+                RetryPolicies.defaultBooking());
+            registry.register(new Skill<>("booking_venue", "体育场馆定时预约", new BookingTask(client, placeholder)));
+        }
+
+        if (!existing.contains("homework_list")) {
+            ChaoxingHomeworkClient client = new ChaoxingHomeworkClient(
+                placeholder,
+                ConfigManager.getInstance().browser(),
+                RetryPolicies.defaultBooking());
+            registry.register(new Skill<>("homework_list", "查询畅课作业列表", new HomeworkTask(client, placeholder)));
+        }
     }
 
     /**

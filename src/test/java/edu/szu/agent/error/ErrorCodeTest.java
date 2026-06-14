@@ -17,9 +17,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrorCodeTest {
 
     @Test
-    @DisplayName("has exactly 12 constants")
-    void hasTwelveConstants() {
-        assertThat(ErrorCode.values()).hasSize(12);
+    @DisplayName("has exactly 14 constants")
+    void hasFourteenConstants() {
+        assertThat(ErrorCode.values()).hasSize(14);
     }
 
     @Test

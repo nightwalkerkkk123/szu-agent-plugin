@@ -34,6 +34,10 @@ java -jar target/szu-agent-plugin.jar booking venue \
 java -jar target/szu-agent-plugin.jar skill list --format json
 ```
 
+> 平台相关：Windows 本机 Maven / JDK 路径见 [`docs/setup/windows-maven.md`](docs/setup/windows-maven.md)；
+> macOS / Linux 路径见 [`docs/setup/mac-maven.md`](docs/setup/mac-maven.md)。
+> 本机已知 Maven 位于 `E:\tools\apache-maven-3.9.16\bin\mvn`，JDK 21 在 `E:\tools\jdk-21`。
+
 ## Code conventions
 
 - 显式标注设计模式: `// Design Pattern: Strategy` (报告要能 grep)

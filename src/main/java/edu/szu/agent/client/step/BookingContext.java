@@ -3,6 +3,9 @@ package edu.szu.agent.client.step;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
+import edu.szu.agent.domain.Homework;
+
+import java.util.List;
 
 /**
  * Mutable context passed through the booking pipeline.
@@ -23,6 +26,7 @@ public final class BookingContext {
     private final Account account;
     private String selectedVenue;
     private BookingResult lastFailure;
+    private List<Homework> homeworks;
 
     public BookingContext(BookingRequest request, Account account) {
         this.request = request;
@@ -62,6 +66,14 @@ public final class BookingContext {
 
     public void lastFailure(BookingResult.Failure lastFailure) {
         this.lastFailure = lastFailure;
+    }
+
+    public List<Homework> homeworks() {
+        return homeworks;
+    }
+
+    public void homeworks(List<Homework> homeworks) {
+        this.homeworks = homeworks;
     }
 
     public BookingResult.Success success(String venueName, String confirmation) {

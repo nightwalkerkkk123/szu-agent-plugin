@@ -50,6 +50,12 @@ public enum ErrorCode {
     /** 浏览器进程崩溃. */
     BROWSER_CRASH         (Severity.HIGH,     true,  false, true,  "浏览器进程崩溃"),
 
+    // ----- 作业查询 -----
+    /** 作业列表页加载失败. */
+    HOMEWORK_PAGE_LOAD_FAILED(Severity.HIGH,  true,  false, true,  "作业列表页加载失败"),
+    /** 作业列表为空. */
+    HOMEWORK_LIST_EMPTY   (Severity.LOW,      false, false, false, "作业列表为空"),
+
     // ----- 业务编排 -----
     /** 请求参数不合法. */
     INVALID_REQUEST       (Severity.LOW,      false, false, false, "请求参数不合法"),
