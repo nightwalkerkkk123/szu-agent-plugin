@@ -17,9 +17,43 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrorCodeTest {
 
     @Test
-    @DisplayName("has exactly 14 constants")
-    void hasFourteenConstants() {
-        assertThat(ErrorCode.values()).hasSize(14);
+    @DisplayName("has exactly 17 constants")
+    void hasSeventeenConstants() {
+        // 14 existing + 3 SESSION_* in US-007 = 17
+        assertThat(ErrorCode.values()).hasSize(17);
+    }
+
+    @Test
+    @DisplayName("SESSION_NOT_FOUND 元数据正确")
+    void sessionNotFoundMetadata() {
+        ErrorCode c = ErrorCode.SESSION_NOT_FOUND;
+        assertThat(c.severity()).isEqualTo(Severity.LOW);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("无持久化登录态");
+    }
+
+    @Test
+    @DisplayName("SESSION_READ_FAILED 元数据正确")
+    void sessionReadFailedMetadata() {
+        ErrorCode c = ErrorCode.SESSION_READ_FAILED;
+        assertThat(c.severity()).isEqualTo(Severity.MEDIUM);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("持久化登录态损坏");
+    }
+
+    @Test
+    @DisplayName("SESSION_WRITE_FAILED 元数据正确")
+    void sessionWriteFailedMetadata() {
+        ErrorCode c = ErrorCode.SESSION_WRITE_FAILED;
+        assertThat(c.severity()).isEqualTo(Severity.LOW);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("持久化登录态写入失败");
     }
 
     @Test

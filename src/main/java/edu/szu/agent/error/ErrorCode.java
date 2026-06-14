@@ -60,7 +60,15 @@ public enum ErrorCode {
     /** 请求参数不合法. */
     INVALID_REQUEST       (Severity.LOW,      false, false, false, "请求参数不合法"),
     /** 未知异常. */
-    UNKNOWN               (Severity.HIGH,     true,  false, true,  "未知异常");
+    UNKNOWN               (Severity.HIGH,     true,  false, true,  "未知异常"),
+
+    // ----- 登录态持久化(US-007) -----
+    /** 无持久化登录态. */
+    SESSION_NOT_FOUND     (Severity.LOW,      false, false, false, "无持久化登录态"),
+    /** 持久化登录态损坏. */
+    SESSION_READ_FAILED   (Severity.MEDIUM,   false, false, false, "持久化登录态损坏"),
+    /** 持久化登录态写入失败. */
+    SESSION_WRITE_FAILED  (Severity.LOW,      false, false, false, "持久化登录态写入失败");
 
     private final Severity severity;
     private final boolean retryable;
