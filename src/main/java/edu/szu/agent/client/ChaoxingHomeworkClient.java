@@ -2,11 +2,15 @@ package edu.szu.agent.client;
 
 import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
+import edu.szu.agent.client.session.SessionProbe;
+import edu.szu.agent.client.session.SessionStore;
 import edu.szu.agent.client.step.BookingContext;
 import edu.szu.agent.client.step.BookingStep;
 import edu.szu.agent.client.step.CasLoginStep;
 import edu.szu.agent.client.step.NavigateToHomeworkStep;
 import edu.szu.agent.client.step.ParseHomeworkListStep;
+import edu.szu.agent.client.step.PersistSessionStep;
+import edu.szu.agent.client.step.RestoreSessionStep;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.HomeworkListResult;
 import edu.szu.agent.error.BookingException;
@@ -17,6 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,9 +48,13 @@ public class ChaoxingHomeworkClient {
     private final BrowserLifecycle browser;
     private final RetryPolicy retryPolicy;
     private final List<BookingStep> steps;
+    private final SessionStore sessionStore;
+    private final SessionProbe sessionProbe;
+    private final Duration sessionTtl;
 
     /**
-     * Production constructor — uses the default homework pipeline.
+     * Production constructor — uses the default homework pipeline without
+     * session persistence. Kept for backward compatibility.
      *
      * @param account     resolved credentials
      * @param browser     browser adapter injected by ConfigManager
@@ -53,11 +63,35 @@ public class ChaoxingHomeworkClient {
     public ChaoxingHomeworkClient(Account account,
                                    BrowserLifecycle browser,
                                    RetryPolicy retryPolicy) {
-        this(account, browser, retryPolicy, List.of(
-            new CasLoginStep(NavigateToHomeworkStep.LMS_USER_INDEX_URL),
-            new NavigateToHomeworkStep(),
-            new ParseHomeworkListStep()
-        ));
+        this(account, browser, retryPolicy, defaultSteps(null, null, null),
+            null, null, null);
+    }
+
+    /**
+     * Production constructor — wires session persistence into the homework
+     * pipeline. Pipeline becomes: RestoreSession → CasLogin (skipped if
+     * sessionOk) → NavigateToHomework → ParseHomeworkList → PersistSession.
+     *
+     * @param account      resolved credentials
+     * @param browser      browser adapter
+     * @param retryPolicy  retry policy
+     * @param sessionStore on-disk store rooted at user home (must not be null)
+     * @param sessionProbe alive probe for the LMS user index (must not be null)
+     * @param sessionTtl   freshness window for persisted state (must not be null)
+     * @since 0.1.0
+     */
+    public ChaoxingHomeworkClient(Account account,
+                                   BrowserLifecycle browser,
+                                   RetryPolicy retryPolicy,
+                                   SessionStore sessionStore,
+                                   SessionProbe sessionProbe,
+                                   Duration sessionTtl) {
+        this(account, browser, retryPolicy,
+            defaultSteps(
+                Objects.requireNonNull(sessionStore, "sessionStore"),
+                Objects.requireNonNull(sessionProbe, "sessionProbe"),
+                Objects.requireNonNull(sessionTtl, "sessionTtl")),
+            sessionStore, sessionProbe, sessionTtl);
     }
 
     /**
@@ -67,10 +101,42 @@ public class ChaoxingHomeworkClient {
                             BrowserLifecycle browser,
                             RetryPolicy retryPolicy,
                             List<BookingStep> steps) {
+        this(account, browser, retryPolicy, steps, null, null, null);
+    }
+
+    /**
+     * Full DI constructor with session dependencies — for testing.
+     */
+    ChaoxingHomeworkClient(Account account,
+                            BrowserLifecycle browser,
+                            RetryPolicy retryPolicy,
+                            List<BookingStep> steps,
+                            SessionStore sessionStore,
+                            SessionProbe sessionProbe,
+                            Duration sessionTtl) {
         this.account = Objects.requireNonNull(account, "account");
         this.browser = Objects.requireNonNull(browser, "browser");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
         this.steps = List.copyOf(steps);
+        this.sessionStore = sessionStore;
+        this.sessionProbe = sessionProbe;
+        this.sessionTtl = sessionTtl;
+    }
+
+    private static List<BookingStep> defaultSteps(SessionStore store,
+                                                   SessionProbe probe,
+                                                   Duration ttl) {
+        List<BookingStep> built = new ArrayList<>();
+        if (store != null && probe != null && ttl != null) {
+            built.add(new RestoreSessionStep(store, probe, ttl));
+        }
+        built.add(new CasLoginStep(NavigateToHomeworkStep.LMS_USER_INDEX_URL));
+        built.add(new NavigateToHomeworkStep());
+        built.add(new ParseHomeworkListStep());
+        if (store != null) {
+            built.add(new PersistSessionStep(store));
+        }
+        return List.copyOf(built);
     }
 
     /**
@@ -81,6 +147,7 @@ public class ChaoxingHomeworkClient {
      */
     public HomeworkListResult list() {
         BookingContext ctx = new BookingContext(null, account);
+        ctx.username(account.studentId());
         try {
             browser.open();
             return retryPolicy.execute(() -> executePipeline(ctx));

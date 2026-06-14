@@ -2,6 +2,8 @@ package edu.szu.agent.client;
 
 import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
+import edu.szu.agent.client.session.SessionProbe;
+import edu.szu.agent.client.session.SessionStore;
 import edu.szu.agent.client.step.BookingContext;
 import edu.szu.agent.client.step.BookingStep;
 import edu.szu.agent.domain.BookingResult;
@@ -19,12 +21,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -128,6 +132,23 @@ class ChaoxingHomeworkClientTest {
 
         assertThat(result).isInstanceOf(HomeworkListResult.Success.class);
         verify(browser).close();
+    }
+
+    @Test
+    @DisplayName("7-arg constructor wires SessionStore/Probe/Ttl into the pipeline")
+    void listWithSessionDependencies() {
+        SessionStore store = mock(SessionStore.class);
+        SessionProbe probe = mock(SessionProbe.class);
+        Homework expected = new Homework("1", "OS", "lab", "2026.06.24", "待提交");
+        ChaoxingHomeworkClient client = new ChaoxingHomeworkClient(
+            account, browser, RetryPolicies.quickFix(),
+            List.of(captureHomeworks("S1", List.of(expected))),
+            store, probe, Duration.ofDays(30));
+
+        HomeworkListResult result = client.list();
+
+        assertThat(result).isInstanceOf(HomeworkListResult.Success.class);
+        assertThat(((HomeworkListResult.Success) result).homeworks()).containsExactly(expected);
     }
 
     // ---------- helpers ----------
