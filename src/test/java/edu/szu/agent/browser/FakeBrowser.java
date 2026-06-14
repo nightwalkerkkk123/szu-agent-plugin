@@ -43,6 +43,10 @@ public class FakeBrowser implements BrowserLifecycle {
     private final List<String> clicked = new ArrayList<>();
     private final List<String> filled = new ArrayList<>();
     private boolean opened;
+    private boolean loaded;
+    private boolean saved;
+    private java.nio.file.Path loadedPath;
+    private java.nio.file.Path savedPath;
 
     public FakeBrowser() {
         this(List.of("网球场1号", "网球场2号", "网球场3号"),
@@ -119,6 +123,19 @@ public class FakeBrowser implements BrowserLifecycle {
         // no-op
     }
 
+    @Override
+    public boolean importStorageState(java.nio.file.Path storageStateFile) {
+        this.loadedPath = storageStateFile;
+        this.loaded = storageStateFile != null;
+        return loaded;
+    }
+
+    @Override
+    public void exportStorageState(java.nio.file.Path storageStateFile) {
+        this.savedPath = storageStateFile;
+        this.saved = storageStateFile != null;
+    }
+
     // Test introspection helpers
 
     public boolean isOpened() {
@@ -132,4 +149,9 @@ public class FakeBrowser implements BrowserLifecycle {
     public List<String> getFilled() {
         return List.copyOf(filled);
     }
+
+    public boolean isLoaded() { return loaded; }
+    public boolean isSaved() { return saved; }
+    public java.nio.file.Path loadedPath() { return loadedPath; }
+    public java.nio.file.Path savedPath() { return savedPath; }
 }

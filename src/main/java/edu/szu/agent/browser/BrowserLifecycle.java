@@ -141,5 +141,28 @@ public interface BrowserLifecycle {
      */
     void screenshot(String absolutePath);
 
-    // Phase 2 complete: all 10 methods of ADR-0002 D1 implemented.
+    /**
+     * Loads cookies + localStorage from a Playwright storageState JSON file.
+     * Missing or invalid file silently returns {@code false}; callers should
+     * fall back to re-login.
+     *
+     * @param storageStateFile path to a Playwright storageState JSON; must not be null
+     * @return {@code true} if the file existed and was parsed, {@code false} otherwise
+     * @since 0.1.0
+     * @author 王子豪
+     */
+    boolean importStorageState(java.nio.file.Path storageStateFile);
+
+    /**
+     * Saves current cookies + localStorage to a Playwright storageState JSON file.
+     * Overwrites any existing file at the same path.
+     *
+     * @param storageStateFile path to write to; must not be null
+     * @throws edu.szu.agent.error.BookingException with SESSION_WRITE_FAILED on disk-write error
+     * @since 0.1.0
+     * @author 王子豪
+     */
+    void exportStorageState(java.nio.file.Path storageStateFile);
+
+    // Phase 5 (US-007): now 12 methods.
 }

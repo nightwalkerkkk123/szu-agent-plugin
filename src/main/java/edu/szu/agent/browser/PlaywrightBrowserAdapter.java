@@ -217,4 +217,16 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
         }
         return new BookingException(ErrorCode.BROWSER_CRASH, e.getMessage(), e);
     }
+
+    @Override
+    public boolean importStorageState(java.nio.file.Path storageStateFile) {
+        throw new UnsupportedOperationException(
+            "importStorageState not yet implemented (US-007 Task 11)");
+    }
+
+    @Override
+    public void exportStorageState(java.nio.file.Path storageStateFile) {
+        throw new UnsupportedOperationException(
+            "exportStorageState not yet implemented (US-007 Task 11)");
+    }
 }
