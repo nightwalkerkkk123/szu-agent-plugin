@@ -1,6 +1,7 @@
 package edu.szu.agent.browser;
 
 import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
@@ -10,11 +11,14 @@ import edu.szu.agent.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,6 +50,7 @@ class PlaywrightBrowserAdapterTest {
     @Mock Playwright playwright;
     @Mock BrowserType browserType;
     @Mock Browser browser;
+    @Mock BrowserContext context;
     @Mock Page page;
     @Mock Locator locator;
 
@@ -56,7 +61,8 @@ class PlaywrightBrowserAdapterTest {
     private PlaywrightBrowserAdapter openAdapter() {
         when(playwright.chromium()).thenReturn(browserType);
         when(browserType.launch(any())).thenReturn(browser);
-        when(browser.newPage()).thenReturn(page);
+        when(browser.newContext()).thenReturn(context);
+        when(context.newPage()).thenReturn(page);
         PlaywrightBrowserAdapter adapter = new PlaywrightBrowserAdapter(playwright);
         adapter.open();
         return adapter;
@@ -76,17 +82,19 @@ class PlaywrightBrowserAdapterTest {
             .as("open() must launch headless=true (per ADR-0002 D4)")
             .isTrue();
 
-        verify(browser).newPage();
+        verify(browser).newContext();
+        verify(context).newPage();
     }
 
     @Test
-    @DisplayName("close() releases page first, then browser (in order)")
+    @DisplayName("close() releases page → context → browser (in order)")
     void closeReleasesPageThenBrowser() {
         PlaywrightBrowserAdapter adapter = openAdapter();
         adapter.close();
 
-        InOrder order = inOrder(page, browser);
+        InOrder order = inOrder(page, context, browser);
         order.verify(page).close();
+        order.verify(context).close();
         order.verify(browser).close();
     }
 
@@ -398,5 +406,58 @@ class PlaywrightBrowserAdapterTest {
             .isInstanceOf(BookingException.class)
             .extracting(t -> ((BookingException) t).code())
             .isEqualTo(ErrorCode.NETWORK_TIMEOUT);
+    }
+
+    // ----- Cycle 10: importStorageState / exportStorageState -----
+
+    @Test
+    @DisplayName("importStorageState(file) rebuilds context with storageState path when file exists")
+    void importStorageStateRebuildsContextWhenFileExists(@TempDir Path tmp) throws Exception {
+        Path stateFile = tmp.resolve("storage-state.json");
+        Files.writeString(stateFile, "{\"cookies\":[],\"origins\":[]}");
+        // After open() builds the blank context, import() will close it and
+        // request a fresh one seeded with the persisted state.
+        when(browser.newContext(any(Browser.NewContextOptions.class))).thenReturn(context);
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        boolean result = adapter.importStorageState(stateFile);
+
+        assertThat(result).isTrue();
+        verify(browser).newContext(any(Browser.NewContextOptions.class));
+    }
+
+    @Test
+    @DisplayName("importStorageState(file) returns false when file is missing — does NOT rebuild context")
+    void importStorageStateReturnsFalseWhenFileMissing(@TempDir Path tmp) {
+        Path stateFile = tmp.resolve("does-not-exist.json");
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        boolean result = adapter.importStorageState(stateFile);
+
+        assertThat(result).isFalse();
+        verify(browser, never()).newContext(any(Browser.NewContextOptions.class));
+    }
+
+    @Test
+    @DisplayName("exportStorageState(file) calls context.storageState with StorageStateOptions.path")
+    void exportStorageStateCallsContextStorageState(@TempDir Path tmp) {
+        Path stateFile = tmp.resolve("session-out.json");
+        PlaywrightBrowserAdapter adapter = openAdapter();
+
+        adapter.exportStorageState(stateFile);
+
+        verify(context).storageState(any(BrowserContext.StorageStateOptions.class));
+    }
+
+    @Test
+    @DisplayName("exportStorageState() throws SESSION_WRITE_FAILED when adapter was never opened")
+    void exportStorageStateThrowsWhenContextIsNull(@TempDir Path tmp) {
+        Path stateFile = tmp.resolve("session-out.json");
+        PlaywrightBrowserAdapter adapter = new PlaywrightBrowserAdapter(playwright);
+
+        assertThatThrownBy(() -> adapter.exportStorageState(stateFile))
+            .isInstanceOf(BookingException.class)
+            .extracting(t -> ((BookingException) t).code())
+            .isEqualTo(ErrorCode.SESSION_WRITE_FAILED);
     }
 }
