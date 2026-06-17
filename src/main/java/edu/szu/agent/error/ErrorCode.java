@@ -68,7 +68,15 @@ public enum ErrorCode {
     /** 持久化登录态损坏. */
     SESSION_READ_FAILED   (Severity.MEDIUM,   false, false, false, "持久化登录态损坏"),
     /** 持久化登录态写入失败. */
-    SESSION_WRITE_FAILED  (Severity.LOW,      false, false, false, "持久化登录态写入失败");
+    SESSION_WRITE_FAILED  (Severity.LOW,      false, false, false, "持久化登录态写入失败"),
+
+    // ----- 作业附件下载(US-008) -----
+    /** 作业详情页无附件. */
+    ATTACHMENT_NOT_FOUND    (Severity.LOW,    false, false, false, "作业无附件"),
+    /** 附件下载失败(HTTP / 写文件). */
+    ATTACHMENT_DOWNLOAD_FAILED(Severity.MEDIUM, true, false, true,  "附件下载失败"),
+    /** 输出目录非法(不存在 / 不可写 / 不是目录). */
+    OUTPUT_DIR_INVALID    (Severity.MEDIUM,   false, false, false, "输出目录非法");
 
     private final Severity severity;
     private final boolean retryable;
