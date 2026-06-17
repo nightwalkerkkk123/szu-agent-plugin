@@ -48,9 +48,6 @@ public class ChaoxingHomeworkClient {
     private final BrowserLifecycle browser;
     private final RetryPolicy retryPolicy;
     private final List<BookingStep> steps;
-    private final SessionStore sessionStore;
-    private final SessionProbe sessionProbe;
-    private final Duration sessionTtl;
 
     /**
      * Production constructor — uses the default homework pipeline without
@@ -59,12 +56,13 @@ public class ChaoxingHomeworkClient {
      * @param account     resolved credentials
      * @param browser     browser adapter injected by ConfigManager
      * @param retryPolicy retry policy for the flow
+     * @since 0.1.0
+     * @author 王子豪
      */
     public ChaoxingHomeworkClient(Account account,
                                    BrowserLifecycle browser,
                                    RetryPolicy retryPolicy) {
-        this(account, browser, retryPolicy, defaultSteps(null, null, null),
-            null, null, null);
+        this(account, browser, retryPolicy, defaultSteps(null, null, null));
     }
 
     /**
@@ -79,6 +77,7 @@ public class ChaoxingHomeworkClient {
      * @param sessionProbe alive probe for the LMS user index (must not be null)
      * @param sessionTtl   freshness window for persisted state (must not be null)
      * @since 0.1.0
+     * @author 王子豪
      */
     public ChaoxingHomeworkClient(Account account,
                                    BrowserLifecycle browser,
@@ -90,8 +89,7 @@ public class ChaoxingHomeworkClient {
             defaultSteps(
                 Objects.requireNonNull(sessionStore, "sessionStore"),
                 Objects.requireNonNull(sessionProbe, "sessionProbe"),
-                Objects.requireNonNull(sessionTtl, "sessionTtl")),
-            sessionStore, sessionProbe, sessionTtl);
+                Objects.requireNonNull(sessionTtl, "sessionTtl")));
     }
 
     /**
@@ -101,26 +99,10 @@ public class ChaoxingHomeworkClient {
                             BrowserLifecycle browser,
                             RetryPolicy retryPolicy,
                             List<BookingStep> steps) {
-        this(account, browser, retryPolicy, steps, null, null, null);
-    }
-
-    /**
-     * Full DI constructor with session dependencies — for testing.
-     */
-    ChaoxingHomeworkClient(Account account,
-                            BrowserLifecycle browser,
-                            RetryPolicy retryPolicy,
-                            List<BookingStep> steps,
-                            SessionStore sessionStore,
-                            SessionProbe sessionProbe,
-                            Duration sessionTtl) {
         this.account = Objects.requireNonNull(account, "account");
         this.browser = Objects.requireNonNull(browser, "browser");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
         this.steps = List.copyOf(steps);
-        this.sessionStore = sessionStore;
-        this.sessionProbe = sessionProbe;
-        this.sessionTtl = sessionTtl;
     }
 
     private static List<BookingStep> defaultSteps(SessionStore store,

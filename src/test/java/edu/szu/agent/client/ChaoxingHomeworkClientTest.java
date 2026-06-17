@@ -31,6 +31,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ChaoxingHomeworkClient")
@@ -135,20 +136,28 @@ class ChaoxingHomeworkClientTest {
     }
 
     @Test
-    @DisplayName("7-arg constructor wires SessionStore/Probe/Ttl into the pipeline")
+    @DisplayName("6-arg constructor wires session deps into the default pipeline")
     void listWithSessionDependencies() {
         SessionStore store = mock(SessionStore.class);
         SessionProbe probe = mock(SessionProbe.class);
-        Homework expected = new Homework("1", "OS", "lab", "2026.06.24", "待提交");
+        // No persisted state on disk -> RestoreSessionStep exits early and
+        // marks ctx.sessionOk = false, so CasLoginStep takes over from there.
+        when(store.exists()).thenReturn(false);
+
         ChaoxingHomeworkClient client = new ChaoxingHomeworkClient(
             account, browser, RetryPolicies.quickFix(),
-            List.of(captureHomeworks("S1", List.of(expected))),
             store, probe, Duration.ofDays(30));
 
         HomeworkListResult result = client.list();
 
-        assertThat(result).isInstanceOf(HomeworkListResult.Success.class);
-        assertThat(((HomeworkListResult.Success) result).homeworks()).containsExactly(expected);
+        // Pipeline runs end-to-end: browser opened then closed by list()'s finally.
+        assertThat(result).isNotNull();
+        verify(browser).open();
+        verify(browser).close();
+        // RestoreSessionStep is the first step in the session-aware default
+        // pipeline; it queried the store for persisted state. This proves the
+        // 6-arg constructor wired session deps into defaultSteps() correctly.
+        verify(store).exists();
     }
 
     // ---------- helpers ----------
