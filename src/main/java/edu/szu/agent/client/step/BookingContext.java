@@ -4,7 +4,9 @@ import edu.szu.agent.account.Account;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Homework;
+import edu.szu.agent.domain.HomeworkAttachment;
 
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -29,6 +31,9 @@ public final class BookingContext {
     private List<Homework> homeworks;
     private boolean sessionOk;
     private String username;
+    private String homeworkId;
+    private List<HomeworkAttachment> attachments;
+    private Path outputDir;
 
     public BookingContext(BookingRequest request, Account account) {
         this.request = request;
@@ -92,6 +97,43 @@ public final class BookingContext {
 
     public void username(String username) {
         this.username = username;
+    }
+
+    /**
+     * Homework ID for download flow (US-008). Set by the caller before
+     * pipeline runs. {@code null} for booking / list flows.
+     */
+    public String homeworkId() {
+        return homeworkId;
+    }
+
+    public void homeworkId(String homeworkId) {
+        this.homeworkId = homeworkId;
+    }
+
+    /**
+     * Parsed attachment list (US-008). Populated by
+     * {@code ParseAttachmentsStep} and enriched by
+     * {@code DownloadFilesStep}. {@code null} for non-download flows.
+     */
+    public List<HomeworkAttachment> attachments() {
+        return attachments;
+    }
+
+    public void attachments(List<HomeworkAttachment> attachments) {
+        this.attachments = attachments;
+    }
+
+    /**
+     * Local output directory for downloads (US-008). Set by the caller
+     * before pipeline runs. {@code null} for non-download flows.
+     */
+    public Path outputDir() {
+        return outputDir;
+    }
+
+    public void outputDir(Path outputDir) {
+        this.outputDir = outputDir;
     }
 
     public BookingResult.Success success(String venueName, String confirmation) {

@@ -24,3 +24,6 @@ Thumbs.db
 
 # Claude Code
 .claude/worktrees/
+
+# HAR captures (large binary files; keep canonical copy in docs/superpowers/research/ if needed)
+*.har
