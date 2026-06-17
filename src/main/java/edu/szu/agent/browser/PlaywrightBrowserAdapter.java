@@ -295,4 +295,53 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
                 "export failed: " + e.getMessage(), e);
         }
     }
+
+    @Override
+    public long downloadAttachment(String url, java.nio.file.Path target) {
+        Objects.requireNonNull(url, "url");
+        Objects.requireNonNull(target, "target");
+        if (context == null) {
+            throw new BookingException(ErrorCode.BROWSER_CRASH,
+                "downloadAttachment called before open()");
+        }
+        Path parent = target.getParent();
+        if (parent != null) {
+            try {
+                Files.createDirectories(parent);
+            } catch (Exception e) {
+                throw new BookingException(ErrorCode.OUTPUT_DIR_INVALID,
+                    "cannot create parent dir for " + target + ": " + e.getMessage(), e);
+            }
+        }
+        // Write to .tmp, then atomic move to target.
+        Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
+        var response = context.request().get(url);
+        try {
+            if (!response.ok()) {
+                throw new BookingException(ErrorCode.ATTACHMENT_DOWNLOAD_FAILED,
+                    "HTTP " + response.status() + " fetching " + url);
+            }
+            byte[] body = response.body();
+            Files.write(tmp, body);
+            try {
+                java.nio.file.Files.move(tmp, target,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException amns) {
+                // Fall back to non-atomic move on filesystems that don't support it.
+                java.nio.file.Files.move(tmp, target,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            return body.length;
+        } catch (BookingException e) {
+            throw e;
+        } catch (Exception e) {
+            // Best-effort cleanup of the tmp file
+            try { Files.deleteIfExists(tmp); } catch (Exception ignored) {}
+            throw new BookingException(ErrorCode.ATTACHMENT_DOWNLOAD_FAILED,
+                "download failed for " + url + ": " + e.getMessage(), e);
+        } finally {
+            try { response.dispose(); } catch (Exception ignored) {}
+        }
+    }
 }

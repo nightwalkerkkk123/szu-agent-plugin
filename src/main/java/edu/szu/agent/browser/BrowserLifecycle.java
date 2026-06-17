@@ -164,5 +164,26 @@ public interface BrowserLifecycle {
      */
     void exportStorageState(java.nio.file.Path storageStateFile);
 
-    // Phase 5 (US-007): now 12 methods.
+    /**
+     * Downloads a single file from a CAS-protected URL using the current
+     * browser context's cookies / signed URL, writing bytes to {@code target}
+     * via a {@code .tmp} + atomic move.
+     *
+     * <p>Accepts any URL: LMS API endpoints (cookie auth) or
+     * {@code media2.szu.edu.cn} signed URLs (token in query). The Playwright
+     * request context shares cookies with the page context, so LMS
+     * authentication is inherited automatically.
+     *
+     * @param url    absolute URL to fetch; must not be null
+     * @param target absolute path to write the file to; parent dir must
+     *               exist; must not be null
+     * @return number of bytes written
+     * @throws BookingException with ATTACHMENT_DOWNLOAD_FAILED on HTTP / IO
+     *         errors, NETWORK_TIMEOUT on timeout, BROWSER_CRASH otherwise
+     * @since 0.1.0
+     * @author 王子豪
+     */
+    long downloadAttachment(String url, java.nio.file.Path target);
+
+    // Phase 5 (US-007): now 13 methods (US-008: +downloadAttachment).
 }

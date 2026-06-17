@@ -136,6 +136,44 @@ public class FakeBrowser implements BrowserLifecycle {
         this.saved = storageStateFile != null;
     }
 
+    /** Recorded by {@link #downloadAttachment(String, java.nio.file.Path)} (US-008). */
+    private final java.util.List<DownloadCall> downloadCalls = new java.util.ArrayList<>();
+    /** Optional byte payload to return from {@link #downloadAttachment}; tests set this. */
+    private byte[] downloadPayload;
+    /** Optional exception to throw from {@link #downloadAttachment}; tests set this. */
+    private RuntimeException downloadError;
+
+    @Override
+    public long downloadAttachment(String url, java.nio.file.Path target) {
+        downloadCalls.add(new DownloadCall(url, target));
+        if (downloadError != null) {
+            throw downloadError;
+        }
+        byte[] payload = downloadPayload != null ? downloadPayload : new byte[0];
+        try {
+            java.nio.file.Files.createDirectories(target.getParent());
+            java.nio.file.Files.write(target, payload);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+        return payload.length;
+    }
+
+    public void setDownloadPayload(byte[] payload) {
+        this.downloadPayload = payload;
+    }
+
+    public void setDownloadError(RuntimeException error) {
+        this.downloadError = error;
+    }
+
+    public java.util.List<DownloadCall> getDownloadCalls() {
+        return java.util.List.copyOf(downloadCalls);
+    }
+
+    /** Recorded argument pair for download calls. */
+    public record DownloadCall(String url, java.nio.file.Path target) {}
+
     // Test introspection helpers
 
     public boolean isOpened() {
