@@ -18,7 +18,7 @@ import java.util.concurrent.Callable;
     name = "homework",
     description = "Campus homework operations",
     mixinStandardHelpOptions = true,
-    subcommands = {HomeworkListCommand.class}
+    subcommands = {HomeworkListCommand.class, HomeworkDownloadCommand.class}
 )
 public class HomeworkCommand implements Callable<Integer> {
 
