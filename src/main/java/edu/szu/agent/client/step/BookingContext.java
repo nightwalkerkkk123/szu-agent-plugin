@@ -3,6 +3,7 @@ package edu.szu.agent.client.step;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
+import edu.szu.agent.domain.CourseEntry;
 import edu.szu.agent.domain.Homework;
 import edu.szu.agent.domain.HomeworkAttachment;
 
@@ -34,6 +35,7 @@ public final class BookingContext {
     private String homeworkId;
     private List<HomeworkAttachment> attachments;
     private Path outputDir;
+    private List<CourseEntry> scheduleCourses;
 
     public BookingContext(BookingRequest request, Account account) {
         this.request = request;
@@ -134,6 +136,18 @@ public final class BookingContext {
 
     public void outputDir(Path outputDir) {
         this.outputDir = outputDir;
+    }
+
+    /**
+     * Parsed schedule courses (US-009). Populated by
+     * {@code ParseScheduleStep}. {@code null} for non-schedule flows.
+     */
+    public List<CourseEntry> scheduleCourses() {
+        return scheduleCourses;
+    }
+
+    public void scheduleCourses(List<CourseEntry> scheduleCourses) {
+        this.scheduleCourses = scheduleCourses;
     }
 
     public BookingResult.Success success(String venueName, String confirmation) {

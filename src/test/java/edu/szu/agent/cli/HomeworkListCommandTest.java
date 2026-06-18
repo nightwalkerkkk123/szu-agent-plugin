@@ -70,7 +70,7 @@ class HomeworkListCommandTest {
             "PASSWORD_INCORRECT, 3"
         })
         void exitCodeMatchesSeverity(String codeName, int expectedExit) {
-            assertThat(HomeworkListCommand.exitCodeFor(ErrorCode.valueOf(codeName)))
+            assertThat(CommandOutput.exitCodeFor(ErrorCode.valueOf(codeName)))
                 .isEqualTo(expectedExit);
         }
 
@@ -78,7 +78,7 @@ class HomeworkListCommandTest {
         @DisplayName("Every ErrorCode maps to a valid exit code 1-4")
         void everyErrorCodeMapsToValidExit() {
             for (ErrorCode code : ErrorCode.values()) {
-                int exit = HomeworkListCommand.exitCodeFor(code);
+                int exit = CommandOutput.exitCodeFor(code);
                 assertThat(exit)
                     .as("ErrorCode.%s mapped to exit %d", code, exit)
                     .isBetween(1, 4);

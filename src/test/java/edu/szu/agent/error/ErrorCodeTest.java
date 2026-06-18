@@ -17,10 +17,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrorCodeTest {
 
     @Test
-    @DisplayName("has exactly 20 constants")
+    @DisplayName("has exactly 23 constants")
     void hasTwentyConstants() {
-        // 14 existing + 3 SESSION_* in US-007 + 3 ATTACHMENT_*/OUTPUT_DIR_INVALID in US-008 = 20
-        assertThat(ErrorCode.values()).hasSize(20);
+        // 14 existing + 3 SESSION_* (US-007) + 3 ATTACHMENT_*/OUTPUT_DIR_INVALID (US-008)
+        // + 3 SCHEDULE_* (US-009) = 23
+        assertThat(ErrorCode.values()).hasSize(23);
     }
 
     @Test

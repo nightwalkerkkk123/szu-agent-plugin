@@ -3,6 +3,7 @@ package edu.szu.agent.cli;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.client.ChaoxingAttachmentDownloadClient;
 import edu.szu.agent.client.ChaoxingHomeworkClient;
+import edu.szu.agent.client.EhallScheduleClient;
 import edu.szu.agent.client.VenueBookingClient;
 import edu.szu.agent.client.session.SessionProbe;
 import edu.szu.agent.client.session.SessionStore;
@@ -13,6 +14,7 @@ import edu.szu.agent.skill.Skills;
 import edu.szu.agent.task.BookingTask;
 import edu.szu.agent.task.HomeworkDownloadTask;
 import edu.szu.agent.task.HomeworkTask;
+import edu.szu.agent.task.ScheduleListTask;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
@@ -49,6 +51,7 @@ import java.time.Duration;
     subcommands = {
         BookingCommand.class,
         HomeworkCommand.class,
+        ScheduleCommand.class,
         SkillCommand.class,
         MCPCommand.class
     }
@@ -75,7 +78,8 @@ public class Main implements Callable<Integer> {
             .collect(java.util.stream.Collectors.toSet());
         if (existing.contains("booking_venue")
             && existing.contains("homework_list")
-            && existing.contains("homework_download")) {
+            && existing.contains("homework_download")
+            && existing.contains("schedule_list")) {
             return;
         }
 
@@ -114,6 +118,15 @@ public class Main implements Callable<Integer> {
             registry.register(new Skill<>("homework_download",
                 "下载畅课作业的全部附件到本地目录",
                 new HomeworkDownloadTask(client, placeholder)));
+        }
+
+        if (!existing.contains("schedule_list")) {
+            EhallScheduleClient client = new EhallScheduleClient(
+                placeholder,
+                ConfigManager.getInstance().browser(),
+                RetryPolicies.defaultBooking());
+            registry.register(new Skill<>("schedule_list", "查询学生课表",
+                new ScheduleListTask(client, placeholder)));
         }
     }
 

@@ -11,7 +11,6 @@ import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.domain.Homework;
 import edu.szu.agent.domain.HomeworkListResult;
 import edu.szu.agent.error.BookingException;
-import edu.szu.agent.error.ErrorCode;
 import edu.szu.agent.observability.Tracer;
 import edu.szu.agent.retry.RetryPolicies;
 import picocli.CommandLine.Command;
@@ -95,7 +94,7 @@ public class HomeworkListCommand implements Callable<Integer> {
                 item.put("status", "待提交");
                 data.add(item);
                 long elapsed = System.currentTimeMillis() - startMs;
-                out.println(formatResult(true, data, null, null, traceId, elapsed));
+                out.println(formatAndPrint(true, data, null, null, traceId, elapsed));
                 return 0;
             }
 
@@ -103,7 +102,7 @@ public class HomeworkListCommand implements Callable<Integer> {
                 Path envPath = Path.of(envFile);
                 if (!Files.exists(envPath)) {
                     long elapsed = System.currentTimeMillis() - startMs;
-                    out.println(formatResult(false, null,
+                    out.println(formatAndPrint(false, null,
                         "INVALID_REQUEST", "env file not found: " + envFile,
                         traceId, elapsed));
                     return 3;
@@ -130,45 +129,60 @@ public class HomeworkListCommand implements Callable<Integer> {
             return formatAndOutput(out, result, traceId, elapsed);
         } catch (AccountResolutionException e) {
             long elapsed = System.currentTimeMillis() - startMs;
-            out.println(formatResult(false, null,
+            out.println(formatAndPrint(false, null,
                 "CREDENTIAL_NOT_FOUND", e.getMessage(), traceId, elapsed));
             return 3;
         } catch (BookingException e) {
             long elapsed = System.currentTimeMillis() - startMs;
-            out.println(formatResult(false, null,
+            out.println(formatAndPrint(false, null,
                 e.code().name(), e.getMessage(), traceId, elapsed));
-            return exitCodeFor(e.code());
+            return CommandOutput.exitCodeFor(e.code());
         } catch (IllegalArgumentException e) {
             long elapsed = System.currentTimeMillis() - startMs;
-            out.println(formatResult(false, null,
+            out.println(formatAndPrint(false, null,
                 "INVALID_REQUEST", e.getMessage(), traceId, elapsed));
             return 2;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startMs;
-            out.println(formatResult(false, null,
+            out.println(formatAndPrint(false, null,
                 "UNKNOWN", e.getMessage(), traceId, elapsed));
             return 1;
         }
     }
 
-    private String formatResult(boolean success, ArrayNode data,
-                                String errorCode, String errorMessage,
+    private int formatAndOutput(PrintWriter out, HomeworkListResult result,
                                 String traceId, long elapsedMs) {
+        if (result instanceof HomeworkListResult.Success s) {
+            ArrayNode data = JSON.createArrayNode();
+            for (Homework h : s.homeworks()) {
+                ObjectNode item = JSON.createObjectNode();
+                item.put("homeworkId", h.homeworkId());
+                item.put("courseName", h.courseName());
+                item.put("title", h.title());
+                item.put("deadline", h.deadline());
+                item.put("status", h.status());
+                data.add(item);
+            }
+            out.println(formatAndPrint(true, data, null, null, traceId, elapsedMs));
+            return 0;
+        } else if (result instanceof HomeworkListResult.Failure f) {
+            out.println(formatAndPrint(false, null,
+                f.code().name(), f.message(), traceId, elapsedMs));
+            return CommandOutput.exitCodeFor(f.code());
+        }
+        out.println(formatAndPrint(false, null, "UNKNOWN",
+            "unexpected result type", traceId, elapsedMs));
+        return 1;
+    }
+
+    private String formatAndPrint(boolean success, ArrayNode data,
+                                  String errorCode, String errorMessage,
+                                  String traceId, long elapsedMs) {
         if ("human".equalsIgnoreCase(format)) {
             return formatHuman(success, data, errorCode, errorMessage, traceId, elapsedMs);
         }
-        try {
-            ObjectNode root = JSON.createObjectNode();
-            root.put("success", success);
-            root.set("data", data != null ? data : JSON.nullNode());
-            root.put("errorCode", errorCode);
-            root.put("errorMessage", errorMessage);
-            root.put("traceId", traceId);
-            root.put("elapsedMs", elapsedMs);
-            return JSON.writeValueAsString(root);
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to serialize JSON output", e);
-        }
+        return CommandOutput.formatResult(success, data, errorCode, errorMessage,
+            traceId, elapsedMs, format);
     }
 
     private String formatHuman(boolean success, ArrayNode data,
@@ -193,42 +207,5 @@ public class HomeworkListCommand implements Callable<Integer> {
         sb.append("Trace: ").append(traceId).append('\n');
         sb.append("Elapsed: ").append(elapsedMs).append("ms");
         return sb.toString();
-    }
-
-    private int formatAndOutput(PrintWriter out, HomeworkListResult result,
-                                String traceId, long elapsedMs) {
-        if (result instanceof HomeworkListResult.Success s) {
-            ArrayNode data = JSON.createArrayNode();
-            for (Homework h : s.homeworks()) {
-                ObjectNode item = JSON.createObjectNode();
-                item.put("homeworkId", h.homeworkId());
-                item.put("courseName", h.courseName());
-                item.put("title", h.title());
-                item.put("deadline", h.deadline());
-                item.put("status", h.status());
-                data.add(item);
-            }
-            out.println(formatResult(true, data, null, null, traceId, elapsedMs));
-            return 0;
-        } else if (result instanceof HomeworkListResult.Failure f) {
-            out.println(formatResult(false, null,
-                f.code().name(), f.message(), traceId, elapsedMs));
-            return exitCodeFor(f.code());
-        }
-        out.println(formatResult(false, null, "UNKNOWN", "unexpected result type",
-            traceId, elapsedMs));
-        return 1;
-    }
-
-    static int exitCodeFor(ErrorCode code) {
-        return switch (code.severity()) {
-            case LOW -> 2;
-            case MEDIUM -> 1;
-            case HIGH -> switch (code) {
-                case BROWSER_CRASH -> 4;
-                default -> 1;
-            };
-            case CRITICAL -> 3;
-        };
     }
 }

@@ -76,7 +76,15 @@ public enum ErrorCode {
     /** 附件下载失败(HTTP / 写文件). */
     ATTACHMENT_DOWNLOAD_FAILED(Severity.MEDIUM, true, false, true,  "附件下载失败"),
     /** 输出目录非法(不存在 / 不可写 / 不是目录). */
-    OUTPUT_DIR_INVALID    (Severity.MEDIUM,   false, false, false, "输出目录非法");
+    OUTPUT_DIR_INVALID    (Severity.MEDIUM,   false, false, false, "输出目录非法"),
+
+    // ----- 课表查询(US-009) -----
+    /** 课表页加载失败. */
+    SCHEDULE_PAGE_LOAD_FAILED(Severity.HIGH,   true,  false, true,  "课表页加载失败"),
+    /** 课表解析失败(选择器失效 / 周次非法). */
+    SCHEDULE_PARSE_FAILED    (Severity.MEDIUM, true,  false, true,  "课表解析失败"),
+    /** 课表为空(可能学期未开始). */
+    SCHEDULE_EMPTY           (Severity.LOW,    false, false, false, "课表为空(可能学期未开始)");
 
     private final Severity severity;
     private final boolean retryable;
