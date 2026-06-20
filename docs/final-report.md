@@ -59,7 +59,59 @@ AI Agent 不知 SZU 页面结构与登录流程，无法直接完成任务；学
 
 ## 三、P1 详细设计:6 Skill + 1 KB
 
-[占位]
+### 3.1 畅课 (Chaoxing)
+
+- **业务背景**: 畅课(学习通)承载全校在线课程资源,作业截止提醒与课件查阅是学生每周高频需求。与 ehall/CAS 独立,需单独建立登录态,复用成本高。
+
+- **数据模型**: `domain.ChaoxingAssignment` record 字段: `title String`, `course String`, `dueAt Instant`, `attachments List<String>`, `status AssignmentStatus`; `AssignmentStatus` 为枚举 `PENDING / SUBMITTED / OVERDUE`。
+
+- **接入方式**: 学习通 SSO,独立域名与 CAS 不同源,Cookie/Token 不与 ehall 复用。BrowserLifecycle 启动专属浏览器上下文,执行 ChaoxingLoginStep 完成账号密码登录。
+
+- **核心流水线**: 4 步 BookingStep 链式执行: `ChaoxingLoginStep`(建会话) → `FetchCourseListStep`(遍历课程列表) → `ForEach course: FetchAssignmentListStep`(抓取作业明细) → `FilterUpcomingStep`(按截止时间筛选)。每步异常统一封装为 `BookingException`。
+
+- **错误码扩展**: 新增 3 个 `ErrorCode`: `CHAOXING_AUTH_EXPIRED`(学习通登录态失效,触发重新登录), `CHAOXING_COURSE_NOT_FOUND`(课程 ID 不存在,中断流水线), `CHAOXING_ANTI_BOT`(检测到人机验证,降级等待或终止)。
+
+- **设计模式复用**: Strategy 模式——`ChaoxingBookingStep` 实现 `BookingStep` 接口,与 P0 体育场地 Strategy 并列; Adapter 模式——`ChaoxingCredentialAdapter` 桥接学习通登录协议与通用凭证抽象; 复用 `BrowserLifecycle` 与 `RetryPolicy`。
+
+- **风险与挑战**: 学习通反爬机制较严格,Selector 随页面迭代易失效,需建立缓存层保存近期作业状态,并定期(每学期)刷新页面定位符。
+
+---
+
+### 3.2 公文通 (Notice)
+
+- **业务背景**: 深圳大学公文通发布校内正式通知(讲座/竞赛/公示),信息分散于企业微信与 ehall 门户。学生需按分类/时间精准筛选,手动翻页成本高。
+
+- **数据模型**: `domain.Notice` record 字段: `id String`, `title String`, `category NoticeCategory`, `publishedAt Instant`, `url String`, `hasAttachment boolean`; `NoticeCategory` 为枚举 `ANNOUNCEMENT / LECTURE / COMPETITION / PUBLICITY`。
+
+- **接入方式**: ehall/CAS 同源,与 P0 体育场地预约复用同一 CAS Session。首次登录后 Cookie 持久化,后续 Skill 调用无需重复认证。
+
+- **核心流水线**: `CasLoginStep`(复用 P0) → `NavigateToNoticeStep`(跳转公文通列表页) → `FetchNoticeListStep`(抓取当前页通知,支持分页) → `FilterByCategoryStep`(按枚举分类过滤) → `SortByDateStep`(按发布时间倒序)。与 booking 流水线共用错误处理与重试机制。
+
+- **错误码扩展**: 新增 2 个 `ErrorCode`: `NOTICE_LIST_EMPTY`(列表为空,可能为分类筛选结果为真,仅告警不重试), `NOTICE_CATEGORY_INVALID`(分类枚举值与页面不符,低严重度,返回空列表)。
+
+- **设计模式复用**: Adapter 模式——`CasLoginAdapter` 同时服务 book/notice/schedule 三个 Skill;复用 `Matcher` 工具类进行页面元素筛选; RetryPolicy 继承自 P0 基础设施。
+
+- **风险与挑战**: 公文通页面结构相对稳定,但分类枚举随学校组织架构调整可能变更,需每学期核对枚举完整性,建议在 KB 中维护版本对应表。
+
+---
+
+### 3.3 课表 (Schedule)
+
+- **业务背景**: 个人课表是学生最基础的时间规划工具,学期视图(周一至周日)需完整呈现课程时间地点。与 ehall/CAS 同源,可在登录态复用基础上构建本地缓存。
+
+- **数据模型**: `domain.ScheduleEntry` record 字段: `courseName String`, `teacher String`, `weekday Weekday`(Java 内置枚举), `startTime LocalTime`, `endTime LocalTime`, `location String`, `weeks List<Integer>`; 聚合为 `Schedule(entries List<ScheduleEntry>, semester String, fetchedAt Instant)`。
+
+- **接入方式**: ehall/CAS 同源,复用 `CasLoginStep`。课表页面为标准表格布局,Selector 定位稳定,适合结构化抓取后本地存储。
+
+- **核心流水线**: `CasLoginStep`(复用) → `NavigateToScheduleStep`(跳转至课表页) → `FetchWeekScheduleStep`(按weekday分区抓取) → `CacheStep`(序列化写入本地 JSON 文件)。缓存命中时直接返回,跳过浏览器自动化,大幅降低响应延迟。
+
+- **错误码扩展**: 新增 2 个 `ErrorCode`: `SCHEDULE_NOT_FOUND`(用户课表页面无数据,可能为学期切换空窗), `SCHEDULE_CACHE_STALE`(缓存超过 24 小时,强制刷新)。
+
+- **设计模式复用**: Builder 模式——`ScheduleEntryBuilder` 链式构造 7 字段复杂对象,替代构造器重载;Strategy 模式——`SemesterSelectionStrategy` 处理秋季/春季/夏季学期不同页面逻辑;复用 `CasLoginStep` 会话管理。
+
+- **风险与挑战**: 课表随学期切换(2 月/9 月)数据完全变更,需实现缓存失效机制(检测到 `fetchedAt` 与当前学期不符时自动清理);考试周课表临时调整需支持增量更新而非全量覆盖。
+
+---
 
 ## 四、P0 现状: `book` Skill 作为首个落地
 
