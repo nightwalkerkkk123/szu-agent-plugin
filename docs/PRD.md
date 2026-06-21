@@ -96,15 +96,68 @@
 > 多账号调度 (`AccountState` 状态机) 非 P0,P0 仅单账号 + 项目轮换。
 > `@AgentTool` 反射 / `SkillManager` / `MCPToolProvider` 推迟到 P1。
 
-### 3.2 P1 — 扩展接口(本作业部分实现)
+### 3.2 P1 — 校园 6 业务 + 深大知识库(本作业路线图)
 
-| Skill | 范围 |
-|---|---|
-| **公文通查询** | 列表 / 筛选 / 摘要;只设计接口,实现基础 list |
-| **畅课任务查询** | 作业 / 课件 / 截止;只设计接口 |
-| **成长方案查询** | 学分 / 完成情况;只设计接口 |
-| **企业微信消息摘要** | 用户主动粘贴消息 → 提取待办;基础实现 |
-| **邮件草稿生成** | 模板化草稿 + 用户确认;基础实现 |
+> ⚠️ **ADR 校准声明**(2026-06-21):本节按 **docs/superpowers/specs/2026-06-20-final-report-design.md** §5 业务模板重写。原 5 项模糊 P1 列表(公文通/畅课/成长方案/企业微信/邮件草稿)全部移除;新 6 业务 + KB 取代,与 `docs/final-report.md` §3 P1 详细设计一致。代码实现按路线图分学期/课后推进,本作业仅交付 P0 `booking_venue`。
+
+#### 通用前置(全部 P1 Skill 复用)
+
+- **P1.0** 复用 `BrowserLifecycle`(F3.1) + `PlaywrightBrowserAdapter`(F3.2);畅课/课表/考试另起独立 SSO Cookie 隔离容器
+- **P1.1** 实现 `CampusTask<T>` 接口(ADR-0001 D10),在 `Skills` 单例注册中心注册
+- **P1.2** 通过 `AccountResolver` 三层凭证查找(ADR-0005 D1)获取凭证,密码永不进 CLI 参数
+- **P1.3** 错误码新增值挂入 `ErrorCode` 枚举的 5 元数据模式,`BookingException` 统一封装
+- **P1.4** `RetryPolicy` 默认 `ExponentialBackoff(3, 2s)`(ADR-0006 §3);只对未点击提交的状态重试,见 ADR-0001 OQ4
+
+#### 3.2.1 畅课(`chaoxing_tasks`)
+
+- **业务范围**:学习通作业与课件清单查询;课程作业列表、按截止时间筛选、附件清单
+- **输入**:`username`(学号,必填) / `queryDaysAhead`(查询未来 N 天,默认 7) / `courseFilter`(可选)
+- **输出**:`List<ChaoxingAssignment>` record 数组(`title/course/dueAt/attachments/status`),`status` 为 `PENDING/SUBMITTED/OVERDUE` 枚举
+- **错误码扩展**:`CHAOXING_AUTH_EXPIRED`(登录态失效) / `CHAOXING_COURSE_NOT_FOUND`(课程不存在) / `CHAOXING_ANTI_BOT`(人机验证)
+- **验收**:GIVEN 登录成功 WHEN 调用 `chaoxing_tasks` THEN 7 天内作业清单返回,JSON `dueAt` 为 ISO 8601;GIVEN 课程不存在 WHEN 调用 THEN `CHAOXING_COURSE_NOT_FOUND` 退出码 1
+
+#### 3.2.2 公文通(`notice_list`)
+
+- **业务范围**:深大公文通列表/分类筛选/时间倒序;按校内组织架构分类聚合
+- **输入**:`username`(必填) / `category`(可选,`ANNOUNCEMENT/LECTURE/COMPETITION/PUBLICITY`) / `daysBack`(默认 30)
+- **输出**:`List<Notice>` record(`id/title/category/publishedAt/url/hasAttachment`),按 `publishedAt` 倒序
+- **错误码扩展**:`NOTICE_LIST_EMPTY`(列表为空,仅告警) / `NOTICE_CATEGORY_INVALID`(分类无效,返回空列表)
+- **验收**:GIVEN CAS 登录态有效 WHEN 调用 `notice_list --category LECTURE` THEN 仅返回讲座类;GIVEN `category` 无效 WHEN 调用 THEN `NOTICE_CATEGORY_INVALID` 退出码 0(降级)
+
+#### 3.2.3 课表(`schedule_get`)
+
+- **业务范围**:个人学期课表抓取,周视图聚合;本地缓存 24h TTL
+- **输入**:`username`(必填) / `semester`(可选,`2025-FALL/2026-SPRING/2026-SUMMER`)
+- **输出**:`Schedule` record(`entries: List<ScheduleEntry>` + `semester/fetchedAt`),每条 `courseName/teacher/weekday/startTime/endTime/location/weeks`
+- **错误码扩展**:`SCHEDULE_NOT_FOUND`(学期切换空窗) / `SCHEDULE_CACHE_STALE`(缓存超 24h)
+- **验收**:GIVEN 学期切换窗口 WHEN 调用 THEN `SCHEDULE_NOT_FOUND` + 空 `entries` 退出码 0;GIVEN 缓存命中(< 24h) WHEN 调用 THEN 跳过 Playwright,响应 < 100ms
+
+#### 3.2.4 校历(`calendar_get`)
+
+- **业务范围**:深大校历公开页抓取,开学/教学周/节假日调休/考试周;一次抓取覆盖整学期
+- **输入**:`academicYear`(如 `2025-2026`,默认当前)
+- **输出**:`List<AcademicEvent>` record(`date/type/description/semester/weekOfTerm`),`type` 为 `SEMESTER_START/HOLIDAY/EXAM_WEEK/BREAK` 枚举
+- **错误码扩展**:`CALENDAR_PARSE_FAILED`(HTML 表格解析失败,降级告警)
+- **验收**:GIVEN 公开页可访问 WHEN 调用 `calendar_get` THEN 返回全学期事件;GIVEN 表格格式变更 WHEN 调用 THEN `CALENDAR_PARSE_FAILED` 不中断,返回已解析部分;缓存命中响应 < 50ms
+
+#### 3.2.5 考试安排(`exam_list`)
+
+- **业务范围**:学期末考试安排抓取,考场与座位号;与课表交叉聚合(`Map<LocalDate, List<ExamInfo>>`)
+- **输入**:`username`(必填) / `semester`(必填)
+- **输出**:`ExamSchedule` record(`exams: List<ExamInfo>` + `semester`),每条 `courseName/examDate/startTime/endTime/location/seatNumber/type`,`type` 为 `REGULAR/RESIT` 枚举
+- **错误码扩展**:`EXAM_NOT_FOUND`(指定课程无考试,仅告警) / `EXAM_LOCATION_CONFLICT`(教室冲突,触发人工复核)
+- **验收**:GIVEN 考前 2-4 周发布期 WHEN 调用 THEN 返回完整考场信息;GIVEN 教室冲突 WHEN 调用 THEN `EXAM_LOCATION_CONFLICT` 退出码 1(需人工介入)
+
+#### 3.2.6 深大知识库(`kb_query`)
+
+- **业务范围**:本地 Markdown + 定期更新脚本的异质模块,5 分类(校园基础/餐饮/图书馆/选课/FAQ);**无 BrowserLifecycle 关键路径**,cron 抓取为辅助
+- **输入**:`query`(关键词,必填) / `category`(可选,5 枚举之一)
+- **输出**:`KnowledgeResult` record(`snippet/sourcePath/relevanceScore`),前 200 字片段 + 文件路径 + 匹配分数
+- **错误码扩展**:`KNOWLEDGE_STALE`(超 7 天未更新,保留旧版) / `KNOWLEDGE_NOT_FOUND`(无匹配,空 snippet 而非异常)
+- **验收**:GIVEN 关键词命中 WHEN 调用 THEN snippet + `relevanceScore` ∈ [0.0, 1.0];GIVEN 无匹配 WHEN 调用 THEN `KNOWLEDGE_NOT_FOUND` 空 snippet 退出码 0;GIVEN `refresh-knowledge.sh` 抓取失败 WHEN cron 触发 THEN 保留旧版本 + `KNOWLEDGE_STALE` 告警
+
+> **架构约束**(贯穿 3.2.1-3.2.6):6 Skill 全部实现 `CampusTask<T>` 通过 `Skills` 单例注册;错误码不新增独立类,P1 错误码挂入 `ErrorCode` 已有 5 元数据模式;跨业务凭证隔离:畅课独立 Cookie 容器(§3.2.1),其余 5 业务共享 ehall/CAS 同源会话;与 P0 `booking_venue` 共用 `BrowserLifecycle` + `RetryPolicy` + `Tracer` + `LogMasker` 基础设施;与 `docs/final-report.md` §3 详细设计保持一致,每 Skill 的 Pipeline 步骤、错误码、复用面以本文为准。
+
 
 ### 3.3 P2 — 不做
 
