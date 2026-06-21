@@ -30,7 +30,7 @@ public final class ToolSchema {
     }
 
     /** Schema version. Bump when inputSchema changes. */
-    public static final String SCHEMA_VERSION = "1.0";
+    public static final String SCHEMA_VERSION = "1.1";
 
     /**
      * Returns the {@code tools/list} entry for a Skill.
@@ -74,9 +74,8 @@ public final class ToolSchema {
     }
 
     /**
-     * Hand-curated inputSchema for the booking_venue tool. Matches
-     * MCP.md §tools/list. Other Skills would add their own switch
-     * branch here — for now the project only has one.
+     * Hand-curated inputSchema per Skill. Matches MCP.md §tools/list.
+     * New Skills add a switch branch here.
      *
      * @since 0.1.0
      */
@@ -84,6 +83,7 @@ public final class ToolSchema {
     private static Map<String, Object> schemaFor(String skillName) {
         return switch (skillName) {
             case "booking_venue" -> bookingVenueSchema();
+            case "kb_query" -> kbQuerySchema();
             default -> Map.of("type", "object", "additionalProperties", true);
         };
     }
@@ -139,6 +139,33 @@ public final class ToolSchema {
 
         schema.put("properties", properties);
         schema.put("required", List.of("username", "campus", "sport", "date", "timeSlot"));
+        return schema;
+    }
+
+    private static Map<String, Object> kbQuerySchema() {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+
+        Map<String, Object> properties = new LinkedHashMap<>();
+
+        Map<String, Object> query = new LinkedHashMap<>();
+        query.put("type", "string");
+        query.put("description", "查询关键词,例如 图书馆、食堂、选课");
+        properties.put("query", query);
+
+        Map<String, Object> limit = new LinkedHashMap<>();
+        limit.put("type", "integer");
+        limit.put("description", "最大返回条数,默认 5");
+        limit.put("default", 5);
+        properties.put("limit", limit);
+
+        Map<String, Object> category = new LinkedHashMap<>();
+        category.put("type", "string");
+        category.put("description", "可选分类过滤: CAMPUS_BASICS / DINING / LIBRARY / ACADEMICS / FAQ");
+        properties.put("category", category);
+
+        schema.put("properties", properties);
+        schema.put("required", List.of("query"));
         return schema;
     }
 }

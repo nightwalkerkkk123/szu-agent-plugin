@@ -102,19 +102,24 @@ class SkillCommandTest {
         int exit = runCli("mcp", "list");
         assertThat(exit).isEqualTo(0);
         JsonNode root = MAPPER.readTree(out.toString().trim());
-        assertThat(root.get("schemaVersion").asText()).isEqualTo("1.0");
+        assertThat(root.get("schemaVersion").asText()).isEqualTo("1.1");
         JsonNode tools = root.get("tools");
         assertThat(tools.isArray()).isTrue();
         JsonNode booking = null;
+        JsonNode kb = null;
         for (JsonNode t : tools) {
-            if ("booking_venue".equals(t.get("name").asText())) {
+            String name = t.get("name").asText();
+            if ("booking_venue".equals(name)) {
                 booking = t;
-                break;
+            } else if ("kb_query".equals(name)) {
+                kb = t;
             }
         }
         assertThat(booking).isNotNull();
         assertThat(booking.get("description").asText()).isEqualTo("体育场馆定时预约");
         assertThat(booking.get("inputSchema").get("type").asText()).isEqualTo("object");
+        assertThat(kb).isNotNull();
+        assertThat(kb.get("description").asText()).isEqualTo("深大知识库查询");
     }
 
     @Test

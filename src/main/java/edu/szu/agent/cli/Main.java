@@ -6,6 +6,7 @@ import edu.szu.agent.retry.RetryPolicies;
 import edu.szu.agent.skill.Skill;
 import edu.szu.agent.skill.Skills;
 import edu.szu.agent.task.BookingTask;
+import edu.szu.agent.task.KnowledgeTask;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
@@ -17,8 +18,9 @@ import java.util.concurrent.Callable;
  * <p>Subcommands:
  * <ul>
  *   <li>{@code booking venue ...} — P0 business (Playwright real run)
+ *   <li>{@code kb query ...} — knowledge-base query (P1 skeleton)
  *   <li>{@code skill list|call} — Skill registry access (P1)
- *   <li>{@code mcp list|call} — MCP protocol surface (P1)
+ *   <li>{@code mcp list|call|serve} — MCP protocol surface (P1)
  * </ul>
  *
  * <p>On startup, the main task(s) are eagerly registered with the
@@ -37,6 +39,7 @@ import java.util.concurrent.Callable;
     description = "SZU campus automation CLI tool",
     subcommands = {
         BookingCommand.class,
+        KnowledgeCommand.class,
         SkillCommand.class,
         MCPCommand.class
     }
@@ -59,17 +62,30 @@ public class Main implements Callable<Integer> {
      */
     public static void registerDefaultSkills() {
         Skills registry = Skills.getInstance();
-        // Defensive: skip if already registered (e.g. from a test)
-        for (Skill<?> existing : registry.all()) {
-            if ("booking_venue".equals(existing.name())) {
-                return;
-            }
+        registerBookingVenue(registry);
+        registerKbQuery(registry);
+    }
+
+    private static void registerBookingVenue(Skills registry) {
+        if (isRegistered(registry, "booking_venue")) {
+            return;
         }
         ConfigManager.getInstance().load();
         VenueBookingClient client = new VenueBookingClient(
             ConfigManager.getInstance().browser(),
             RetryPolicies.defaultBooking());
         registry.register(new Skill<>("booking_venue", "体育场馆定时预约", new BookingTask(client)));
+    }
+
+    private static void registerKbQuery(Skills registry) {
+        if (isRegistered(registry, "kb_query")) {
+            return;
+        }
+        registry.register(new Skill<>("kb_query", "深大知识库查询", new KnowledgeTask()));
+    }
+
+    private static boolean isRegistered(Skills registry, String name) {
+        return registry.all().stream().anyMatch(s -> s.name().equals(name));
     }
 
     /**

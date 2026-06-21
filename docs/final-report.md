@@ -163,6 +163,8 @@ AI Agent 不知 SZU 页面结构与登录流程，无法直接完成任务；学
 
 - **设计模式复用**: Builder 模式——`KnowledgeDocBuilder` 构造含 frontmatter 的 Markdown; MatchingStrategy 接口实现三档匹配,体现 OCP。均不依赖 `BrowserLifecycle`,体现与自动化业务的解耦。
 
+- **实现状态**: P1 骨架已落地——`KnowledgeCategory` / `KnowledgeDoc` / `KnowledgeResult` 领域模型、`KnowledgeDocBuilder`、`MatchingStrategy`(精确/包含/正则三档)、`KnowledgeRepository`(Markdown 加载 + YAML frontmatter 解析)、`KnowledgeTask`(`kb_query`)及 CLI `szu-agent kb query`、MCP schema 均已实现。5 个 starter Markdown 文件已置于 `src/main/resources/knowledge/`。定期刷新脚本 `scripts/refresh-knowledge.sh` 与 `KNOWLEDGE_STALE` 告警作为后续增强保留。
+
 - **风险与挑战**: 仅抓公开页面,不采集私有系统数据,每周 cron 在可接受范围内;关键词检索面对同义词(如"图书馆"vs"图馆")可能漏检;需维护 changelog 避免 Agent 使用过期信息。
 
 ---
@@ -359,17 +361,18 @@ ehall/畅课页面 DOM 改版即导致 selector 失效,改进方向:Playwright `
 
 ### 9.1 项目总结
 
-本作业完整交付了一个面向 AI Agent 的深圳大学校园自动化插件,以 **6 Skill + 1 KB** 愿景(§2)、**4 模式 + 6 技术**(§5/6)、**84.58% 行覆盖**(§7)三层支柱落地。代码层 P0 已交付 `booking_venue`,真演示跑通 8 步流水线(§4),293 测试 0 失败;P1 5 业务 + KB 已在 §3 完成详细设计,作为后续学期/课后的路线图。
+本作业完整交付了一个面向 AI Agent 的深圳大学校园自动化插件,以 **6 Skill + 1 KB** 愿景(§2)、**4 模式 + 6 技术**(§5/6)、**84.58% 行覆盖**(§7)三层支柱落地。代码层 P0 已交付 `booking_venue`,真演示跑通 8 步流水线(§4),293 测试 0 失败;P1 中 `kb_query` 深大知识库骨架已落地(§3.6),含本地 Markdown 知识库与三档匹配策略;同时 Skill/MCP 薄壳升级为可实际跨平台使用的 stdio MCP server(`mcp serve`)。其余 4 项 P1 业务(畅课、公文通、课表、校历、考试)已在 §3 完成详细设计,作为后续学期/课后的路线图。
 
 ### 9.2 演进路径:工具集 → 智能助手工具集
 
 | 阶段 | 形态 | 状态 |
 |---|---|---|
 | v0.1 (本作业) | 1 Skill 工具集(`book`) | ✅ 已交付 |
-| v0.2 | + Skill/MCP 薄壳 + `CampusTask<T>` 抽象 | ✅ 已交付(Phase 4) |
+| v0.2 | + Skill/MCP 薄壳 + `CampusTask<T>` 抽象 + 跨平台 stdio MCP server | ✅ 已交付 |
+| v0.2.5 | + `kb_query` 深大知识库骨架(本地 Markdown + 三档匹配) | ✅ 已交付 |
 | v0.3 | + 畅课(§3.1)+ 公文通(§3.2) | 目标下学期 |
 | v0.4 | + 课表(§3.3)+ 校历(§3.4) | 目标下学期 |
-| v0.5 | + 考试(§3.5)+ 深大知识库(§3.6) | 目标下学期初 |
+| v0.5 | + 考试(§3.5) | 目标下学期初 |
 | v1.0 | 6 Skill + 1 KB 完整工具集 | 目标 1 学年 |
 
 ### 9.3 课程要求达成
