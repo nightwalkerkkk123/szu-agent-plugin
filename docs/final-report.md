@@ -169,24 +169,218 @@ AI Agent 不知 SZU 页面结构与登录流程，无法直接完成任务；学
 
 ## 四、P0 现状: `book` Skill 作为首个落地
 
-[占位]
+
+P0 已交付 `booking_venue` Skill,从 CLI 字符串参数到 ehall/CAS 真实预约全链路跑通;`mvn test` **250 通过 0 失败**、JaCoCo **行覆盖 87.80%**(见 §7)。本节描述 8 步流水线、领域模型、凭证流转三块核心机制,并指出与 §3 P1 业务的复用面。
+
+### 4.1 8 步预约流水线
+
+`VenueBookingClient.book(BookingRequest)` 串联 8 个 `BookingStep` 策略(`client/step/BookingStep.java:32`):
+
+| # | 步骤 | 职责 | 设计模式 |
+|---|---|---|---|
+| 1 | `CasLoginStep` | CAS 统一认证,建立 ehall 会话 | Adapter(`BrowserLifecycle`) |
+| 2 | `NavigateToBookingStep` | 跳转 ehall 预约主页 | Adapter |
+| 3 | `SelectCampusStep` | 选择校区(粤海/丽湖) | Strategy(`BookingStep`) |
+| 4 | `SelectDateStep` | 选择预约日期 | Strategy |
+| 5 | `SelectSportStep` | 选择运动项目(网球/羽毛球) | Strategy |
+| 6 | `SelectTimeSlotStep` | 选择时段(HH:mm-HH:mm) | Strategy |
+| 7 | `SelectVenueStep` | 选定场地(`VenueSelector`) | Strategy + 子策略 |
+| 8 | `ConfirmBookingStep` | 提交并校验确认信息 | Strategy |
+
+每步读取 `BookingContext.request()` 拿到不可变输入,写入 `BookingContext.selectedVenue` 等中间结果;返回值 `null` 为成功,`BookingResult.Failure` 为终态失败,抛异常则由 `RetryPolicy` 按错误码元数据决定是否重试。`VenueSelector` 是嵌套 Strategy:两个实现 `CapacityVenueSelector`(优先空闲场)和 `CourtListSelector`(按场地编号)按业务场景选用,体现"Strategy 选 Strategy"。
+
+### 4.2 领域模型与 Builder 校验
+
+`domain.BookingRequest`(6 字段,`Builder` 构造,`ADR-0006 §一.4`):
+
+- 4 必填非空:`campus` / `sport` / `date` / `timeSlot`
+- 1 约束:`preferredVenueIndex >= 1`(ehall 1-based)
+- 1 可选:`username`(由 `AccountResolver` 后续解析)
+
+**关键设计**:`build()` 在最终构造前做 **cross-field 校验**——若 `sport.campus() != campus` 抛 `IllegalStateException` 给出明确错误("`TENNIS` belongs to campus YUEHAI but campus parameter is LIHU. Use Sport.of(campus, name) to route correctly.")。这避免了构造器重载在多校区场景下的歧义,体现 Builder 相对重载的优越性。`Campus` 枚举承载 `YUEHAI/LIHU`,`Sport` 是 per-campus 模型(`YuehaiSport` / `LihuSport` 拆分,通过 `Sport.of(campus, name)` 工厂方法路由,见 commit `3a5913d`)。
+
+### 4.3 凭证流转三层查找
+
+`account.AccountResolver`(`ADR-0005 D1`)实现三层凭证查找,**密码永不进 CLI 参数**:
+
+1. **进程环境变量**(`System.getenv("SZU_PASSWORD_2023150090")`,由 `EnvVarName.forStudentId()` 工厂生成)
+2. **`--env-file` 指向的 .env 文件**(Skill wrapper 调用 CLI 时传)
+3. **Skill 直接注入**(MCP/Skill 调用方在内存中传入)
+
+优先级:进程 env > `.env` > 注入。`LogMasker`(ADR-0005 D2)集中脱敏 9 字段名 + 2 值正则,archunit 静态规则禁止日志字符串中裸含敏感字段名。CLI 参数 `username` 是学号(公开),密码只在 env 层流转。
+
+### 4.4 错误码、追踪与产物
+
+`error.ErrorCode` 枚举(`docs/system-map.md §4`)携带 5 元数据:`severity` / `retryable` / `switchAccount` / `screenshot` / `hint`——把"是否重试/是否截图/是否换号"的决策下沉到枚举,删除原 `ErrorClassifier` 策略(`ADR-0001 D9`)。`BookingException` 统一异常封装,`Tracer`(Singleton,双检锁+volatile)生成 `traceId`(格式 `20240610-abc123`),`RunRecord` 在 run 结束时落盘 JSON 到 `runs/` 目录替代 Python 版的 SQLite,SQLite 不引入。
+
+### 4.5 暴露面:CLI / Skill / MCP 三层
+
+- **CLI**:`szu-agent booking venue --username ... --campus 粤海 --sport 网球 --date 0 --time-slot 19:00-20:00`,picocli 子命令路由,`--dry-run` 仅作测试夹具,真演示默认走 Playwright(ADR-0001 D2)
+- **Skill**:`Skill<T>` 接口 + `Skills` 注册中心(Singleton),`BookingTask implements CampusTask<BookingResult>`(`ADR-0001 D10`)薄壳翻译 `TaskInput → BookingRequest`
+- **MCP**:`MCPToolProvider` 导出 `tools/list`,`MCPToolCallHandler` 处理 `tools/call`,JSON Schema 与 CLI 参数对齐
+
+`§3.1-3.6` 的 6 个 P1 Skill 全部复用本节的 8 步流水线骨架、Builder 校验、凭证三层查找、错误码枚举、Tracer 单例——即每条流水线只需扩展自己的步骤内容,而公共底座一处建设、六业务共享。
+
+---
 
 ## 五、设计模式应用(4 种, 贯穿 P0+P1)
 
-[占位]
+
+> 详细背景见 `docs/design-patterns.md`,本节仅按 spec 要求以 **markdown 表格两列** 呈现 P0 落点与 P1 复用面,不与既有文档重复。
+
+### 5.1 Builder
+
+| P0 落点 | P1 复用面 |
+|---|---|
+| `domain.BookingRequest.Builder`(6 字段 + cross-field 校验) | §3.3 `ScheduleEntryBuilder` / §3.5 `ExamInfoBuilder` / §3.6 `KnowledgeDocBuilder` 链式构造同构 6-10 字段复杂对象,统一替换构造器重载 |
+
+### 5.2 Singleton
+
+| P0 落点 | P1 复用面 |
+|---|---|
+| `config.ConfigManager`(配置加载 + 浏览器注入) / `observability.Tracer`(trace_id 管理) / `skill.Skills`(注册中心)均双检锁 + volatile | §3 P1 Skill 注册共用 `Skills` 注册中心,新增 Skill 无需修改框架(OCP);`Tracer` 为 §3.1-3.6 六业务所有 run 提供统一 traceId |
+
+### 5.3 Strategy
+
+| P0 落点 | P1 复用面 |
+|---|---|
+| `Matcher<T>`(5 实现)/ `RetryPolicy`(3 实现)/ `BookingStep`(8 实现)+ `VenueSelector`(2 实现) = 18 文件 | §3.1 `ChaoxingBookingStep` / §3.3 `SemesterSelectionStrategy` / §3.6 `MatchingStrategy`(三档精确/包含/正则)与 P0 同构,新增业务即"加一个 step"无需改框架 |
+
+### 5.4 Adapter
+
+| P0 落点 | P1 复用面 |
+|---|---|
+| `browser.BrowserLifecycle`(10 方法目标接口)+ `PlaywrightBrowserAdapter` 唯一真实现,`FakeBrowser` 仅测试夹具 | §3.1 畅课需独立 SSO,`ChaoxingBrowserAdapter` 桥接学习通登录协议;§3.6 KB 走 HTML→Markdown 解析路径,**不依赖 BrowserLifecycle**,体现异质模块的解耦 |
+
+---
 
 ## 六、编程技术应用(6 种, 贯穿 P0+P1)
 
-[占位]
+
+> 静态守卫:`scripts/grep-runs.sh` 校验 4 模式 24 文件 + 6 技术 46 文件,任何漂移 `exit 1`(见 `WORKING-CONTEXT.md` 交付物表)。
+
+### 6.1 泛型
+
+| P0 现状 | P1 复用 |
+|---|---|
+| `Matcher<T>` / `RetryPolicy` / `BookingContext` / `BookingStep` 贯穿领域与策略层 | `Skill<T>` / `CampusTask<T>` / `BookingTask<T>` / `MCPToolCallHandler` / `MCPToolProvider` / `Skills` 让 §3 P1 业务以同构契约注册,无需任何适配层 |
+
+### 6.2 枚举
+
+| P0 现状 | P1 复用 |
+|---|---|
+| 13 个枚举:`Campus` / `Sport` / `TimeSlot` / `ErrorCode`(12 值 5 元数据)/ `Severity` / `AccountState` 等 | §3.2 `NoticeCategory` / §3.1 `AssignmentStatus` / §3.4 `EventType` / §3.5 `ExamType` / §3.6 `KnowledgeCategory` 5 个新枚举,延续"P0 五元数据模式"携带业务元数据,无需外部分类器 |
+
+### 6.3 注解
+
+| P0 现状 | P1 复用 |
+|---|---|
+| picocli `@Command/@Option/@Spec/@Parameters` 在 `cli.Main` + `cli.BookingCommand`,4 文件命中 | §3 P1 业务子命令(`chaoxingTasks` / `noticeList` / `scheduleGet` / `calendarGet` / `examList` / `kbQuery`)继承同套 picocli 注解,注册即用 |
+
+### 6.4 重载
+
+| P0 现状 | P1 复用 |
+|---|---|
+| `AccountResolver.resolve`(3 重载)+ `ConfigManager.load`(2 重载)+ `ExponentialBackoff` / `FixedDelay` 构造器,4 文件命中 | §3.3 `Schedule` 聚合(单 `ScheduleEntry` vs 完整 `Schedule(entries, semester, fetchedAt)`)与 §3.5 `ExamInfo` 同构;`AccountResolver` 三层凭证查找直接服务于 §3.1 畅课独立 SSO |
+
+### 6.5 抽象类
+
+| P0 现状 | P1 复用 |
+|---|---|
+| `AbstractMatcher<T>` 承载 `description` + `toString` 默认实现,4 个具体 Matcher 继承,1 文件命中 | §3.6 KB `KnowledgeMatcher` 若需新增匹配算法(如模糊/同义词)继承 `AbstractMatcher` 即可,无需重写契约方法 |
+
+### 6.6 Lambda + Stream
+
+| P0 现状 | P1 复用 |
+|---|---|
+| 12 文件命中:`BookingStep.of(name, BiFunction)` 静态工厂允许 Lambda 一步定义新 step / `Matcher` 4 default 组合方法(`Matchers.all/any`)/ `RetryPolicies` 工厂链 | `SkillCommand` / `MCPCommand` / `MCPToolCallHandler` / `Skills` / `BookingTask` 共 17 文件命中;§3.6 `KnowledgeSkill` 用 Stream 串接 Markdown 目录加载与片段截取 |
+
+---
 
 ## 七、测试与覆盖率
 
-[占位]
+
+### 7.1 测试栈与统计
+
+测试栈:**JUnit 5** + **AssertJ** + **Mockito** + **ArchUnit** + **JaCoCo 0.8.13**。`mvn test` 2026-06-14 跑过:**250 通过 0 失败**,**行覆盖 87.80%** / 指令覆盖 87.96%(`target/site/jacoco/jacoco.csv` 878/1000),远超课程 80% 红线(见 `WORKING-CONTEXT.md` "P1 wrapper 已做"段)。`mvn package` 产物 `target/szu-agent-plugin.jar` 169MB,Playwright 浏览器内核打包在内,真演示免环境。
+
+### 7.2 测试分层
+
+| 层级 | 数量级 | 关键类 | 备注 |
+|---|---|---|---|
+| 单元测试 | ~180 | `MatcherTest` / `RetryPolicyTest` / `BookingRequestTest` / `BookingStepTest` 等 | FakeBrowser 模拟 BrowserLifecycle,无真实浏览器依赖 |
+| 集成测试 | ~50 | `BookingTaskTest` / `SkillsTest` / `MCPToolCallHandlerTest` / `FakeBrowserIntegrationTest` | 跨模块流程校验,跑完整 8 步流水线 |
+| 静态守卫 | 4 | `LogbackShadeConsistencyTest` + `ArchUnitLogMaskerTest` + `grep-runs.sh` + `scripts/demo.sh --smoke-only` | 守护 4 模式 24 文件、6 技术 46 文件、日志脱敏、shade 一致性 |
+
+### 7.3 关键测试用例(展示覆盖深度)
+
+`FakeBrowser.allTextOf` 按 selector 分发(commit `7c6d61c`)后,8 步流水线全部可走 FakeBrowser 单测路径,无需起 Playwright 即可在 CI 中回归。`ArchUnit` 规则禁止日志字符串裸含 `password` / `token` 等 9 字段名,任何漂移编译失败。`BookingRequestTest` 显式断言 `sport.campus() != campus` 抛 `IllegalStateException`,防止 §3 P1 多校区业务路由错误。
+
+### 7.4 课堂演示兜底
+
+`scripts/demo.sh`(ADR-0001 D8)4 步流程:`mvn -q package` → `mvn test` → `java -jar ... --smoke-only` → `grep-runs.sh`,任何一步失败 exit 非零。HARNESS_BACKLOG ID-002 记录"演示后 5 分钟内手工取消 ehall 占位场地"的兜底义务,确保自动化不污染真实资源。
+
+---
 
 ## 八、局限性分析与改进
 
-[占位]
+
+### 8.1 浏览器脆弱性(系统级)
+
+ehall/畅课页面 DOM 改版即导致 selector 失效,改进方向:Playwright `locator()` API + ARIA role 语义识别,逐步替换硬编码 CSS selector。Playwright API 升级(每 6-8 周)冲击适配器层,需建立版本协商机制(`ADR-0006 retry 子决定`已落地部分 trace 机制)。
+
+### 8.2 P1 六业务具体挑战
+
+| 业务 | 主要风险 | 改进方向 |
+|---|---|---|
+| 畅课(§3.1) | 学习通反爬严格,SSO 与 ehall 不互通 | 独立 SSO Cookie 隔离容器 + 缓存层,每学期刷新 selector |
+| 公文通(§3.2) | 分类枚举随学校组织架构调整可能变更 | KB 中维护 `NoticeCategory ↔ 校内部门` 版本对应表 |
+| 课表(§3.3) | 学期切换数据全变更,考试周临时调整 | 缓存失效检测 `fetchedAt` 与学期不符时清理,增量更新 |
+| 校历(§3.4) | 域名或路径变更,学年数据 8-9 月更新 | KB 记录权威 URL 配置化,每年人工核对 |
+| 考试(§3.5) | 发布前缓存 TTL 短,考场临时更换 | 考前 2-4 周发布前 6h 缓存、发布后 24h,支持强制刷新 |
+| KB(§3.6) | 同义词漏检("图书馆"vs"图馆")、cron 抓取失败 | 同义词词典 + 失败保留旧版本 + `KNOWLEDGE_STALE` 告警 |
+
+### 8.3 单例测试困难
+
+`ConfigManager` / `Tracer` / `Skills` 三个 Singleton 双检锁 + volatile 实现,测试间相互影响。改进:枚举单例(`enum ConfigManager { INSTANCE }`)防止反射破坏;引入注册表管理生命周期(JEP 447 已支持 `Statements Before super(...)`)。
+
+### 8.4 MCP 权限控制缺失
+
+当前 `MCPToolProvider` 暴露所有工具,无细粒度 ACL。改进:`toolPermissions.json` 配置 + 操作审计日志,记录哪个 Agent 在何时调用哪个工具;高风险操作(如确认预约)增加 `--confirm` 二次确认标志。
+
+### 8.5 意图误判的边界责任
+
+外部 Agent 调用本工具时若参数错误(如 `preferredVenueIndex < 1`),`BookingRequest.build()` 抛 `IllegalStateException`,CLI 映射为 exit 2。本项目仅保证参数校验严密,**不**对 Agent 意图理解负责——这是 ADR-0001 D1 边界的具体体现(见 §2.2)。
+
+---
 
 ## 九、总结与展望
 
-[占位]
+
+### 9.1 项目总结
+
+本作业完整交付了一个面向 AI Agent 的深圳大学校园自动化插件,以 **6 Skill + 1 KB** 愿景(§2)、**4 模式 + 6 技术**(§5/6)、**87.80% 测试覆盖**(§7)三层支柱落地。代码层 P0 已交付 `booking_venue`,真演示跑通 8 步流水线(§4),250 测试 0 失败;P1 5 业务 + KB 已在 §3 完成详细设计,作为后续学期/课后的路线图。
+
+### 9.2 演进路径:工具集 → 智能助手工具集
+
+| 阶段 | 形态 | 状态 |
+|---|---|---|
+| v0.1 (本作业) | 1 Skill 工具集(`book`) | ✅ 已交付 |
+| v0.2 | + Skill/MCP 薄壳 + `CampusTask<T>` 抽象 | ✅ 已交付(Phase 4) |
+| v0.3 | + 畅课(§3.1)+ 公文通(§3.2) | 目标下学期 |
+| v0.4 | + 课表(§3.3)+ 校历(§3.4) | 目标下学期 |
+| v0.5 | + 考试(§3.5)+ 深大知识库(§3.6) | 目标下学期初 |
+| v1.0 | 6 Skill + 1 KB 完整工具集 | 目标 1 学年 |
+
+### 9.3 课程要求达成
+
+| 要求 | 落地证据 |
+|---|---|
+| 4 种设计模式 | Builder / Singleton / Strategy / Adapter,grep 守卫 24 文件命中 |
+| 6 种编程技术 | 泛型 / 枚举 / 注解 / 重载 / 抽象类 / Lambda+Stream,grep 守卫 46 文件命中 |
+| 80%+ 测试覆盖率 | JaCoCo 87.80% 行 / 87.96% 指令,250 测试 0 失败 |
+| 完整文档 | `docs/final-report.md`(本文)+ `docs/PRD.md` + `docs/system-map.md` + `docs/design-patterns.md` + `WORKING-CONTEXT.md` + 5 个 ADR |
+
+### 9.4 展望
+
+短期:按 v0.3-v0.5 时间表逐 Skill 落地,每 Skill 复用 P0 已验证的 8 步骨架、Builder 校验、凭证三层查找、错误码枚举。中期:Agent 调用方生态成熟后,本工具集可作为 OpenClaw / Claude Code / 自建 Agent 的标准校园 Skill 集合被引用。长期:深大知识库开放给非在校用户,让"懂深大的助手"服务于校友、考生、访客等群体——这是项目从"工具集"到"知识基础设施"的最终愿景。
