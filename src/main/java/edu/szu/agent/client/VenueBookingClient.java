@@ -49,7 +49,7 @@ public class VenueBookingClient {
     private final List<BookingStep> steps;
 
     /**
-     * Production constructor — uses the default 7-step pipeline.
+     * Production constructor — uses the default 8-step pipeline.
      *
      * @param account      resolved credentials (from AccountResolver)
      * @param browser      the browser adapter (injected by ConfigManager.browser())
