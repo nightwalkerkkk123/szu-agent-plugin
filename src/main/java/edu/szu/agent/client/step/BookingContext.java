@@ -3,6 +3,12 @@ package edu.szu.agent.client.step;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
+import edu.szu.agent.domain.CourseEntry;
+import edu.szu.agent.domain.Homework;
+import edu.szu.agent.domain.HomeworkAttachment;
+
+import java.nio.file.Path;
+import java.util.List;
 
 /**
  * Mutable context passed through the booking pipeline.
@@ -23,6 +29,13 @@ public final class BookingContext {
     private final Account account;
     private String selectedVenue;
     private BookingResult lastFailure;
+    private List<Homework> homeworks;
+    private boolean sessionOk;
+    private String username;
+    private String homeworkId;
+    private List<HomeworkAttachment> attachments;
+    private Path outputDir;
+    private List<CourseEntry> scheduleCourses;
 
     public BookingContext(BookingRequest request, Account account) {
         this.request = request;
@@ -62,6 +75,79 @@ public final class BookingContext {
 
     public void lastFailure(BookingResult.Failure lastFailure) {
         this.lastFailure = lastFailure;
+    }
+
+    public List<Homework> homeworks() {
+        return homeworks;
+    }
+
+    public void homeworks(List<Homework> homeworks) {
+        this.homeworks = homeworks;
+    }
+
+    public boolean sessionOk() {
+        return sessionOk;
+    }
+
+    public void sessionOk(boolean sessionOk) {
+        this.sessionOk = sessionOk;
+    }
+
+    public String username() {
+        return username;
+    }
+
+    public void username(String username) {
+        this.username = username;
+    }
+
+    /**
+     * Homework ID for download flow (US-008). Set by the caller before
+     * pipeline runs. {@code null} for booking / list flows.
+     */
+    public String homeworkId() {
+        return homeworkId;
+    }
+
+    public void homeworkId(String homeworkId) {
+        this.homeworkId = homeworkId;
+    }
+
+    /**
+     * Parsed attachment list (US-008). Populated by
+     * {@code ParseAttachmentsStep} and enriched by
+     * {@code DownloadFilesStep}. {@code null} for non-download flows.
+     */
+    public List<HomeworkAttachment> attachments() {
+        return attachments;
+    }
+
+    public void attachments(List<HomeworkAttachment> attachments) {
+        this.attachments = attachments;
+    }
+
+    /**
+     * Local output directory for downloads (US-008). Set by the caller
+     * before pipeline runs. {@code null} for non-download flows.
+     */
+    public Path outputDir() {
+        return outputDir;
+    }
+
+    public void outputDir(Path outputDir) {
+        this.outputDir = outputDir;
+    }
+
+    /**
+     * Parsed schedule courses (US-009). Populated by
+     * {@code ParseScheduleStep}. {@code null} for non-schedule flows.
+     */
+    public List<CourseEntry> scheduleCourses() {
+        return scheduleCourses;
+    }
+
+    public void scheduleCourses(List<CourseEntry> scheduleCourses) {
+        this.scheduleCourses = scheduleCourses;
     }
 
     public BookingResult.Success success(String venueName, String confirmation) {

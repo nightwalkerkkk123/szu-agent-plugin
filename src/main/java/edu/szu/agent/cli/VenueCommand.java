@@ -41,18 +41,6 @@ import java.util.concurrent.Callable;
  * Per PRD §5.3: exit codes 0/1/2/3/4 correspond to
  * success / business-failure / param-error / env-error / browser-error.
  *
- * <p>Output is JSON per PRD §5.2 schema:
- * <pre>{@code
- * {
- *   "success": true,
- *   "data": { ... },
- *   "errorCode": null,
- *   "errorMessage": null,
- *   "traceId": "20260612-ABC123",
- *   "elapsedMs": 4321
- * }
- * }</pre>
- *
  * <p>Uses picocli's {@code @Command} annotation as a CLI dispatch mechanism;
  * picocli is the framework, not a project-level design pattern (per ADR-0007 D1
  * the project commits to 4 patterns: Builder / Singleton / Strategy / Adapter).
@@ -111,37 +99,32 @@ public class VenueCommand implements Callable<Integer> {
         String traceId = Tracer.getInstance().generateTraceId();
 
         try {
-            // Per ADR-0001 D2: --dry-run is a test fixture only — short-circuit
-            // before any I/O (no AccountResolver, no browser, no env-file).
             if (dryRun) {
                 ObjectNode data = JSON.createObjectNode();
                 data.put("venueName", "dry-run-stub");
                 data.put("confirmation", "DRY-RUN");
                 long elapsed = System.currentTimeMillis() - startMs;
-                out.println(formatResult(true, data, null, null, traceId, elapsed));
+                out.println(formatAndPrint(true, data, null, null, traceId, elapsed));
                 return 0;
             }
 
-            // Per ADR-0005 D1: --env-file loads credentials before business logic
             if (envFile != null) {
                 Path envPath = Path.of(envFile);
                 if (!Files.exists(envPath)) {
                     long elapsed = System.currentTimeMillis() - startMs;
-                    out.println(formatResult(false, null,
+                    out.println(formatAndPrint(false, null,
                         "INVALID_REQUEST", "env file not found: " + envFile,
                         traceId, elapsed));
-                    return 3; // env error
+                    return 3;
                 }
                 ConfigManager.getInstance().loadEnvFile(envPath);
             }
 
-            // Build effective env: env-file values override process env
             Map<String, String> effectiveEnv = new LinkedHashMap<>(System.getenv());
             if (envFile != null) {
                 effectiveEnv.putAll(ConfigManager.getInstance().envFileProps());
             }
 
-            // Resolve credentials (per ADR-0005 D1: process env > env-file > Skill injection)
             Account account = AccountResolver.resolve(username, effectiveEnv);
 
             Campus campusEnum = Campus.valueOf(campus.toUpperCase());
@@ -166,45 +149,53 @@ public class VenueCommand implements Callable<Integer> {
             return formatAndOutput(out, result, traceId, elapsed);
         } catch (AccountResolutionException e) {
             long elapsed = System.currentTimeMillis() - startMs;
-            out.println(formatResult(false, null,
+            out.println(formatAndPrint(false, null,
                 "CREDENTIAL_NOT_FOUND", e.getMessage(), traceId, elapsed));
             return 3;
         } catch (BookingException e) {
             long elapsed = System.currentTimeMillis() - startMs;
-            out.println(formatResult(false, null,
+            out.println(formatAndPrint(false, null,
                 e.code().name(), e.getMessage(), traceId, elapsed));
-            return exitCodeFor(e.code());
+            return CommandOutput.exitCodeFor(e.code());
         } catch (IllegalArgumentException e) {
             long elapsed = System.currentTimeMillis() - startMs;
-            out.println(formatResult(false, null,
+            out.println(formatAndPrint(false, null,
                 "INVALID_REQUEST", e.getMessage(), traceId, elapsed));
             return 2;
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startMs;
-            out.println(formatResult(false, null,
+            out.println(formatAndPrint(false, null,
                 "UNKNOWN", e.getMessage(), traceId, elapsed));
             return 1;
         }
     }
 
-    private String formatResult(boolean success, ObjectNode data,
-                                String errorCode, String errorMessage,
+    private int formatAndOutput(PrintWriter out, BookingResult result,
                                 String traceId, long elapsedMs) {
+        if (result instanceof BookingResult.Success s) {
+            ObjectNode data = JSON.createObjectNode();
+            data.put("venueName", s.venueName());
+            data.put("confirmation", s.confirmation());
+            out.println(formatAndPrint(true, data, null, null, traceId, elapsedMs));
+            return 0;
+        } else if (result instanceof BookingResult.Failure f) {
+            out.println(formatAndPrint(false, null,
+                f.code().name(), f.message(), traceId, elapsedMs));
+            return CommandOutput.exitCodeFor(f.code());
+        }
+        out.println(formatAndPrint(false, null, "UNKNOWN",
+            "unexpected result type", traceId, elapsedMs));
+        return 1;
+    }
+
+    private String formatAndPrint(boolean success, ObjectNode data,
+                                  String errorCode, String errorMessage,
+                                  String traceId, long elapsedMs) {
         if ("human".equalsIgnoreCase(format)) {
             return formatHuman(success, data, errorCode, errorMessage, traceId, elapsedMs);
         }
-        try {
-            ObjectNode root = JSON.createObjectNode();
-            root.put("success", success);
-            root.set("data", data != null ? data : JSON.nullNode());
-            root.put("errorCode", errorCode);
-            root.put("errorMessage", errorMessage);
-            root.put("traceId", traceId);
-            root.put("elapsedMs", elapsedMs);
-            return JSON.writeValueAsString(root);
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to serialize JSON output", e);
-        }
+        return CommandOutput.formatResult(success, data, errorCode, errorMessage,
+            traceId, elapsedMs, format);
     }
 
     private String formatHuman(boolean success, ObjectNode data,
@@ -227,37 +218,7 @@ public class VenueCommand implements Callable<Integer> {
         return sb.toString();
     }
 
-    private int formatAndOutput(PrintWriter out, BookingResult result,
-                                String traceId, long elapsedMs) {
-        if (result instanceof BookingResult.Success s) {
-            ObjectNode data = JSON.createObjectNode();
-            data.put("venueName", s.venueName());
-            data.put("confirmation", s.confirmation());
-            out.println(formatResult(true, data, null, null, traceId, elapsedMs));
-            return 0;
-        } else if (result instanceof BookingResult.Failure f) {
-            out.println(formatResult(false, null,
-                f.code().name(), f.message(), traceId, elapsedMs));
-            return exitCodeFor(f.code());
-        }
-        out.println(formatResult(false, null, "UNKNOWN", "unexpected result type",
-            traceId, elapsedMs));
-        return 1;
-    }
-
     static TimeSlot parseTimeSlot(String raw) {
         return TimeSlot.of(raw);
-    }
-
-    static int exitCodeFor(ErrorCode code) {
-        return switch (code.severity()) {
-            case LOW -> 2;      // param error
-            case MEDIUM -> 1;   // business failure
-            case HIGH -> switch (code) {
-                case BROWSER_CRASH -> 4;
-                default -> 1;
-            };
-            case CRITICAL -> 3; // env / account error
-        };
     }
 }

@@ -17,9 +17,77 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrorCodeTest {
 
     @Test
-    @DisplayName("has exactly 12 constants")
-    void hasTwelveConstants() {
-        assertThat(ErrorCode.values()).hasSize(12);
+    @DisplayName("has exactly 23 constants")
+    void hasTwentyConstants() {
+        // 14 existing + 3 SESSION_* (US-007) + 3 ATTACHMENT_*/OUTPUT_DIR_INVALID (US-008)
+        // + 3 SCHEDULE_* (US-009) = 23
+        assertThat(ErrorCode.values()).hasSize(23);
+    }
+
+    @Test
+    @DisplayName("SESSION_NOT_FOUND 元数据正确")
+    void sessionNotFoundMetadata() {
+        ErrorCode c = ErrorCode.SESSION_NOT_FOUND;
+        assertThat(c.severity()).isEqualTo(Severity.LOW);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("无持久化登录态");
+    }
+
+    @Test
+    @DisplayName("SESSION_READ_FAILED 元数据正确")
+    void sessionReadFailedMetadata() {
+        ErrorCode c = ErrorCode.SESSION_READ_FAILED;
+        assertThat(c.severity()).isEqualTo(Severity.MEDIUM);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("持久化登录态损坏");
+    }
+
+    @Test
+    @DisplayName("SESSION_WRITE_FAILED 元数据正确")
+    void sessionWriteFailedMetadata() {
+        ErrorCode c = ErrorCode.SESSION_WRITE_FAILED;
+        assertThat(c.severity()).isEqualTo(Severity.LOW);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("持久化登录态写入失败");
+    }
+
+    @Test
+    @DisplayName("ATTACHMENT_NOT_FOUND 元数据正确 (US-008)")
+    void attachmentNotFoundMetadata() {
+        ErrorCode c = ErrorCode.ATTACHMENT_NOT_FOUND;
+        assertThat(c.severity()).isEqualTo(Severity.LOW);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("作业无附件");
+    }
+
+    @Test
+    @DisplayName("ATTACHMENT_DOWNLOAD_FAILED 元数据正确 (US-008)")
+    void attachmentDownloadFailedMetadata() {
+        ErrorCode c = ErrorCode.ATTACHMENT_DOWNLOAD_FAILED;
+        assertThat(c.severity()).isEqualTo(Severity.MEDIUM);
+        assertThat(c.isRetryable()).isTrue();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isTrue();
+        assertThat(c.hint()).isEqualTo("附件下载失败");
+    }
+
+    @Test
+    @DisplayName("OUTPUT_DIR_INVALID 元数据正确 (US-008)")
+    void outputDirInvalidMetadata() {
+        ErrorCode c = ErrorCode.OUTPUT_DIR_INVALID;
+        assertThat(c.severity()).isEqualTo(Severity.MEDIUM);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("输出目录非法");
     }
 
     @Test

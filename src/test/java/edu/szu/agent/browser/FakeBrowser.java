@@ -43,6 +43,10 @@ public class FakeBrowser implements BrowserLifecycle {
     private final List<String> clicked = new ArrayList<>();
     private final List<String> filled = new ArrayList<>();
     private boolean opened;
+    private boolean loaded;
+    private boolean saved;
+    private java.nio.file.Path loadedPath;
+    private java.nio.file.Path savedPath;
 
     public FakeBrowser() {
         this(List.of("网球场1号", "网球场2号", "网球场3号"),
@@ -119,6 +123,57 @@ public class FakeBrowser implements BrowserLifecycle {
         // no-op
     }
 
+    @Override
+    public boolean importStorageState(java.nio.file.Path storageStateFile) {
+        this.loadedPath = storageStateFile;
+        this.loaded = storageStateFile != null;
+        return loaded;
+    }
+
+    @Override
+    public void exportStorageState(java.nio.file.Path storageStateFile) {
+        this.savedPath = storageStateFile;
+        this.saved = storageStateFile != null;
+    }
+
+    /** Recorded by {@link #downloadAttachment(String, java.nio.file.Path)} (US-008). */
+    private final java.util.List<DownloadCall> downloadCalls = new java.util.ArrayList<>();
+    /** Optional byte payload to return from {@link #downloadAttachment}; tests set this. */
+    private byte[] downloadPayload;
+    /** Optional exception to throw from {@link #downloadAttachment}; tests set this. */
+    private RuntimeException downloadError;
+
+    @Override
+    public long downloadAttachment(String url, java.nio.file.Path target) {
+        downloadCalls.add(new DownloadCall(url, target));
+        if (downloadError != null) {
+            throw downloadError;
+        }
+        byte[] payload = downloadPayload != null ? downloadPayload : new byte[0];
+        try {
+            java.nio.file.Files.createDirectories(target.getParent());
+            java.nio.file.Files.write(target, payload);
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
+        }
+        return payload.length;
+    }
+
+    public void setDownloadPayload(byte[] payload) {
+        this.downloadPayload = payload;
+    }
+
+    public void setDownloadError(RuntimeException error) {
+        this.downloadError = error;
+    }
+
+    public java.util.List<DownloadCall> getDownloadCalls() {
+        return java.util.List.copyOf(downloadCalls);
+    }
+
+    /** Recorded argument pair for download calls. */
+    public record DownloadCall(String url, java.nio.file.Path target) {}
+
     // Test introspection helpers
 
     public boolean isOpened() {
@@ -132,4 +187,9 @@ public class FakeBrowser implements BrowserLifecycle {
     public List<String> getFilled() {
         return List.copyOf(filled);
     }
+
+    public boolean isLoaded() { return loaded; }
+    public boolean isSaved() { return saved; }
+    public java.nio.file.Path loadedPath() { return loadedPath; }
+    public java.nio.file.Path savedPath() { return savedPath; }
 }

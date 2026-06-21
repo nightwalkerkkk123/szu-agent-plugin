@@ -50,11 +50,41 @@ public enum ErrorCode {
     /** 浏览器进程崩溃. */
     BROWSER_CRASH         (Severity.HIGH,     true,  false, true,  "浏览器进程崩溃"),
 
+    // ----- 作业查询 -----
+    /** 作业列表页加载失败. */
+    HOMEWORK_PAGE_LOAD_FAILED(Severity.HIGH,  true,  false, true,  "作业列表页加载失败"),
+    /** 作业列表为空. */
+    HOMEWORK_LIST_EMPTY   (Severity.LOW,      false, false, false, "作业列表为空"),
+
     // ----- 业务编排 -----
     /** 请求参数不合法. */
     INVALID_REQUEST       (Severity.LOW,      false, false, false, "请求参数不合法"),
     /** 未知异常. */
-    UNKNOWN               (Severity.HIGH,     true,  false, true,  "未知异常");
+    UNKNOWN               (Severity.HIGH,     true,  false, true,  "未知异常"),
+
+    // ----- 登录态持久化(US-007) -----
+    /** 无持久化登录态. */
+    SESSION_NOT_FOUND     (Severity.LOW,      false, false, false, "无持久化登录态"),
+    /** 持久化登录态损坏. */
+    SESSION_READ_FAILED   (Severity.MEDIUM,   false, false, false, "持久化登录态损坏"),
+    /** 持久化登录态写入失败. */
+    SESSION_WRITE_FAILED  (Severity.LOW,      false, false, false, "持久化登录态写入失败"),
+
+    // ----- 作业附件下载(US-008) -----
+    /** 作业详情页无附件. */
+    ATTACHMENT_NOT_FOUND    (Severity.LOW,    false, false, false, "作业无附件"),
+    /** 附件下载失败(HTTP / 写文件). */
+    ATTACHMENT_DOWNLOAD_FAILED(Severity.MEDIUM, true, false, true,  "附件下载失败"),
+    /** 输出目录非法(不存在 / 不可写 / 不是目录). */
+    OUTPUT_DIR_INVALID    (Severity.MEDIUM,   false, false, false, "输出目录非法"),
+
+    // ----- 课表查询(US-009) -----
+    /** 课表页加载失败. */
+    SCHEDULE_PAGE_LOAD_FAILED(Severity.HIGH,   true,  false, true,  "课表页加载失败"),
+    /** 课表解析失败(选择器失效 / 周次非法). */
+    SCHEDULE_PARSE_FAILED    (Severity.MEDIUM, true,  false, true,  "课表解析失败"),
+    /** 课表为空(可能学期未开始). */
+    SCHEDULE_EMPTY           (Severity.LOW,    false, false, false, "课表为空(可能学期未开始)");
 
     private final Severity severity;
     private final boolean retryable;

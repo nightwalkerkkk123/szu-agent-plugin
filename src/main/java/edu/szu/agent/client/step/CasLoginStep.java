@@ -5,6 +5,8 @@ import edu.szu.agent.domain.BookingResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
+
 /**
  * Step 0 — CAS login.
  *
@@ -36,6 +38,24 @@ public final class CasLoginStep implements BookingStep {
      */
     static final String EHALL_VENUE_URL =
         "https://ehall.szu.edu.cn/qljfwapp/sys/lwSzuCgyy/index.do#/sportVenue";
+
+    private final String casEntryUrl;
+
+    /**
+     * Default constructor — logs in through the ehall venue entry point.
+     */
+    public CasLoginStep() {
+        this(EHALL_VENUE_URL);
+    }
+
+    /**
+     * Constructor for other CAS-protected campus services (e.g. LMS).
+     *
+     * @param casEntryUrl the service URL that triggers CAS when unauthenticated
+     */
+    public CasLoginStep(String casEntryUrl) {
+        this.casEntryUrl = Objects.requireNonNull(casEntryUrl, "casEntryUrl");
+    }
 
     /**
      * Fills both inputs via direct DOM access, bypassing Playwright's
@@ -89,6 +109,12 @@ public final class CasLoginStep implements BookingStep {
 
     @Override
     public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+        if (ctx.sessionOk()) {
+            log.info("Skipping CAS login, persisted state valid for {}",
+                ctx.account() != null ? ctx.account().studentId() : "unknown");
+            return null;
+        }
+
         var account = ctx.account();
         if (account == null) {
             throw new IllegalStateException(
@@ -96,10 +122,10 @@ public final class CasLoginStep implements BookingStep {
                     + "Did you forget to call AccountResolver before constructing the context?");
         }
 
-        log.info("Logging in as {}", account.studentId());
-        // Hit ehall directly; the unauthenticated request 302's to authserver
-        // CAS, presenting the login page in the same tab.
-        browser.navigateTo(EHALL_VENUE_URL);
+        log.info("Logging in as {} via {}", account.studentId(), casEntryUrl);
+        // Hit the service URL directly; the unauthenticated request 302's to
+        // authserver CAS, presenting the login page in the same tab.
+        browser.navigateTo(casEntryUrl);
 
         // Inject username + password and submit via the page's own
         // startLogin() function, which handles password salt-encryption.

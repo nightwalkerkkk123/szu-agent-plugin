@@ -84,6 +84,8 @@ public final class ToolSchema {
     private static Map<String, Object> schemaFor(String skillName) {
         return switch (skillName) {
             case "booking_venue" -> bookingVenueSchema();
+            case "homework_list" -> homeworkListSchema();
+            case "schedule_list" -> scheduleListSchema();
             default -> Map.of("type", "object", "additionalProperties", true);
         };
     }
@@ -139,6 +141,36 @@ public final class ToolSchema {
 
         schema.put("properties", properties);
         schema.put("required", List.of("username", "campus", "sport", "date", "timeSlot"));
+        return schema;
+    }
+
+    private static Map<String, Object> homeworkListSchema() {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+
+        Map<String, Object> properties = new LinkedHashMap<>();
+        Map<String, Object> username = new LinkedHashMap<>();
+        username.put("type", "string");
+        username.put("description", "学号");
+        properties.put("username", username);
+
+        schema.put("properties", properties);
+        schema.put("required", List.of("username"));
+        return schema;
+    }
+
+    private static Map<String, Object> scheduleListSchema() {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+
+        Map<String, Object> properties = new LinkedHashMap<>();
+        Map<String, Object> username = new LinkedHashMap<>();
+        username.put("type", "string");
+        username.put("description", "学号");
+        properties.put("username", username);
+
+        schema.put("properties", properties);
+        schema.put("required", List.of("username"));
         return schema;
     }
 }

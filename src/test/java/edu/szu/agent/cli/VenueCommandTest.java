@@ -129,7 +129,7 @@ class VenueCommandTest {
     @DisplayName("exitCodeFor — ErrorCode → exit code mapping")
     class ExitCodeForUnit {
 
-        // Per VenueCommand.exitCodeFor switch: severity drives the code,
+        // Per CommandOutput.exitCodeFor switch: severity drives the code,
         // BROWSER_CRASH is the only HIGH→4 special case.
 
         @ParameterizedTest(name = "[{index}] {0} → exit {1}")
@@ -148,7 +148,7 @@ class VenueCommandTest {
                 "ACCOUNT_LOCKED, 3"           // CRITICAL → env/account
         })
         void exitCodeMatchesSeverity(String codeName, int expectedExit) {
-            assertThat(VenueCommand.exitCodeFor(ErrorCode.valueOf(codeName)))
+            assertThat(CommandOutput.exitCodeFor(ErrorCode.valueOf(codeName)))
                     .isEqualTo(expectedExit);
         }
 
@@ -156,7 +156,7 @@ class VenueCommandTest {
         @DisplayName("Every ErrorCode maps to one of the documented exit codes 0-4")
         void everyErrorCodeMapsToValidExit() {
             for (ErrorCode code : ErrorCode.values()) {
-                int exit = VenueCommand.exitCodeFor(code);
+                int exit = CommandOutput.exitCodeFor(code);
                 assertThat(exit)
                         .as("ErrorCode.%s mapped to exit %d, expected 1-4 (0=success not reachable here)",
                                 code, exit)

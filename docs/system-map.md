@@ -31,13 +31,22 @@ edu.szu.agent
 │   ├── Venue                       # 场地
 │   └── BookingRequest              # 预约请求(Builder 构造)
 │
-├── client/                         # 校园服务客户端(P0 仅 book)
-│   └── VenueBookingClient          # 体育场馆预约(核心实现)
+├── client/                         # 校园服务客户端
+│   ├── VenueBookingClient          # 体育场馆预约(P0 核心实现)
+│   ├── ChaoxingHomeworkClient      # 畅课作业列表查询(US-006)
+│   ├── session/                    # US-007 登录态持久化
+│   │   ├── SessionStore            # 路径解析 + POSIX 600 + TTL 30d + username 白名单
+│   │   ├── SessionProbe            # // Design Pattern: Strategy(navigate + isVisible 探针)
+│   │   └── SessionResult           # sealed Fresh() / Stale(String reason)
+│   └── step/                       # BookingStep 管线(// Design Pattern: Strategy)
+│       ├── RestoreSessionStep      # US-007 前置:试 import + 探针验证
+│       └── PersistSessionStep      # US-007 后置:业务成功后 export storageState
 │
 ├── browser/                        # 浏览器抽象层(Adapter + ConfigManager 注入)
-│   ├── BrowserLifecycle            # Design Pattern: Adapter 目标接口(10 方法,见 ADR-0002 D1)
+│   ├── BrowserLifecycle            # Design Pattern: Adapter 目标接口(12 方法,见 ADR-0002 D1 + ADR-0008)
 │   │ // open / close / navigateTo / click / fill /
 │   │                                 // isVisible / textOf / allTextOf / currentUrl / screenshot
+│   │                                 // importStorageState / exportStorageState (US-007)
 │   ├── PlaywrightBrowserAdapter    # Design Pattern: Adapter,真演示唯一入口
 │   └── FakeBrowser                 # 单元测试夹具,不出现在课堂演示
 │   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager.browser() 注入
@@ -545,10 +554,13 @@ BrowserLifecycle browser = ConfigManager.getInstance().browser();
 | ADR | 决策 | 文档 |
 |---|---|---|
 | ADR-0001 | 项目方向校准(Grill 共识) | `docs/adr/0001-project-direction-recalibration.md` |
-| ADR-0002 | `BrowserLifecycle` 接口设计与 Playwright 适配细节(Phase 2 写) | `docs/adr/0002-*.md` |
+| ADR-0002 | `BrowserLifecycle` 接口设计与 Playwright 适配细节 | `docs/adr/0002-browser-lifecycle-and-playwright-adapter.md` |
 | ADR-0003 | `CampusTask<T>` 接口与扩展模式(P1 写) | `docs/adr/0003-*.md` |
 | ADR-0004 | Skill/MCP wrapper 协议契约(Phase 4 写,含 OQ1 凭证注入细节) | `docs/adr/0004-*.md` |
 | ADR-0005 | 凭证流转 + archunit 强制(Phase 0 收尾) | `docs/adr/0005-credential-and-logging-enforcement.md` |
+| ADR-0006 | Phase 1 子决定(domain + error + retry + matcher) | `docs/adr/0006-phase1-domain-error-retry-matcher.md` |
+| ADR-0007 | 架构深度审视(improve-codebase-architecture) | `docs/adr/0007-architecture-deepening.md` |
+| ADR-0008 | 登录态持久化(storageState + 30d TTL + 探针) | `docs/adr/0008-session-persistence.md` |
 
 > 实际 ADR 文档在 `docs/adr/` 目录下,采用 `{NNNN}-{kebab-case-slug}.md` 命名。
 > 上表第 2-5 行是**预留槽位**,对应 ADR 在 Phase 启动时创建。

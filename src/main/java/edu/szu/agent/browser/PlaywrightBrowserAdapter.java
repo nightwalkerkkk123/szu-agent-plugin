@@ -1,12 +1,17 @@
 package edu.szu.agent.browser;
 
 import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
@@ -32,9 +37,12 @@ import java.util.Objects;
  */
 public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
 
+    private static final Logger log = LoggerFactory.getLogger(PlaywrightBrowserAdapter.class);
+
     private final Playwright playwright;
     private final boolean headless;
     private Browser browser;
+    private BrowserContext context;
     private Page page;
 
     /**
@@ -76,7 +84,8 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
         try {
             browser = playwright.chromium().launch(
                 new BrowserType.LaunchOptions().setHeadless(headless));
-            page = browser.newPage();
+            context = browser.newContext();
+            page = context.newPage();
             // ehall pages are heavy (CAS redirect + Angular SPA + iframe); give
             // navigation a generous budget. 60s default unless overridden via
             // -Dszu.agent.nav-timeout-ms=NNN.
@@ -94,6 +103,10 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
             if (page != null) {
                 page.close();
                 page = null;
+            }
+            if (context != null) {
+                context.close();
+                context = null;
             }
             if (browser != null) {
                 browser.close();
@@ -216,5 +229,119 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
             return new BookingException(ErrorCode.ELEMENT_NOT_FOUND, e.getMessage(), e);
         }
         return new BookingException(ErrorCode.BROWSER_CRASH, e.getMessage(), e);
+    }
+
+    @Override
+    public boolean importStorageState(java.nio.file.Path storageStateFile) {
+        Objects.requireNonNull(storageStateFile, "storageStateFile");
+        if (!Files.exists(storageStateFile)) {
+            return false;
+        }
+        if (browser == null) {
+            log.warn("import requested before open(); skipping");
+            return false;
+        }
+        try {
+            // Playwright requires storageState at context-creation time. Tear
+            // down the just-opened blank context (and its page) and rebuild a
+            // new one seeded with the persisted file.
+            if (page != null) {
+                page.close();
+                page = null;
+            }
+            if (context != null) {
+                context.close();
+                context = null;
+            }
+            context = browser.newContext(
+                new Browser.NewContextOptions().setStorageStatePath(storageStateFile));
+            page = context.newPage();
+            long navTimeout = Long.getLong("szu.agent.nav-timeout-ms", 60_000L);
+            page.setDefaultNavigationTimeout(navTimeout);
+            page.setDefaultTimeout(navTimeout);
+            return true;
+        } catch (Exception e) {
+            log.warn("Failed to import persisted state: {}", e.getMessage());
+            // Best-effort fallback: rebuild a blank context so subsequent calls
+            // do not blow up on a missing context.
+            try {
+                if (context == null) {
+                    context = browser.newContext();
+                    page = context.newPage();
+                }
+            } catch (Exception ignored) {
+                // give up; caller will see the false return and re-login
+            }
+            return false;
+        }
+    }
+
+    @Override
+    public void exportStorageState(java.nio.file.Path storageStateFile) {
+        Objects.requireNonNull(storageStateFile, "storageStateFile");
+        if (context == null) {
+            throw new BookingException(ErrorCode.SESSION_WRITE_FAILED,
+                "no browser context to export");
+        }
+        try {
+            Path parent = storageStateFile.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+            context.storageState(
+                new BrowserContext.StorageStateOptions().setPath(storageStateFile));
+        } catch (Exception e) {
+            throw new BookingException(ErrorCode.SESSION_WRITE_FAILED,
+                "export failed: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public long downloadAttachment(String url, java.nio.file.Path target) {
+        Objects.requireNonNull(url, "url");
+        Objects.requireNonNull(target, "target");
+        if (context == null) {
+            throw new BookingException(ErrorCode.BROWSER_CRASH,
+                "downloadAttachment called before open()");
+        }
+        Path parent = target.getParent();
+        if (parent != null) {
+            try {
+                Files.createDirectories(parent);
+            } catch (Exception e) {
+                throw new BookingException(ErrorCode.OUTPUT_DIR_INVALID,
+                    "cannot create parent dir for " + target + ": " + e.getMessage(), e);
+            }
+        }
+        // Write to .tmp, then atomic move to target.
+        Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
+        var response = context.request().get(url);
+        try {
+            if (!response.ok()) {
+                throw new BookingException(ErrorCode.ATTACHMENT_DOWNLOAD_FAILED,
+                    "HTTP " + response.status() + " fetching " + url);
+            }
+            byte[] body = response.body();
+            Files.write(tmp, body);
+            try {
+                java.nio.file.Files.move(tmp, target,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException amns) {
+                // Fall back to non-atomic move on filesystems that don't support it.
+                java.nio.file.Files.move(tmp, target,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            return body.length;
+        } catch (BookingException e) {
+            throw e;
+        } catch (Exception e) {
+            // Best-effort cleanup of the tmp file
+            try { Files.deleteIfExists(tmp); } catch (Exception ignored) {}
+            throw new BookingException(ErrorCode.ATTACHMENT_DOWNLOAD_FAILED,
+                "download failed for " + url + ": " + e.getMessage(), e);
+        } finally {
+            try { response.dispose(); } catch (Exception ignored) {}
+        }
     }
 }
