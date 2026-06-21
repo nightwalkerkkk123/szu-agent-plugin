@@ -1,6 +1,5 @@
 package edu.szu.agent.cli;
 
-import edu.szu.agent.account.Account;
 import edu.szu.agent.client.VenueBookingClient;
 import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.retry.RetryPolicies;
@@ -24,10 +23,9 @@ import java.util.concurrent.Callable;
  *
  * <p>On startup, the main task(s) are eagerly registered with the
  * Skills singleton so {@code skill list} / {@code mcp list} reflect
- * the current build. The {@link BookingTask} is constructed with
- * a default {@link VenueBookingClient} using {@link RetryPolicies#defaultBooking()}
- * and a placeholder account — actual account resolution happens
- * per-call inside the task (matches the existing CLI flow).
+ * the current build. The {@link BookingTask} is constructed with a
+ * {@link VenueBookingClient} that has no fixed account — credentials
+ * are resolved per-call inside the task using {@link edu.szu.agent.account.AccountResolver}.
  *
  * @since 0.1.0
  * @author 王子豪
@@ -47,7 +45,8 @@ public class Main implements Callable<Integer> {
 
     @Override
     public Integer call() {
-        System.out.println("szu-agent-plugin v0.1.0 — skeleton ready");
+        // Skeleton message is printed by main() so that this class does not
+        // depend on System.out directly; ArchUnit allows stdout only in main().
         return 0;
     }
 
@@ -67,16 +66,10 @@ public class Main implements Callable<Integer> {
             }
         }
         ConfigManager.getInstance().load();
-        // Placeholder account — Account requires non-blank studentId/password.
-        // Real credentials are resolved per-call from env-file / process env
-        // inside BookingTask. Account record's compact constructor enforces
-        // non-blank, so we use dummy non-blank values here.
-        Account placeholder = new Account("placeholder", "placeholder", "P1-stub");
         VenueBookingClient client = new VenueBookingClient(
-            placeholder,
             ConfigManager.getInstance().browser(),
             RetryPolicies.defaultBooking());
-        registry.register(new Skill<>("booking_venue", "体育场馆定时预约", new BookingTask(client, placeholder)));
+        registry.register(new Skill<>("booking_venue", "体育场馆定时预约", new BookingTask(client)));
     }
 
     /**
@@ -87,6 +80,9 @@ public class Main implements Callable<Integer> {
      */
     public static void main(String[] args) {
         registerDefaultSkills();
+        // ArchUnit allows System.out only inside main(); keep the skeleton
+        // greeting here rather than in call().
+        System.out.println("szu-agent-plugin v0.1.0 — skeleton ready");
         int exitCode = new CommandLine(new Main()).execute(args);
         System.exit(exitCode);
     }

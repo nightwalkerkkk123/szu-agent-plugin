@@ -3,7 +3,6 @@ package edu.szu.agent.client.step;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.domain.BookingRequest;
-import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Campus;
 import edu.szu.agent.domain.YuehaiSport;
 import edu.szu.agent.domain.TimeSlot;
@@ -51,10 +50,10 @@ class SelectDateStepTest {
         BookingContext ctx = contextFor(tomorrow);
         String expectedSelector = "label[for=\"" + tomorrow + "\"]";
 
-        BookingResult result = new SelectDateStep().execute(browser, ctx);
+        StepOutcome outcome = new SelectDateStep().execute(browser, ctx);
 
         verify(browser).click(expectedSelector);
-        assertThat(result).isNull();
+        assertThat(outcome).isInstanceOf(StepOutcome.Continue.class);
     }
 
     @Test

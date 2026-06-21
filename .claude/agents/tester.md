@@ -29,41 +29,43 @@ src/test/java/edu/szu/agent/
 │   └── BookingRequestTest.java
 ├── error/
 │   ├── ErrorCodeTest.java
-│   ├── BookingExceptionTest.java
-│   └── ErrorClassifierTest.java
+│   └── BookingExceptionTest.java
 ├── retry/
-│   ├── RetryPolicyTest.java
-│   ├── FixedDelayRetryTest.java
-│   └── ExponentialBackoffTest.java
+│   ├── FixedDelayTest.java
+│   ├── ExponentialBackoffTest.java
+│   └── NoRetryTest.java
 ├── account/
 │   ├── AccountStateTest.java
-│   └── AccountManagerTest.java
-├── matcher/
-│   ├── TextMatcherTest.java
-│   ├── RegexMatcherTest.java
-│   ├── ContainsMatcherTest.java
-│   └── MatcherFactoryTest.java
+│   └── AccountResolverTest.java
 ├── browser/
 │   ├── FakeBrowserTest.java
-│   └── BrowserLifecycleTest.java
+│   └── PlaywrightBrowserAdapterTest.java
+├── client/step/
+│   ├── CasLoginStepTest.java
+│   ├── SelectCampusStepTest.java
+│   ├── SelectSportStepTest.java
+│   ├── SelectDateStepTest.java
+│   ├── SelectTimeSlotStepTest.java
+│   ├── SelectVenueStepTest.java
+│   ├── ConfirmBookingStepTest.java
+│   └── VenueSelectorTest.java
 ├── task/
-│   ├── TaskResultTest.java
-│   ├── TaskStatusTest.java
-│   └── TaskExecutorTest.java
-├── platform/
-│   └── AgentToolPlatformTest.java
+│   ├── BookingTaskTest.java
+│   └── BookingTaskIntegrationTest.java
+├── architecture/
+│   └── ArchitectureTest.java
 └── cli/
-    └── CLIRunnerTest.java
+    └── MainTest.java
 ```
 
 ## Test Naming
 
 ```java
 test_[scenario]_[expected]
-test_booking_request_builder_with_empty_username_throws_illegal_state
-test_error_classifier_with_network_error_returns_retryable
+test_booking_request_builder_with_mismatched_campus_and_sport_throws_illegal_state
+test_retry_policy_exhaustion_throws_network_timeout
 test_singleton_config_manager_returns_same_instance_twice
-test_retry_policy_fixed_delay_returns_correct_delay
+test_fixed_delay_policy_retries_exact_attempts
 ```
 
 ## 设计模式验证测试
@@ -128,11 +130,10 @@ void fake_browser_launch_and_close_no_exception() {
 
 ## Boundary Cases
 
-1. **null 输入**: `Matcher.match(null)`
-2. **空字符串**: `TextMatcher.match("")`
-3. **非法正则**: `RegexMatcher` 构造非法正则
-4. **非法参数**: 负数重试次数、越界日期索引
-5. **边界时间**: 00:00-01:00 / 23:00-24:00
+1. **null 输入**: `BookingRequest.Builder.campus(null)` 抛异常
+2. **空字符串**: `TimeSlot("", "")` 抛异常
+3. **非法参数**: 负数重试次数、越界日期索引
+4. **边界时间**: 00:00-01:00 / 23:00-24:00
 
 ## Mock 策略
 

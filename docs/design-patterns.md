@@ -18,7 +18,7 @@
 
 1. [Builder 模式 (Builder)](#1-builder-模式-builder) — `BookingRequest.Builder`
 2. [单例模式 (Singleton)](#2-单例模式-singleton) — `ConfigManager` / `Tracer`
-3. [策略模式 (Strategy)](#3-策略模式-strategy) — `Matcher` / `RetryPolicy`
+3. [策略模式 (Strategy)](#3-策略模式-strategy) — `BookingStep` / `VenueSelector` / `RetryPolicy`
 4. [适配器模式 (Adapter)](#4-适配器模式-adapter) — `PlaywrightBrowserAdapter`
 
 > 5 模式 → **4 模式**(ADR-0007 D1):`BrowserFactory` / Static Factory 删除,改 `ConfigManager` 配置注入
@@ -214,19 +214,23 @@ public final class ConfigManager {
 ### 位置
 
 ```
-com.szu.agent.matcher.Matcher<T>            (策略接口 + 4 default 组合方法)
-com.szu.agent.matcher.AbstractMatcher<T>    (策略抽象基类,带 description)
-com.szu.agent.matcher.ExactMatcher          (策略A:精确文本)
-com.szu.agent.matcher.ContainsMatcher       (策略B:包含)
-com.szu.agent.matcher.RegexMatcher          (策略C:正则)
-com.szu.agent.matcher.VenueIndexMatcher     (策略D:业务专用,ehandle 4 种编号写法)
-com.szu.agent.matcher.Matchers              (工厂,exposes exact/contains/regex/venueIndex/all/any)
-
 com.szu.agent.retry.RetryPolicy             (策略接口,FunctionalInterface)
 com.szu.agent.retry.FixedDelay              (策略A:固定间隔)
 com.szu.agent.retry.ExponentialBackoff      (策略B:指数退避)
 com.szu.agent.retry.NoRetry                 (策略C:不重试,单例)
 com.szu.agent.retry.RetryPolicies           (工厂,defaultBooking/login/quickFix)
+
+com.szu.agent.client.step.BookingStep       (策略接口,每步一个实现)
+com.szu.agent.client.step.CasLoginStep      (登录)
+com.szu.agent.client.step.NavigateToBookingStep
+com.szu.agent.client.step.SelectCampusStep
+com.szu.agent.client.step.SelectSportStep
+com.szu.agent.client.step.SelectDateStep
+com.szu.agent.client.step.SelectTimeSlotStep
+com.szu.agent.client.step.SelectVenueStep
+com.szu.agent.client.step.ConfirmBookingStep
+com.szu.agent.client.step.VenueSelector     (内部 VenueSelector Strategy)
+com.szu.agent.client.VenueBookingClient     (Pipeline 调用方)
 ```
 
 > ADR-0007 D2:`JitteredBackoff` NoOp 占位删除,YAGNI;P1 真需要时 15 行加回
@@ -237,24 +241,26 @@ com.szu.agent.retry.RetryPolicies           (工厂,defaultBooking/login/quickFi
 
 | 策略接口 | 具体策略 |
 |---|---|
-| `Matcher<T>` | `ExactMatcher`, `ContainsMatcher`, `RegexMatcher`, `VenueIndexMatcher` |
+| `BookingStep` | `CasLoginStep`, `SelectCampusStep`, `SelectSportStep`, `SelectDateStep`, `SelectTimeSlotStep`, `SelectVenueStep`, `ConfirmBookingStep` |
 | `RetryPolicy` | `FixedDelay`, `ExponentialBackoff`, `NoRetry` |
 
 ### 类图
 
 ```
-Matcher<T>  ────────────── «interface»  (@FunctionalInterface)
-  + matches(T): boolean
-  + and(Matcher): Matcher     (default)
-  + or(Matcher): Matcher      (default)
-  + negate(): Matcher         (default)
-  + andNot(Matcher): Matcher  (default)
+BookingStep  ────────────── «interface»  (@FunctionalInterface)
+  + execute(BrowserLifecycle, BookingContext): StepOutcome
 
-AbstractMatcher<T> ──► Matcher<T>  (抽象基类,带 description + toString)
-ExactMatcher       ──► AbstractMatcher<String>
-ContainsMatcher    ──► AbstractMatcher<String>
-RegexMatcher       ──► AbstractMatcher<String>
-VenueIndexMatcher  ──► AbstractMatcher<String>  (业务专用,4 种 ehall 编号写法)
+CasLoginStep             ──► BookingStep
+NavigateToBookingStep    ──► BookingStep
+SelectCampusStep         ──► BookingStep
+SelectSportStep          ──► BookingStep
+SelectDateStep           ──► BookingStep
+SelectTimeSlotStep       ──► BookingStep
+SelectVenueStep          ──► BookingStep
+ConfirmBookingStep       ──► BookingStep
+VenueSelector            ──► (内部 Strategy,为 Sport 选 VenueSelector)
+CourtListSelector        ──► VenueSelector
+CapacityVenueSelector    ──► VenueSelector
 
 RetryPolicy  ────────────── «interface»  (@FunctionalInterface)
   + <T> T execute(Supplier<T> action): T
@@ -322,42 +328,27 @@ public final class FixedDelay implements RetryPolicy {
 
 ```java
 // Design Pattern: Strategy
-// 编程技术: 泛型 / 抽象类 / Lambda
+// 编程技术: 泛型 / Lambda / FunctionalInterface
 @FunctionalInterface
-public interface Matcher<T> {
-    boolean matches(T candidate);
-
-    default Matcher<T> and(Matcher<T> other) {
-        Objects.requireNonNull(other);
-        return c -> this.matches(c) && other.matches(c);
-    }
-    default Matcher<T> or(Matcher<T> other) {
-        Objects.requireNonNull(other);
-        return c -> this.matches(c) || other.matches(c);
-    }
-    default Matcher<T> negate() {
-        return c -> !this.matches(c);
-    }
-    default Matcher<T> andNot(Matcher<T> other) {
-        return this.and(other.negate());
-    }
+public interface BookingStep {
+    StepOutcome execute(BrowserLifecycle browser, BookingContext context);
 }
 ```
 
 ### 为什么选它
 
-- `Matcher` 在选择器系统中用于匹配页面元素,不同匹配规则(Exact/Contains/Regex/VenueIndex)**真的有 4 种不同语义**的业务需求
+- `BookingStep` 把预约流程拆成 7 个可独立测试、可替换的步骤,新增步骤只需实现一个接口
+- `VenueSelector` 把不同场地选择策略(网球场列表 / 健身房容量)封装为 Strategy,`SelectVenueStep` 按 Sport 委派
 - 组合不靠 `CompositeMatcher` 类(原设计),改用 Java 21 `default` 方法 + Lambda,代码短 50%
-- `VenueIndexMatcher` 把 ehall "1号 / 第1场 / (1) / 1" 4 种编号写法集中,**未来 ehall 改版只动这一个文件**
 - `RetryPolicy` 不靠 `shouldRetry` + `nextDelayMs` 双方法(原设计),改为单一 `execute(Supplier<T>)`,业务层只 `policy.execute(() -> doStep())`
 - 重试耗尽统一抛 `NETWORK_TIMEOUT`,**不**用 `last.code()` — 重试耗尽 = 升级错误码
-- 4 个实现类 + 工厂 `RetryPolicies` + `Matchers` 给 ConfigManager 配默认,业务层零 `new`
+- 步骤 + 重试策略通过工厂(`RetryPolicies`)和管道(`VenueBookingClient`)组装,业务层零 `new`
 
 ### 局限性
 
 - 策略类数量随功能增加而线性增长,需要统一的注册/发现机制
 - `RetryPolicy` 内部用 `Thread.sleep`,演示场景同步阻塞够用;并发场景需要切换到 `ScheduledExecutorService`(P2 再说)
-- `Matcher<T>` 当前绑死 `<String>`,P0 不实现 `Matcher<Venue>` 强类型版本(YAGNI,等 Phase 3 引入 Venue 再说)
+- `BookingStep` 当前只支持同步执行,P0 不引入异步或撤销语义
 
 ---
 
@@ -530,9 +521,9 @@ BrowserLifecycle browser = ConfigManager.getInstance().browser();
 | 模式 | 类 | 编程技术 | 状态 |
 |---|---|---|---|
 | Builder | `BookingRequest.Builder` | 泛型/重载/record | ✅ |
-| 单例 | `ConfigManager` / `Tracer` | 枚举/Lambda | ✅ |
-| 策略 | `Matcher<T>` (4 实现) / `RetryPolicy` (3 实现) | 泛型/抽象类/Lambda | ✅ |
-| 适配器 | `PlaywrightBrowserAdapter` / `FakeBrowser` | 抽象类/Lambda | ✅ |
+| 单例 | `ConfigManager` / `Tracer` / `Skills` | 枚举/Lambda | ✅ |
+| 策略 | `BookingStep` (7 实现) / `VenueSelector` (2 实现) / `RetryPolicy` (3 实现) | 泛型/Lambda | ✅ |
+| 适配器 | `BrowserLifecycle` / `PlaywrightBrowserAdapter` / `BookingFlowLauncher` | 接口/Lambda | ✅ |
 
 **报告交代话术**:"5 模式 → 4 模式 + 配置注入,理由是 seam 深度。Static Factory 模式适用于实现选择是业务决策的场景(数据库驱动、日志后端),而浏览器实现选择是部署决策,放配置层更自然。"
 

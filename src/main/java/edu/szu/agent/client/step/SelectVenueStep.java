@@ -30,14 +30,13 @@ public final class SelectVenueStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         try {
             String venueName = ctx.request().sport().venueSelector().selectAndClick(browser, ctx);
-            ctx.selectedVenue(venueName);
             log.info("Selected venue: {}", venueName);
-            return null;
+            return new StepOutcome.Continue(ctx.withSelectedVenue(venueName));
         } catch (BookingException e) {
-            return new BookingResult.Failure(e.code(), e.getMessage());
+            return new StepOutcome.Failure(new BookingResult.Failure(e.code(), e.getMessage()));
         }
     }
 }

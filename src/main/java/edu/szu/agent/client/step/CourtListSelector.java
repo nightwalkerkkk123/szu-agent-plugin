@@ -1,7 +1,6 @@
 package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
-import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 import org.slf4j.Logger;
@@ -35,11 +34,18 @@ public final class CourtListSelector implements VenueSelector {
     static final String SEL_COURT_LABEL_AVAILABLE =
         "label:has(div.element:has-text(\"可预约\"))";
 
+    /**
+     * Max time to wait for the venue section to render. Tunable via the
+     * {@code szu.agent.venue-wait-ms} system property.
+     */
+    static long venueWaitMs() {
+        return Long.getLong("szu.agent.venue-wait-ms", 8_000L);
+    }
+
     @Override
     public String selectAndClick(BrowserLifecycle browser, BookingContext ctx)
         throws BookingException {
-        if (!SelectTimeSlotStep.waitForVisible(browser, SEL_COURT_LABEL_AVAILABLE,
-                SelectTimeSlotStep.labelWaitMs())) {
+        if (!browser.waitForVisible(SEL_COURT_LABEL_AVAILABLE, venueWaitMs())) {
             throw new BookingException(ErrorCode.NO_AVAILABLE_VENUE,
                 "No bookable courts (可预约) on the page");
         }

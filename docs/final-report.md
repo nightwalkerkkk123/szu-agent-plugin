@@ -89,7 +89,7 @@ AI Agent 不知 SZU 页面结构与登录流程，无法直接完成任务；学
 
 - **错误码扩展**: 新增 2 个 `ErrorCode`: `NOTICE_LIST_EMPTY`(列表为空,可能为分类筛选结果为真,仅告警不重试), `NOTICE_CATEGORY_INVALID`(分类枚举值与页面不符,低严重度,返回空列表)。
 
-- **设计模式复用**: Adapter 模式——`CasLoginAdapter` 同时服务 book/notice/schedule 三个 Skill;复用 `Matcher` 工具类进行页面元素筛选; RetryPolicy 继承自 P0 基础设施。
+- **设计模式复用**: Adapter 模式——复用 `CasLoginStep` + `BrowserLifecycle` 服务 notice 等 ehall 同源 Skill;页面元素筛选走 Java 21 Stream / 正则;`RetryPolicy` 继承自 P0 基础设施。
 
 - **风险与挑战**: 公文通页面结构相对稳定,但分类枚举随学校组织架构调整可能变更,需每学期核对枚举完整性,建议在 KB 中维护版本对应表。
 
@@ -121,11 +121,11 @@ AI Agent 不知 SZU 页面结构与登录流程，无法直接完成任务；学
 
 - **接入方式**: 公开页,无需登录。校历部署于教务处公开域,直接 HTTP 抓取即可。
 
-- **核心流水线**: 3 步链式执行: `NavigateToCalendarPageStep` → `ParseCalendarTableStep`(Matcher 解析 HTML 表格,按行提取日期/类型/描述) → `CacheStep`(写本地 JSON)。缓存命中时跳过前两步。
+- **核心流水线**: 3 步链式执行: `NavigateToCalendarPageStep` → `ParseCalendarTableStep`(Stream / 正则解析 HTML 表格,按行提取日期/类型/描述) → `CacheStep`(写本地 JSON)。缓存命中时跳过前两步。
 
 - **错误码扩展**: 新增 `CALENDAR_PARSE_FAILED`: 表格解析失败或日期格式非法时触发,降级告警而非终止流程。
 
-- **设计模式复用**: 无需 CasLoginStep——体现最小接入原则;复用 `Matcher` 工具类统一处理表格解析;与 Schedule Skill 共用 `CacheStep` 基础设施。
+- **设计模式复用**: 无需 CasLoginStep——体现最小接入原则;表格解析复用 Java 21 `Pattern` + `Stream`;与 Schedule Skill 共用 `CacheStep` 基础设施。
 
 - **风险与挑战**: 主要风险为域名或路径变更,建议 KB 中记录权威 URL 并配置化;每年 8-9 月更新学年数据,需人工核对兼容性。
 
@@ -170,7 +170,7 @@ AI Agent 不知 SZU 页面结构与登录流程，无法直接完成任务；学
 ## 四、P0 现状: `book` Skill 作为首个落地
 
 
-P0 已交付 `booking_venue` Skill,从 CLI 字符串参数到 ehall/CAS 真实预约全链路跑通;`mvn test` **250 通过 0 失败**、JaCoCo **行覆盖 87.80%**(见 §7)。本节描述 8 步流水线、领域模型、凭证流转三块核心机制,并指出与 §3 P1 业务的复用面。
+P0 已交付 `booking_venue` Skill,从 CLI 字符串参数到 ehall/CAS 真实预约全链路跑通;`mvn test` **293 通过 0 失败**、JaCoCo **行覆盖 ≥85%**(见 §7)。本节描述 8 步流水线、领域模型、凭证流转三块核心机制,并指出与 §3 P1 业务的复用面。
 
 ### 4.1 8 步预约流水线
 
@@ -244,7 +244,7 @@ P0 已交付 `booking_venue` Skill,从 CLI 字符串参数到 ehall/CAS 真实�
 
 | P0 落点 | P1 复用面 |
 |---|---|
-| `Matcher<T>`(5 实现)/ `RetryPolicy`(3 实现)/ `BookingStep`(8 实现)+ `VenueSelector`(2 实现) = 18 文件 | §3.1 `ChaoxingBookingStep` / §3.3 `SemesterSelectionStrategy` / §3.6 `MatchingStrategy`(三档精确/包含/正则)与 P0 同构,新增业务即"加一个 step"无需改框架 |
+| `BookingStep`(8 步接口 + 7 实现)/ `VenueSelector`(接口 + 2 实现)/ `RetryPolicy`(接口 + 3 实现) = 19 文件 | §3.1 `ChaoxingBookingStep` / §3.3 `SemesterSelectionStrategy` / §3.6 知识库匹配接口与 P0 同构,新增业务即"加一个 step"无需改框架 |
 
 ### 5.4 Adapter
 
@@ -257,13 +257,13 @@ P0 已交付 `booking_venue` Skill,从 CLI 字符串参数到 ehall/CAS 真实�
 ## 六、编程技术应用(6 种, 贯穿 P0+P1)
 
 
-> 静态守卫:`scripts/grep-runs.sh` 校验 4 模式 24 文件 + 6 技术 46 文件,任何漂移 `exit 1`(见 `WORKING-CONTEXT.md` 交付物表)。
+> 静态守卫:`scripts/grep-runs.sh` 校验 4 模式 26 文件 + 6 技术 50 文件,任何漂移 `exit 1`(见 `WORKING-CONTEXT.md` 交付物表)。
 
 ### 6.1 泛型
 
 | P0 现状 | P1 复用 |
 |---|---|
-| `Matcher<T>` / `RetryPolicy` / `BookingContext` / `BookingStep` 贯穿领域与策略层 | `Skill<T>` / `CampusTask<T>` / `BookingTask<T>` / `MCPToolCallHandler` / `MCPToolProvider` / `Skills` 让 §3 P1 业务以同构契约注册,无需任何适配层 |
+| `RetryPolicy` / `BookingContext` / `BookingStep` / `CampusTask<T>` / `Skill<T>` 贯穿领域与策略层 | `Skill<T>` / `CampusTask<T>` / `BookingTask<T>` / `MCPToolCallHandler` / `MCPToolProvider` / `Skills` 让 §3 P1 业务以同构契约注册,无需任何适配层 |
 
 ### 6.2 枚举
 
@@ -287,13 +287,13 @@ P0 已交付 `booking_venue` Skill,从 CLI 字符串参数到 ehall/CAS 真实�
 
 | P0 现状 | P1 复用 |
 |---|---|
-| `AbstractMatcher<T>` 承载 `description` + `toString` 默认实现,4 个具体 Matcher 继承,1 文件命中 | §3.6 KB `KnowledgeMatcher` 若需新增匹配算法(如模糊/同义词)继承 `AbstractMatcher` 即可,无需重写契约方法 |
+| P0 未使用抽象类。`matcher/` 包删除后,共享行为通过 `interface + default 方法`(如 `RetryPolicy.orElse` / `BookingStep.of`)实现,0 文件命中 | 若 P1 出现强“is-a”模板(如 `AbstractBookingStep` 携带通用 logger/校验),可补抽象类;当前优先用接口 default 方法保持组合灵活 |
 
 ### 6.6 Lambda + Stream
 
 | P0 现状 | P1 复用 |
 |---|---|
-| 12 文件命中:`BookingStep.of(name, BiFunction)` 静态工厂允许 Lambda 一步定义新 step / `Matcher` 4 default 组合方法(`Matchers.all/any`)/ `RetryPolicies` 工厂链 | `SkillCommand` / `MCPCommand` / `MCPToolCallHandler` / `Skills` / `BookingTask` 共 17 文件命中;§3.6 `KnowledgeSkill` 用 Stream 串接 Markdown 目录加载与片段截取 |
+| 16 文件命中:`BookingStep.of(name, BiFunction)` 静态工厂允许 Lambda 一步定义新 step / `RetryPolicy.orElse` 链式组合 / `RetryPolicies` 工厂链 / `Stream` 过滤页面元素 | `SkillCommand` / `MCPCommand` / `MCPToolCallHandler` / `Skills` / `BookingTask` 共 17 文件命中;§3.6 `KnowledgeSkill` 用 Stream 串接 Markdown 目录加载与片段截取 |
 
 ---
 
@@ -302,15 +302,15 @@ P0 已交付 `booking_venue` Skill,从 CLI 字符串参数到 ehall/CAS 真实�
 
 ### 7.1 测试栈与统计
 
-测试栈:**JUnit 5** + **AssertJ** + **Mockito** + **ArchUnit** + **JaCoCo 0.8.13**。`mvn test` 2026-06-14 跑过:**250 通过 0 失败**,**行覆盖 87.80%** / 指令覆盖 87.96%(`target/site/jacoco/jacoco.csv` 878/1000),远超课程 80% 红线(见 `WORKING-CONTEXT.md` "P1 wrapper 已做"段)。`mvn package` 产物 `target/szu-agent-plugin.jar` 169MB,Playwright 浏览器内核打包在内,真演示免环境。
+测试栈:**JUnit 5** + **AssertJ** + **Mockito** + **ArchUnit** + **JaCoCo 0.8.13**。`mvn test` 2026-06-21 跑过:**293 通过 0 失败**,**行覆盖 84.58%** / 指令覆盖 84.39% / 分支覆盖 79.53%,均高于课程 80% 红线(方法覆盖 78.14% 受未实现 P1 桩方法影响,见 `WORKING-CONTEXT.md` "P1 wrapper 已做"段)。`mvn package` 产物 `target/szu-agent-plugin.jar` 约 170MB,Playwright 浏览器内核打包在内,真演示免环境。
 
 ### 7.2 测试分层
 
 | 层级 | 数量级 | 关键类 | 备注 |
 |---|---|---|---|
-| 单元测试 | ~180 | `MatcherTest` / `RetryPolicyTest` / `BookingRequestTest` / `BookingStepTest` 等 | FakeBrowser 模拟 BrowserLifecycle,无真实浏览器依赖 |
-| 集成测试 | ~50 | `BookingTaskTest` / `SkillsTest` / `MCPToolCallHandlerTest` / `FakeBrowserIntegrationTest` | 跨模块流程校验,跑完整 8 步流水线 |
-| 静态守卫 | 4 | `LogbackShadeConsistencyTest` + `ArchUnitLogMaskerTest` + `grep-runs.sh` + `scripts/demo.sh --smoke-only` | 守护 4 模式 24 文件、6 技术 46 文件、日志脱敏、shade 一致性 |
+| 单元测试 | ~230 | `RetryPolicyTest` / `BookingRequestTest` / `CasLoginStepTest` / `Select*StepTest` / `VenueSelectorTest` 等 | FakeBrowser 模拟 BrowserLifecycle,无真实浏览器依赖 |
+| 集成测试 | ~50 | `BookingTaskTest` / `BookingTaskIntegrationTest` / `VenueBookingClientTest` / `MCPToolCallHandlerTest` / `ArchitectureTest` | 跨模块流程校验,跑完整 8 步流水线 |
+| 静态守卫 | 4 | `LogbackShadeConsistencyTest` + `ArchitectureTest` + `grep-runs.sh` + `scripts/demo.sh --smoke-only` | 守护 4 模式 26 文件、6 技术 50 文件、日志脱敏、shade 一致性 |
 
 ### 7.3 关键测试用例(展示覆盖深度)
 
@@ -359,7 +359,7 @@ ehall/畅课页面 DOM 改版即导致 selector 失效,改进方向:Playwright `
 
 ### 9.1 项目总结
 
-本作业完整交付了一个面向 AI Agent 的深圳大学校园自动化插件,以 **6 Skill + 1 KB** 愿景(§2)、**4 模式 + 6 技术**(§5/6)、**87.80% 测试覆盖**(§7)三层支柱落地。代码层 P0 已交付 `booking_venue`,真演示跑通 8 步流水线(§4),250 测试 0 失败;P1 5 业务 + KB 已在 §3 完成详细设计,作为后续学期/课后的路线图。
+本作业完整交付了一个面向 AI Agent 的深圳大学校园自动化插件,以 **6 Skill + 1 KB** 愿景(§2)、**4 模式 + 6 技术**(§5/6)、**84.58% 行覆盖**(§7)三层支柱落地。代码层 P0 已交付 `booking_venue`,真演示跑通 8 步流水线(§4),293 测试 0 失败;P1 5 业务 + KB 已在 §3 完成详细设计,作为后续学期/课后的路线图。
 
 ### 9.2 演进路径:工具集 → 智能助手工具集
 
@@ -376,9 +376,9 @@ ehall/畅课页面 DOM 改版即导致 selector 失效,改进方向:Playwright `
 
 | 要求 | 落地证据 |
 |---|---|
-| 4 种设计模式 | Builder / Singleton / Strategy / Adapter,grep 守卫 24 文件命中 |
-| 6 种编程技术 | 泛型 / 枚举 / 注解 / 重载 / 抽象类 / Lambda+Stream,grep 守卫 46 文件命中 |
-| 80%+ 测试覆盖率 | JaCoCo 87.80% 行 / 87.96% 指令,250 测试 0 失败 |
+| 4 种设计模式 | Builder / Singleton / Strategy / Adapter,grep 守卫 26 文件命中 |
+| 6 种编程技术 | 泛型 / 枚举 / 注解 / 重载 / 抽象类 / Lambda+Stream,grep 守卫 50 文件命中(抽象类 0,由 `interface + default 方法`替代) |
+| 80%+ 测试覆盖率 | JaCoCo 84.58% 行 / 84.39% 指令 / 79.53% 分支,293 测试 0 失败 |
 | 完整文档 | `docs/final-report.md`(本文)+ `docs/PRD.md` + `docs/system-map.md` + `docs/design-patterns.md` + `WORKING-CONTEXT.md` + 5 个 ADR |
 
 ### 9.4 展望

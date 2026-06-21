@@ -9,7 +9,7 @@
 > - `NoticeQueryClient` / `ChaoxingCourseClient` / `GrowthPlanClient` / `MCPToolProvider` 全部降为 P1(roadmap)
 > - `ErrorClassifier` 已删除
 > - 凭证流转:`--env-file` 参数(ADR-0005 D1),不走 cwd
-> - `FixedDelayRetry` → `FixedDelay`,`TextMatcher` → `ExactMatcher`,新增 `VenueIndexMatcher`(业务专用)
+> - `FixedDelayRetry` → `FixedDelay`;matcher/ 包删除(无生产调用)
 > - `JitteredBackoff` NoOp 占位删除(ADR-0007 D2),`RetryPolicy` 4 实现 → **3 实现**(FixedDelay/ExponentialBackoff/NoRetry)
 > - `Tracer` 不接 `Throwable`/`BookingException`(ADR-0007 D4),接 `ErrorCode + String + Optional<Path>`
 > 详细理由见 `docs/adr/0001-project-direction-recalibration.md` / `0005-credential-and-logging-enforcement.md` / `0006-phase1-domain-error-retry-matcher.md` / `0007-architecture-deepening.md`。
@@ -21,7 +21,7 @@
 | 域模型设计 | `docs/PRD.md` §6 数据模型 + `Q4.1` 设计对话(本会话) |
 | 错误码设计 | `docs/system-map.md` §4 错误码枚举 + `Q4.2` |
 | 重试策略设计 | `docs/design-patterns.md` §3 策略模式 + `Q4.3` |
-| 匹配器策略设计 | `docs/design-patterns.md` §3 策略模式 + `Q4.4` |
+| 匹配器策略设计 | ~~`docs/design-patterns.md` §3 策略模式~~ matcher/ 包已删除 |
 | 浏览器适配器设计 | `docs/system-map.md` §1 模块拓扑 |
 | 静态工厂设计 | `docs/design-patterns.md` §5 静态工厂模式(`BrowserFactory`) — **已删除**(ADR-0007 D1),改 `ConfigManager` 配置注入 |
 | 凭证流转 / 日志强制 | `docs/adr/0005-credential-and-logging-enforcement.md` |
@@ -34,7 +34,7 @@
 | **Phase 1 域模型** | `Campus` / `Sport` / `TimeSlot` / `BookingRequest.Builder` / `BookingResult` sealed(详见 `Q4.1`) | 待开始 |
 | **Phase 1 错误层** | `ErrorCode`(12 值 5 元数据) + `Severity` + `BookingException` + `LogMasker`(详见 `Q4.2`) | 待开始 |
 | **Phase 1 重试** | `RetryPolicy` + 3 实现(FixedDelay/ExponentialBackoff/NoRetry,详见 ADR-0007 D2) + `RetryPolicies` 工厂 | 待开始 |
-| **Phase 1 匹配器** | `Matcher<T>` + `AbstractMatcher` + 4 实现 + `Matchers` 工厂(详见 `Q4.4`) | 待开始 |
+| **Phase 1 匹配器** | ~~`Matcher<T>` + `AbstractMatcher` + 4 实现 + `Matchers` 工厂~~ 已删除(无生产调用) | 已删除 |
 | **Phase 2 浏览器** | `BrowserLifecycle` sealed(6 方法,见 ADR-0007 D3) + `PlaywrightBrowserAdapter` + `FakeBrowser`(**无 BrowserFactory**,改 ConfigManager 注入,ADR-0007 D1) | 待开始 |
 | **Phase 3 业务编排** | `BookingTask` / `BookingClient` / `ConfigManager`(Singleton) / `Tracer`(Singleton) / `AccountResolver` | 待开始 |
 | **Phase 4 CLI + Wrapper** | `BookingCommand` / `SkillCommand` / `McpCommand` + `CampusTask<T>` 扩展(ADR-0003/0004 待写) | 待开始 |

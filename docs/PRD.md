@@ -267,7 +267,7 @@ TaskResult<T>
 - [ ] `mvn package` 生成可执行 jar
 - [ ] `java -jar szu-agent-plugin.jar booking venue --format json` **真跑** Playwright 完整流程,退出码 0
 - [ ] 4 种设计模式在代码中**显式可见**(注释 + 文档):Builder / Singleton / Strategy / Adapter(见 ADR-0001 D9 + ADR-0007 D1,Static Factory 已删改 ConfigManager 注入)
-- [ ] 6 种编程技术(泛型/枚举/注解/重载/抽象类/Lambda-Stream)实际使用
+- [ ] 6 种编程技术(泛型/枚举/注解/重载/抽象类/Lambda-Stream)实际使用;抽象类当前由 `interface + default 方法`替代,计数为 0
 - [ ] `docs/class-diagram.puml` 完整
 - [ ] README + PRD + design-patterns + system-map + 局限性分析齐全
 - [ ] 课堂演示**真占场地**(不演示 dry-run),通过体育项目轮换支持多次演示(ADR-0001 D2/D3)

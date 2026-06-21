@@ -79,10 +79,10 @@ D8 演示兜底清单当前只覆盖"演示前不预约"和"准备录屏",未覆
 ## [ID-003] OQ3: ErrorClassifier 删除后分类能力归属(D9)
 
 **Date:** 2026-06-11
-**Status:** proposed
+**Status:** resolved-by-ADR-0001-D9
 **Lane:** normal
-**Predicted impact:** 确认 `BookingErrorCode` 枚举 + `BookingException` 密封继承可独立支撑分类需求
-**Outcome:** TBD
+**Predicted impact:** 确认 `ErrorCode` 枚举 + `BookingException` 可独立支撑分类需求
+**Outcome:** `ErrorCode` 12 个常量已携带 `severity / retryable / switchAccount / screenshot / hint` 5 元数据,`BookingException` 统一封装异常;Python `ErrorClassifier` 判定表已等价映射到 Java 枚举,无需额外 Classifier。详见 `docs/adr/0001-project-direction-recalibration.md` D9 + `docs/adr/0006-phase1-domain-error-retry-matcher.md` §2。
 **Friction type:** pattern-unclear
 
 **Pain:** D9 删 Python `ErrorClassifier`,理由是"枚举自带元数据"。需在 Phase 1 (`error/` 包)

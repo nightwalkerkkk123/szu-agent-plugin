@@ -2,6 +2,7 @@
 
 **Date:** 2026-06-11
 **Status:** Accepted
+**Amended:** 2026-06-21 — `matcher/` 包在 Phase 5 清理中整体删除(无生产调用);retry 与 error 决定仍然有效。
 **Supersedes:** Q4.1 / Q4.2 / Q4.3 / Q4.4 散落决定(本 ADR 闭环)
 **Extends:** ADR-0001 D7/D9, ADR-0005 D2, ADR-0007 D2/D4
 
@@ -137,7 +138,7 @@ catch (BookingException e) {
 
 #### 3.1 `RetryPolicy` 是 `@FunctionalInterface`
 
-5 模式 Strategy 之一**第 2 处落地**(第 1 处是 Matcher)。
+4 模式 Strategy 之一**第 2 处落地**(第 1 处是 `BookingStep`/`VenueSelector`)。
 单一方法 `<T> T execute(Supplier<T> action)`。
 **不再**用 Python 风格双方法 `shouldRetry` + `nextDelayMs`(业务层写 `policy.execute(() -> doStep())` 1 行)。
 
@@ -201,7 +202,7 @@ ConfigManager 启动时调一次,业务层零 `new`。
 
 ---
 
-### 四. matcher/ 包(10 决定)
+### 四. matcher/ 包(10 决定) — 已删除(2026-06-21)
 
 #### 4.1 `Matcher<T>` 泛型 + `@FunctionalInterface`
 
@@ -263,10 +264,10 @@ ConfigManager 启动时调一次,业务层零 `new`。
 
 ### 好处
 - **闭环所有 Phase 1 决定**:不再散落对话,文档树 grep 找得到
-- **5 模式表诚实**:4 个真业务驱动模式(ADR-0007 D1)
+- **4 模式表诚实**:Builder / Singleton / Strategy / Adapter 均有真业务落地(ADR-0007 D1)
 - **retry 包诚实**:3 个真行为(ADR-0007 D2),无 NoOp 装饰
 - **Tracer 干净**(ADR-0007 D4):不接 Throwable,observability ↔ error seam 干净
-- **测试策略统一**:domain 覆盖率 ≥ 90%,error/retry/matcher 覆盖率 ≥ 90%
+- **测试策略统一**:domain / error / retry 覆盖率 ≥ 80%,新增 ArchUnit 架构测试
 
 ### 代价 / 风险
 - **没建文档时多次返工**:本 ADR 之前,Phase 1 决定散落 4 段对话;`/improve-codebase-architecture` 一查就发现 9 处矛盾
@@ -279,7 +280,7 @@ ConfigManager 启动时调一次,业务层零 `new`。
 | 文件 | 改动 |
 |---|---|
 | `docs/adr/0001-project-direction-recalibration.md` | 引文加 "Extended by ADR-0006";删除散落 Phase 1 描述 |
-| `docs/design-patterns.md` | §3 策略模式 retry 表格 3 实现,Matcher 4 实现 确认 |
+| `docs/design-patterns.md` | §3 策略模式 BookingStep/VenueSelector/RetryPolicy,删 matcher |
 | `docs/system-map.md` | §6.7 删 BrowserFactory 段;§4 ErrorCode 代码块替换 12 值 5 字段版本 |
 | `docs/PRD.md` | §数据模型 `date: int` → `date: LocalDate`;MCP schema 同;验收标准 4 模式 |
 | `docs/plans/README.md` | "4 实现" → "3 实现";Phase 2 行删 BrowserFactory |

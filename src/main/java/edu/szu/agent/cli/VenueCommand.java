@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.account.AccountResolutionException;
 import edu.szu.agent.account.AccountResolver;
-import edu.szu.agent.client.VenueBookingClient;
+import edu.szu.agent.client.BookingFlowLauncher;
 import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
@@ -155,12 +155,11 @@ public class VenueCommand implements Callable<Integer> {
                 .build();
 
             ConfigManager.getInstance().load();
-            VenueBookingClient bookingClient = new VenueBookingClient(
-                account,
+            BookingFlowLauncher launcher = new BookingFlowLauncher(
                 ConfigManager.getInstance().browser(),
                 RetryPolicies.defaultBooking());
 
-            BookingResult result = bookingClient.book(bookingRequest);
+            BookingResult result = launcher.launch(bookingRequest, account);
 
             long elapsed = System.currentTimeMillis() - startMs;
             return formatAndOutput(out, result, traceId, elapsed);

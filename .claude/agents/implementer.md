@@ -20,20 +20,18 @@ Java 实现工程师,将设计转为可运行代码,遵循 TDD 和 ECC 编码规
 
 ## 实现顺序(必须遵循)
 
-1. `domain/` → 值对象 records (Campus, Sport, TimeSlot, Venue)
+1. `domain/` → 值对象 records (Campus, Sport, TimeSlot, BookingRequest)
 2. `error/` → ErrorCode 枚举(每个值带行为方法) + BookingException
-3. `retry/` → RetryPolicy 接口 + FixedDelayRetry + ExponentialBackoff
-4. `account/` → AccountState 枚举 + Account
-5. `browser/` → BrowserLifecycle 接口 + FakeBrowser + CloakBrowserAdapter
-6. `matcher/` → Matcher 接口 + TextMatcher + RegexMatcher + ContainsMatcher + CompositeMatcher + MatcherFactory
-7. `client/` → VenueBookingClient + ClientFactory
-8. `task/` → CampusTask<T> + TaskResult<T> + TaskStatus
-9. `config/` → ConfigManager(单例) + Config
-10. `observability/` → Tracer(单例) + MetricsCollector
-11. `platform/` → AgentToolPlatform(Facade)
-12. `skill/` → Skill + SkillManager + @AgentTool
-13. `mcp/` → MCPToolProvider
-14. `cli/` → Main + BookingCommand + JsonOutput
+3. `retry/` → RetryPolicy 接口 + FixedDelay + ExponentialBackoff + NoRetry
+4. `account/` → AccountState 枚举 + Account + AccountResolver
+5. `browser/` → BrowserLifecycle 接口 + PlaywrightBrowserAdapter + FakeBrowser
+6. `client/` → VenueBookingClient + BookingFlowLauncher
+7. `task/` → CampusTask<T> + TaskResult<T> + BookingTask
+8. `config/` → ConfigManager(单例) + Config
+9. `observability/` → Tracer(单例) + RunRecord
+10. `skill/` → Skill<T> + Skills(单例注册中心) + @AgentTool
+11. `mcp/` → MCPToolProvider + MCPToolCallHandler
+12. `cli/` → Main + BookingCommand + VenueCommand + SkillCommand + MCPCommand
 
 ## 强制标注格式
 
@@ -47,8 +45,8 @@ public class MyClass { ... }
 示例:
 ```java
 // Design Pattern: Strategy
-// 编程技术: 泛型 / 枚举 / 抽象类
-public class RetryPolicy { ... }
+// 编程技术: 泛型 / Lambda / FunctionalInterface
+public interface RetryPolicy { ... }
 
 // Design Pattern: Builder
 // 编程技术: 泛型 / 重载 / record

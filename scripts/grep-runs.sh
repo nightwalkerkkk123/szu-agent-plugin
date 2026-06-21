@@ -20,29 +20,29 @@ fi
 
 # 文档里登记的预期值
 declare -A EXPECTED=(
-    [Builder]=1 [Singleton]=3 [Strategy]=18 [Adapter]=2
-    [泛型]=9 [枚举]=16 [注解]=4 [重载]=4 [抽象类]=1 [Lambda]=17
+    [Builder]=1 [Singleton]=3 [Strategy]=19 [Adapter]=3
+    [泛型]=8 [枚举]=20 [注解]=4 [重载]=4 [抽象类]=0 [Lambda]=16
 )
 
-PATTERNS_TOTAL=24
-TECHNIQUES_TOTAL=46
+PATTERNS_TOTAL=26
+TECHNIQUES_TOTAL=50
 
 failures=0
 
 echo "== 4 设计模式 =="
 for k in Builder Singleton Strategy Adapter; do
-    n=$(grep -rln "// Design Pattern: $k" "$SRC" 2>/dev/null | wc -l | tr -d ' ')
+    n=$(grep -rln "// Design Pattern: $k" "$SRC" 2>/dev/null | wc -l | tr -d ' ' || true)
     exp=${EXPECTED[$k]}
     if [[ "$n" == "$exp" ]]; then
         echo "  ✓ $k: $n (expected $exp)"
     else
         echo "  ✗ $k: $n (expected $exp)"
-        grep -rln "// Design Pattern: $k" "$SRC" 2>/dev/null
+        grep -rln "// Design Pattern: $k" "$SRC" 2>/dev/null || true
         failures=$((failures + 1))
     fi
 done
 
-total_patterns=$(grep -rln '// Design Pattern:' "$SRC" 2>/dev/null | wc -l | tr -d ' ')
+total_patterns=$(grep -rln '// Design Pattern:' "$SRC" 2>/dev/null | wc -l | tr -d ' ' || true)
 if [[ "$total_patterns" == "$PATTERNS_TOTAL" ]]; then
     echo "  ✓ TOTAL: $total_patterns (expected $PATTERNS_TOTAL)"
 else
@@ -53,18 +53,18 @@ fi
 echo ""
 echo "== 6 编程技术 =="
 for k in 泛型 枚举 注解 重载 抽象类 Lambda; do
-    n=$(grep -rln "// 编程技术:.*$k" "$SRC" 2>/dev/null | wc -l | tr -d ' ')
+    n=$(grep -rln "// 编程技术:.*$k" "$SRC" 2>/dev/null | wc -l | tr -d ' ' || true)
     exp=${EXPECTED[$k]}
     if [[ "$n" == "$exp" ]]; then
         echo "  ✓ $k: $n (expected $exp)"
     else
         echo "  ✗ $k: $n (expected $exp)"
-        grep -rln "// 编程技术:.*$k" "$SRC" 2>/dev/null
+        grep -rln "// 编程技术:.*$k" "$SRC" 2>/dev/null || true
         failures=$((failures + 1))
     fi
 done
 
-total_techniques=$(grep -rln '// 编程技术:' "$SRC" 2>/dev/null | wc -l | tr -d ' ')
+total_techniques=$(grep -rln '// 编程技术:' "$SRC" 2>/dev/null | wc -l | tr -d ' ' || true)
 if [[ "$total_techniques" == "$TECHNIQUES_TOTAL" ]]; then
     echo "  ✓ TOTAL: $total_techniques (expected $TECHNIQUES_TOTAL)"
 else

@@ -51,8 +51,9 @@ class SelectSportStepTest {
     }
 
     @Test
-    @DisplayName("execute() returns null on success")
-    void executeReturnsNullOnSuccess() {
-        assertThat(new SelectSportStep().execute(browser, ctx)).isNull();
+    @DisplayName("execute() returns Continue on success")
+    void executeReturnsContinueOnSuccess() {
+        assertThat(new SelectSportStep().execute(browser, ctx))
+            .isInstanceOf(StepOutcome.Continue.class);
     }
 }

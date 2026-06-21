@@ -51,8 +51,9 @@ class SelectCampusStepTest {
     }
 
     @Test
-    @DisplayName("execute() returns null on success")
-    void executeReturnsNullOnSuccess() {
-        assertThat(new SelectCampusStep().execute(browser, ctx)).isNull();
+    @DisplayName("execute() returns Continue on success")
+    void executeReturnsContinueOnSuccess() {
+        assertThat(new SelectCampusStep().execute(browser, ctx))
+            .isInstanceOf(StepOutcome.Continue.class);
     }
 }

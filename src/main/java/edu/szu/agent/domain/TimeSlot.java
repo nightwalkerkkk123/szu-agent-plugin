@@ -16,7 +16,6 @@ package edu.szu.agent.domain;
  * that constructor is gone. {@link #parse(String, String)} provides a
  * temporary equivalent for tests that still pass two strings.
  *
- * // Design Pattern: Type Object (per-slot metadata)
  * // 编程技术: 枚举 / 静态工厂方法 / Stream
  *
  * @since 0.1.0

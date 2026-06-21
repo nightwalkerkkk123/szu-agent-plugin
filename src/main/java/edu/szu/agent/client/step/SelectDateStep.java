@@ -1,7 +1,6 @@
 package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
-import edu.szu.agent.domain.BookingResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +30,7 @@ public final class SelectDateStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         LocalDate date = ctx.request().date();
         // ehall renders dates as <input type="radio" id="YYYY-MM-DD"> wrapped in
         // a <label for="YYYY-MM-DD">. The radio is display:none, so we click the
@@ -40,6 +39,6 @@ public final class SelectDateStep implements BookingStep {
         String selector = String.format("label[for=\"%s\"]", date);
         log.info("Selecting date: {}", date);
         browser.click(selector);
-        return null;
+        return new StepOutcome.Continue(ctx);
     }
 }

@@ -88,7 +88,7 @@ public final class CasLoginStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         var account = ctx.account();
         if (account == null) {
             throw new IllegalStateException(
@@ -113,6 +113,6 @@ public final class CasLoginStep implements BookingStep {
         log.info("CAS login submitted for {} (landed on ehall: {})",
             account.studentId(), landed);
 
-        return null;
+        return new StepOutcome.Continue(ctx);
     }
 }

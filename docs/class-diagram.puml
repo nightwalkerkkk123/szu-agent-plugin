@@ -198,79 +198,7 @@ ErrorCode        ..> Severity  : uses
 ' Failure record imports ErrorCode — already shown above
 
 ' ============================================================
-'  CLUSTER 3 · matcher/  — Strategy
-' ============================================================
-package "matcher/  (Strategy)" {
-
-  interface Matcher <<Strategy>> {
-    +matches(T) : boolean
-    +and(Matcher<T>)   : Matcher<T> «default»
-    +or(Matcher<T>)    : Matcher<T> «default»
-    +negate()          : Matcher<T> «default»
-    +andNot(Matcher<T>): Matcher<T> «default»
-  }
-
-  abstract class AbstractMatcher <<Strategy>> {
-    -description : String
-    --
-    +description() : String
-    +toString()    : String
-  }
-
-  class ExactMatcher <<Strategy>> {
-    -target : String
-    --
-    +ExactMatcher(String)
-    +matches(String) : boolean
-  }
-
-  class ContainsMatcher <<Strategy>> {
-    -substring  : String
-    -ignoreCase : boolean
-    --
-    +ContainsMatcher(String)
-    +ContainsMatcher(String, boolean)
-    +matches(String) : boolean
-  }
-
-  class RegexMatcher <<Strategy>> {
-    -pattern : Pattern
-    --
-    +RegexMatcher(String)
-    +RegexMatcher(Pattern)
-    +matches(String) : boolean
-  }
-
-  class VenueIndexMatcher <<Strategy>> {
-    -index    : int
-    -patterns : List<Pattern>
-    ' 4 precompiled regexes: N号 / 第N场 / (N) / bare N
-    --
-    +VenueIndexMatcher(int)
-    +matches(String) : boolean
-  }
-
-  class Matchers <<factory>> {
-    +{static} exact(String)              : Matcher<String>
-    +{static} contains(String)           : Matcher<String>
-    +{static} containsIgnoreCase(String) : Matcher<String>
-    +{static} regex(String)              : Matcher<String>
-    +{static} regex(Pattern)             : Matcher<String>
-    +{static} venueIndex(int)            : Matcher<String>
-    +{static} all(Matcher<String>...)    : Matcher<String>
-    +{static} any(Matcher<String>...)    : Matcher<String>
-  }
-}
-
-Matcher         <|.. AbstractMatcher
-AbstractMatcher <|-- ExactMatcher
-AbstractMatcher <|-- ContainsMatcher
-AbstractMatcher <|-- RegexMatcher
-AbstractMatcher <|-- VenueIndexMatcher
-Matchers        ..> Matcher : creates
-
-' ============================================================
-'  CLUSTER 4 · retry/  — Strategy (FunctionalInterface)
+'  CLUSTER 3 · retry/  — Strategy (FunctionalInterface)
 ' ============================================================
 package "retry/  (Strategy)" {
 
@@ -322,7 +250,7 @@ ExponentialBackoff ..> BookingException
 ExponentialBackoff ..> ErrorCode
 
 ' ============================================================
-'  CLUSTER 5 · browser/  — Adapter
+'  CLUSTER 4 · browser/  — Adapter
 ' ============================================================
 package "browser/  (Adapter)" {
 
@@ -359,7 +287,7 @@ PlaywrightBrowserAdapter ..> BookingException : throws
 PlaywrightBrowserAdapter ..> ErrorCode        : maps to
 
 ' ============================================================
-'  CLUSTER 6 · cli/  — entry point (Phase 4 BookingCommand planned)
+'  CLUSTER 5 · cli/  — entry point (Phase 4 BookingCommand planned)
 ' ============================================================
 package "cli/" {
 
@@ -371,7 +299,7 @@ package "cli/" {
 }
 
 ' ============================================================
-'  CLUSTER 7 · Phase 3 + 4 + P1  (planned, dashed border)
+'  CLUSTER 6 · Phase 3 + 4 + P1  (planned, dashed border)
 ' ============================================================
 package "Phase 3/4 + P1  (planned)" {
 
@@ -511,7 +439,7 @@ legend right
   | Stereotype | Meaning |
   | <<Builder>>   | Builder pattern (BookingRequest.Builder) |
   | <<Singleton>> | Singleton pattern (ConfigManager, Tracer) |
-  | <<Strategy>>  | Strategy pattern (Matcher, RetryPolicy) |
+  | <<Strategy>>  | Strategy pattern (BookingStep, VenueSelector, RetryPolicy) |
   | <<Adapter>>   | Adapter pattern (PlaywrightBrowserAdapter) |
   | <<sealed>>    | Sealed type (Java 17+) |
   | <<record>>    | Record value type (Java 16+) |

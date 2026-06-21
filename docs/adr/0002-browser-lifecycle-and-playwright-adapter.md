@@ -63,7 +63,7 @@ public interface BrowserLifecycle {
 
 **为什么这 10 个**:
 - 登录 / 选场地 / 提交按钮 / 取场地列表 — 这 4 类操作覆盖预约全流程
-- `allTextOf` + Phase 1 的 `VenueIndexMatcher` 配合,完成"读场地列表 + 按 N 号过滤"
+- `allTextOf` 供 `CourtListSelector` / `CapacityVenueSelector` 读取场地列表后解析并点击
 - `currentUrl` 唯一不可替代:登录跳转链 CAS → ehall,业务层需要确认是否到了目标页
 - `screenshot` 由 `ErrorCode.shouldScreenshot()` 元数据驱动(ADR-0006 §二.2)
 

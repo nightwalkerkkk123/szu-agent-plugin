@@ -12,7 +12,6 @@ import edu.szu.agent.client.step.VenueSelector;
  * BASKETBALL) but the underlying ehall venues are independent — that's
  * why each campus gets its own enum rather than a shared one.
  *
- * <p>// Design Pattern: Type Object
  * <p>// 编程技术: 枚举(携带元数据字段) / sealed-interface 实现
  *
  * @since 0.1.0

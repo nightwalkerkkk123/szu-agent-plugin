@@ -1,7 +1,6 @@
 package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
-import edu.szu.agent.domain.BookingResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,11 +31,11 @@ public final class SelectSportStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         var sport = ctx.request().sport();
         log.info("Selecting sport: {} ({})", sport.displayName(), sport.ehallCode());
         String selector = String.format(SEL_SPORT_TILE_TEMPLATE, sport.displayName());
         browser.click(selector);
-        return null;
+        return new StepOutcome.Continue(ctx);
     }
 }

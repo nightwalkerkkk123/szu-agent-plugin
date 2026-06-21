@@ -33,8 +33,8 @@ class BookingTaskIntegrationTest {
         FakeBrowser browser = new FakeBrowser();
         Account account = new Account("2023150090", "fake-pw", "test");
         RetryPolicy noRetry = noRetry();
-        VenueBookingClient client = new VenueBookingClient(account, browser, noRetry);
-        BookingTask task = new BookingTask(client, account);
+        VenueBookingClient client = new VenueBookingClient(browser, noRetry);
+        BookingTask task = new BookingTask(client, username -> account);
 
         TaskInput input = new TaskInput(Map.of(
             "username", "2023150090",
@@ -58,8 +58,8 @@ class BookingTaskIntegrationTest {
         FakeBrowser browser = new FakeBrowser();
         Account account = new Account("2023150090", "fake-pw", "test");
         RetryPolicy noRetry = noRetry();
-        VenueBookingClient client = new VenueBookingClient(account, browser, noRetry);
-        BookingTask task = new BookingTask(client, account);
+        VenueBookingClient client = new VenueBookingClient(browser, noRetry);
+        BookingTask task = new BookingTask(client, username -> account);
 
         TaskInput input = new TaskInput(Map.of(
             "username", "2023150090",
@@ -82,8 +82,8 @@ class BookingTaskIntegrationTest {
         FakeBrowser browser = new FakeBrowser();
         Account account = new Account("2023150090", "fake-pw", "test");
         RetryPolicy noRetry = noRetry();
-        VenueBookingClient client = new VenueBookingClient(account, browser, noRetry);
-        BookingTask task = new BookingTask(client, account);
+        VenueBookingClient client = new VenueBookingClient(browser, noRetry);
+        BookingTask task = new BookingTask(client, username -> account);
 
         TaskInput input = new TaskInput(Map.of(
             "username", "2023150090",
@@ -106,8 +106,8 @@ class BookingTaskIntegrationTest {
         FakeBrowser browser = new FakeBrowser();
         Account account = new Account("2023150090", "fake-pw", "test");
         RetryPolicy noRetry = noRetry();
-        VenueBookingClient client = new VenueBookingClient(account, browser, noRetry);
-        BookingTask task = new BookingTask(client, account);
+        VenueBookingClient client = new VenueBookingClient(browser, noRetry);
+        BookingTask task = new BookingTask(client, username -> account);
 
         TaskInput input = new TaskInput(Map.of(
             "campus", "YUEHAI",
@@ -129,8 +129,8 @@ class BookingTaskIntegrationTest {
         FakeBrowser browser = new FakeBrowser(List.of());  // empty!
         Account account = new Account("2023150090", "fake-pw", "test");
         RetryPolicy noRetry = noRetry();
-        VenueBookingClient client = new VenueBookingClient(account, browser, noRetry);
-        BookingTask task = new BookingTask(client, account);
+        VenueBookingClient client = new VenueBookingClient(browser, noRetry);
+        BookingTask task = new BookingTask(client, username -> account);
 
         TaskInput input = new TaskInput(Map.of(
             "username", "2023150090",

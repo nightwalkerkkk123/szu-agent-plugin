@@ -4,6 +4,7 @@ import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.client.step.BookingContext;
 import edu.szu.agent.client.step.BookingStep;
+import edu.szu.agent.client.step.StepOutcome;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Campus;
@@ -76,7 +77,7 @@ class VenueBookingClientTest {
 
     private VenueBookingClient clientWith(BookingStep... steps) {
         return new VenueBookingClient(
-            account, browser, RetryPolicies.quickFix(), List.of(steps));
+            browser, RetryPolicies.quickFix(), List.of(steps));
     }
 
     // ---------- happy path ----------
@@ -86,7 +87,7 @@ class VenueBookingClientTest {
     void bookReturnsSuccessWhenAllStepsSucceed() {
         VenueBookingClient client = clientWith(noop("S1"), noop("S2"));
 
-        BookingResult result = client.book(request);
+        BookingResult result = client.book(request, account);
 
         assertThat(result).isInstanceOf(BookingResult.Success.class);
         verify(browser).open();
@@ -100,7 +101,7 @@ class VenueBookingClientTest {
         VenueBookingClient client = clientWith(
             tracked("S1", log), tracked("S2", log), tracked("S3", log));
 
-        client.book(request);
+        client.book(request, account);
 
         assertThat(log.toString()).isEqualTo("S1-S2-S3-");
     }
@@ -115,10 +116,10 @@ class VenueBookingClientTest {
         AtomicBoolean thirdRan = new AtomicBoolean();
         VenueBookingClient client = clientWith(
             noop("OK"),
-            returning("FAIL", failure),
+            failing("FAIL", failure),
             sideEffect("NOT_RUN", () -> thirdRan.set(true)));
 
-        BookingResult result = client.book(request);
+        BookingResult result = client.book(request, account);
 
         assertThat(result).isSameAs(failure);
         assertThat(thirdRan).isFalse();
@@ -133,7 +134,7 @@ class VenueBookingClientTest {
         VenueBookingClient client = clientWith(
             throwing(new BookingException(ErrorCode.ELEMENT_NOT_FOUND, "missing")));
 
-        BookingResult result = client.book(request);
+        BookingResult result = client.book(request, account);
 
         assertThat(result).isInstanceOf(BookingResult.Failure.class);
         BookingResult.Failure f = (BookingResult.Failure) result;
@@ -148,7 +149,7 @@ class VenueBookingClientTest {
         VenueBookingClient client = clientWith(
             throwing(new BookingException(ErrorCode.VENUE_OCCUPIED, "occupied")));
 
-        BookingResult result = client.book(request);
+        BookingResult result = client.book(request, account);
 
         assertThat(result).isInstanceOf(BookingResult.Failure.class);
         assertThat(((BookingResult.Failure) result).code()).isEqualTo(ErrorCode.VENUE_OCCUPIED);
@@ -164,7 +165,7 @@ class VenueBookingClientTest {
         doThrow(new RuntimeException("close failed")).when(browser).close();
         VenueBookingClient client = clientWith(noop("OK"));
 
-        BookingResult result = client.book(request);
+        BookingResult result = client.book(request, account);
 
         assertThat(result).isInstanceOf(BookingResult.Success.class);
         verify(browser).close();
@@ -179,13 +180,13 @@ class VenueBookingClientTest {
         VenueBookingClient client = clientWith(
             new BookingStep() {
                 @Override public String name() { return "CAPTURE"; }
-                @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
+                @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
                     captured.set(ctx);
-                    return null;
+                    return new StepOutcome.Continue(ctx);
                 }
             });
 
-        client.book(request);
+        client.book(request, account);
 
         assertThat(captured.get()).isNotNull();
         assertThat(captured.get().request()).isSameAs(request);
@@ -198,7 +199,7 @@ class VenueBookingClientTest {
         AtomicBoolean ran = new AtomicBoolean();
         VenueBookingClient client = clientWith(sideEffect("S", () -> ran.set(true)));
 
-        client.book(request);
+        client.book(request, account);
 
         assertThat(ran).isTrue();
         verify(browser).open();
@@ -210,28 +211,28 @@ class VenueBookingClientTest {
     private static BookingStep noop(String name) {
         return new BookingStep() {
             @Override public String name() { return name; }
-            @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
-                return null;
+            @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
+                return new StepOutcome.Continue(ctx);
             }
         };
     }
 
-    /** Step that runs a side effect on execution, then returns null. */
+    /** Step that runs a side effect on execution, then returns Continue. */
     private static BookingStep sideEffect(String name, Runnable sideEffect) {
         return new BookingStep() {
             @Override public String name() { return name; }
-            @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
+            @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
                 sideEffect.run();
-                return null;
+                return new StepOutcome.Continue(ctx);
             }
         };
     }
 
-    private static BookingStep returning(String name, BookingResult result) {
+    private static BookingStep failing(String name, BookingResult.Failure failure) {
         return new BookingStep() {
             @Override public String name() { return name; }
-            @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
-                return result;
+            @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
+                return new StepOutcome.Failure(failure);
             }
         };
     }
@@ -239,7 +240,7 @@ class VenueBookingClientTest {
     private static BookingStep throwing(BookingException ex) {
         return new BookingStep() {
             @Override public String name() { return "THROW"; }
-            @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
+            @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
                 throw ex;
             }
         };
@@ -248,9 +249,9 @@ class VenueBookingClientTest {
     private static BookingStep tracked(String name, StringBuilder log) {
         return new BookingStep() {
             @Override public String name() { return name; }
-            @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
+            @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
                 log.append(name).append('-');
-                return null;
+                return new StepOutcome.Continue(ctx);
             }
         };
     }

@@ -132,9 +132,7 @@ class BookingTaskTest {
                 return action.get();
             }
         };
-        Account placeholder = new Account("p", "p", "test");
-        VenueBookingClient client = new VenueBookingClient(
-            placeholder, mockBrowser, noRetry);
-        return new BookingTask(client, placeholder);
+        VenueBookingClient client = new VenueBookingClient(mockBrowser, noRetry);
+        return new BookingTask(client, username -> new Account(username, "test-pw", "test"));
     }
 }

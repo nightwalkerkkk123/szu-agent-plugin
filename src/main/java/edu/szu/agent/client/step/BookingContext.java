@@ -5,66 +5,35 @@ import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
 
 /**
- * Mutable context passed through the booking pipeline.
+ * Immutable context passed through the booking pipeline.
  *
- * <p>Each step reads from {@link #request} and writes intermediate results
- * here (e.g. {@link #selectedVenue}). The {@link #account} field holds
+ * <p>Each step reads from {@link #request} and returns a new context with
+ * intermediate results (e.g. {@link #selectedVenue}) via
+ * {@link #withSelectedVenue(String)}. The {@link #account} field holds
  * resolved credentials injected by the caller before the pipeline runs.
  * This keeps {@link BookingRequest} free of credential types.
  *
- * // 编程技术: record(不可变外壳) / Lambda
+ * <p>// 编程技术: record(不可变) / Lambda
  *
  * @since 0.1.0
  * @author 王子豪
  */
-public final class BookingContext {
-
-    private final BookingRequest request;
-    private final Account account;
-    private String selectedVenue;
-    private BookingResult lastFailure;
+public record BookingContext(
+    BookingRequest request,
+    Account account,
+    String selectedVenue,
+    BookingResult.Failure lastFailure
+) {
 
     public BookingContext(BookingRequest request, Account account) {
-        this.request = request;
-        this.account = account;
+        this(request, account, null, null);
     }
 
-    /**
-     * Convenience constructor for steps that don't need credentials
-     * (e.g. {@link SelectCampusStep}, {@link SelectSportStep},
-     * {@link SelectTimeSlotStep}, {@link SelectVenueStep},
-     * {@link ConfirmBookingStep}). Equivalent to passing {@code null}
-     * for {@code account}.
-     */
-    public BookingContext(BookingRequest request) {
-        this(request, null);
+    public BookingContext withSelectedVenue(String selectedVenue) {
+        return new BookingContext(request, account, selectedVenue, lastFailure);
     }
 
-    public BookingRequest request() {
-        return request;
-    }
-
-    public Account account() {
-        return account;
-    }
-
-    public String selectedVenue() {
-        return selectedVenue;
-    }
-
-    public void selectedVenue(String selectedVenue) {
-        this.selectedVenue = selectedVenue;
-    }
-
-    public BookingResult lastFailure() {
-        return lastFailure;
-    }
-
-    public void lastFailure(BookingResult.Failure lastFailure) {
-        this.lastFailure = lastFailure;
-    }
-
-    public BookingResult.Success success(String venueName, String confirmation) {
-        return new BookingResult.Success(venueName, confirmation);
+    public BookingContext withLastFailure(BookingResult.Failure lastFailure) {
+        return new BookingContext(request, account, selectedVenue, lastFailure);
     }
 }

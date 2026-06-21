@@ -78,25 +78,32 @@ void config_manager_returns_same_instance_twice() {
 
 // 策略可替换测试
 @Test
-void error_classifier_with_login_failure_returns_retryable() {
-    ErrorClassifier classifier = new ErrorClassifier();
-    boolean retryable = classifier.shouldRetry(LOGIN_FAILED, 1);
-    assertThat(retryable).isTrue();
+void retry_policy_fixed_delay_doubles_attempts() {
+    RetryPolicy policy = new FixedDelay(2, Duration.ofMillis(10));
+    AtomicInteger calls = new AtomicInteger();
+    BookingException ex = assertThrows(BookingException.class, () ->
+        policy.execute(() -> {
+            calls.incrementAndGet();
+            throw new BookingException(ErrorCode.NETWORK_TIMEOUT, "boom");
+        })
+    );
+    assertThat(calls.get()).isEqualTo(2);
+    assertThat(ex.code()).isEqualTo(ErrorCode.NETWORK_TIMEOUT);
 }
 
 // Builder 构建测试
 @Test
 void booking_request_builder_with_all_params_produces_valid_request() {
     BookingRequest req = BookingRequest.builder()
-        .username("2023150090")
         .campus(Campus.YUEHAI)
         .sport(Sport.TENNIS)
-        .date(0)
-        .timeSlot("19:00-20:00")
-        .maxRetry(3)
+        .date(LocalDate.parse("2026-06-21"))
+        .timeSlot(TimeSlot.parse("19:00-20:00"))
+        .preferredVenueIndex(2)
+        .displayHint("test")
         .build();
-    assertThat(req.username()).isEqualTo("2023150090");
     assertThat(req.campus()).isEqualTo(Campus.YUEHAI);
+    assertThat(req.preferredVenueIndex()).isEqualTo(2);
 }
 ```
 
@@ -111,22 +118,25 @@ void booking_request_builder_with_all_params_produces_valid_request() {
 ```
 src/test/java/edu/szu/agent/
 ├── domain/           CampusTest, SportTest, TimeSlotTest, BookingRequestTest
-├── error/             ErrorCodeTest, BookingExceptionTest, ErrorClassifierTest
-├── retry/             RetryPolicyTest, FixedDelayRetryTest, ExponentialBackoffTest
-├── account/           AccountStateTest, AccountManagerTest
-├── matcher/           TextMatcherTest, RegexMatcherTest, ContainsMatcherTest, MatcherFactoryTest
-├── browser/           FakeBrowserTest, BrowserLifecycleTest
-├── task/              TaskResultTest, TaskStatusTest, TaskExecutorTest
-├── platform/          AgentToolPlatformTest
-└── cli/               CLIRunnerTest (dry-run 模式)
+├── error/             ErrorCodeTest, BookingExceptionTest
+├── retry/             FixedDelayTest, ExponentialBackoffTest, NoRetryTest
+├── account/           AccountStateTest, AccountResolverTest
+├── browser/           FakeBrowserTest, PlaywrightBrowserAdapterTest
+├── client/            VenueBookingClientTest
+├── client/step/       CasLoginStepTest, SelectCampusStepTest, SelectSportStepTest,
+│                     SelectDateStepTest, SelectTimeSlotStepTest, SelectVenueStepTest,
+│                     ConfirmBookingStepTest, VenueSelectorTest
+├── task/              BookingTaskTest, BookingTaskIntegrationTest
+├── architecture/      ArchitectureTest
+└── cli/               MainTest
 ```
 
 ## Test naming
 
 ```java
 test_[scenario]_[expected]
-test_booking_request_builder_with_empty_username_throws_illegal_state
-test_error_classifier_with_network_error_returns_retryable
+test_booking_request_builder_with_missing_campus_throws_illegal_state
+test_retry_policy_exhaustion_throws_network_timeout
 test_singleton_config_manager_returns_same_instance_twice
 ```
 

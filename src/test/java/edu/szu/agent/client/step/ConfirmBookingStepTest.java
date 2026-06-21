@@ -3,9 +3,7 @@ package edu.szu.agent.client.step;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.domain.BookingRequest;
-import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Campus;
-import edu.szu.agent.domain.Sport;
 import edu.szu.agent.domain.YuehaiSport;
 import edu.szu.agent.domain.TimeSlot;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ConfirmBookingStep")
@@ -28,7 +26,6 @@ class ConfirmBookingStepTest {
     private BrowserLifecycle browser;
 
     private BookingContext ctx;
-    private Account account;
 
     @BeforeEach
     void setUp() {
@@ -39,26 +36,18 @@ class ConfirmBookingStepTest {
             .timeSlot(TimeSlot.T19_20)
             .preferredVenueIndex(1)
             .build();
-        account = new Account("2023150090", "test-pwd", "test-user");
-        ctx = new BookingContext(request, account);
-        ctx.selectedVenue("网球1号场");
+        Account account = new Account("2023150090", "test-pwd", "test-user");
+        ctx = new BookingContext(request, account).withSelectedVenue("网球1号场");
     }
 
     @Test
-    @DisplayName("execute() clicks the confirm button")
+    @DisplayName("execute() clicks the confirm button and returns Continue")
     void executeClicksConfirmButton() {
-        new ConfirmBookingStep().execute(browser, ctx);
+        StepOutcome outcome = new ConfirmBookingStep().execute(browser, ctx);
+
         verify(browser).click(ConfirmBookingStep.SEL_CONFIRM_BUTTON);
-    }
-
-    @Test
-    @DisplayName("execute() returns BookingResult.Success with venue name and confirmation")
-    void executeReturnsSuccessResult() {
-        BookingResult result = new ConfirmBookingStep().execute(browser, ctx);
-
-        assertThat(result).isInstanceOf(BookingResult.Success.class);
-        var success = (BookingResult.Success) result;
-        assertThat(success.venueName()).isEqualTo("网球1号场");
-        assertThat(success.confirmation()).startsWith("CONFIRMED-");
+        assertThat(outcome).isInstanceOf(StepOutcome.Continue.class);
+        assertThat(((StepOutcome.Continue) outcome).nextContext().selectedVenue())
+            .isEqualTo("网球1号场");
     }
 }

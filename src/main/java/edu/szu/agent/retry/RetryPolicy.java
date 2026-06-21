@@ -68,7 +68,14 @@ public interface RetryPolicy {
                 try {
                     return RetryPolicy.this.execute(action);
                 } catch (BookingException primaryExhausted) {
-                    return next.execute(action);
+                    try {
+                        return next.execute(action);
+                    } catch (BookingException fallbackExhausted) {
+                        // Preserve the primary failure chain; the fallback
+                        // failure is still available via getSuppressed().
+                        primaryExhausted.addSuppressed(fallbackExhausted);
+                        throw primaryExhausted;
+                    }
                 }
             }
         };
