@@ -4,7 +4,7 @@
 > **姓名**: 王子豪
 > **题目**: SZU Agent Plugin — 面向 AI Agent 的深圳大学校园自动化插件
 > **代码仓库**: https://github.com/nightwalkerkkk123/szu-agent-plugin
-> **提交日期**: 2026-06-20
+> **提交日期**: 2026-06-21
 
 ---
 
@@ -110,6 +110,60 @@ AI Agent 不知 SZU 页面结构与登录流程，无法直接完成任务；学
 - **设计模式复用**: Builder 模式——`ScheduleEntryBuilder` 链式构造 7 字段复杂对象,替代构造器重载;Strategy 模式——`SemesterSelectionStrategy` 处理秋季/春季/夏季学期不同页面逻辑;复用 `CasLoginStep` 会话管理。
 
 - **风险与挑战**: 课表随学期切换(2 月/9 月)数据完全变更,需实现缓存失效机制(检测到 `fetchedAt` 与当前学期不符时自动清理);考试周课表临时调整需支持增量更新而非全量覆盖。
+
+---
+
+### 3.4 校历 (Calendar)
+
+- **业务背景**: 深圳大学校历含开学日期、教学周划分、节假日调休和考试周,是课表、考试等下游业务的时间参照系。数据高度稳定,一次抓取可覆盖整个学期。
+
+- **数据模型**: `domain.AcademicEvent` record: date, type, description, semester, weekOfTerm; EventType 枚举: SEMESTER_START / HOLIDAY / EXAM_WEEK / BREAK。
+
+- **接入方式**: 公开页,无需登录。校历部署于教务处公开域,直接 HTTP 抓取即可。
+
+- **核心流水线**: 3 步链式执行: `NavigateToCalendarPageStep` → `ParseCalendarTableStep`(Matcher 解析 HTML 表格,按行提取日期/类型/描述) → `CacheStep`(写本地 JSON)。缓存命中时跳过前两步。
+
+- **错误码扩展**: 新增 `CALENDAR_PARSE_FAILED`: 表格解析失败或日期格式非法时触发,降级告警而非终止流程。
+
+- **设计模式复用**: 无需 CasLoginStep——体现最小接入原则;复用 `Matcher` 工具类统一处理表格解析;与 Schedule Skill 共用 `CacheStep` 基础设施。
+
+- **风险与挑战**: 主要风险为域名或路径变更,建议 KB 中记录权威 URL 并配置化;每年 8-9 月更新学年数据,需人工核对兼容性。
+
+---
+
+### 3.5 考试安排 (Exam)
+
+- **业务背景**: 学期末高频需求,学生需在考前 2-4 周获知考场与座位号。与课表数据交叉可自动计算空闲教室时间窗口,为复习规划提供参考。考试安排发布较晚,数据保鲜窗口短。
+
+- **数据模型**: `domain.ExamInfo` record: courseName, examDate, startTime, endTime, location, seatNumber, type; ExamType 枚举: REGULAR / RESIT。
+
+- **接入方式**: ehall/CAS 同源,复用 `CasLoginStep`。考试安排页面与课表、场地预约共享同一 CAS Session,登录态可直接复用。
+
+- **核心流水线**: `CasLoginStep`(复用) → `NavigateToExamStep` → `FetchExamListStep` → `CrossReferenceScheduleStep`(与 `ScheduleEntry` 交叉, Builder 模式合并 ExamInfo + ScheduleEntry) → `CacheStep`。交叉结果以 `Map<LocalDate, List<ExamInfo>>` 组织。
+
+- **错误码扩展**: 新增 `EXAM_NOT_FOUND`: 指定课程考试不存在,仅告警; `EXAM_LOCATION_CONFLICT`: 教室在不同时间段重复分配,触发人工复核。
+
+- **设计模式复用**: Builder 模式——`ExamInfoBuilder` 与 `ScheduleEntryBuilder` 并列复用聚合逻辑; `CasLoginStep` 和 `RetryPolicy` 完整复用; Strategy 处理秋季/春季/夏季不同页面逻辑。
+
+- **风险与挑战**: 考前 2-4 周才发布,此前缓存 TTL 短(如 6 小时);发布后调整为 24 小时;考场临时更换需支持强制刷新。
+
+---
+
+### 3.6 深大知识库 (KnowledgeBase)
+
+- **业务背景**: SZU 校园信息分散,缺乏统一检索入口,Agent 极易给出过时或错误事实。知识库为 Agent 提供可信赖的 SZU 领域事实库,覆盖校园基础、餐饮、图书馆、选课、FAQ 五大分类。**异质模块**,无浏览器自动化在关键路径。
+
+- **数据模型**: `domain.KnowledgeDoc` record: title, content, path, category, lastUpdated; KnowledgeCategory 枚举: CAMPUS_BASICS / DINING / LIBRARY / ACADEMICS / FAQ; `KnowledgeResult`(snippet, sourcePath, relevanceScore)。
+
+- **接入方式**: **本地 Markdown + 定期更新脚本**。5 个 Markdown 文件存于 `resources/knowledge/`: `01-campus-basics.md`(学校简介/历史/院系)、`02-dining.md`(食堂/菜单/营业时间)、`03-library.md`(图书馆/借阅/数据库)、`04-academics.md`(选课/学分/学位)、`05-faq.md`(常见问题)。每文件含 YAML frontmatter `last_updated: 2026-06-20`。
+
+- **核心流水线**: `KnowledgeSkill` 接收 query → 文件 I/O 关键词匹配(三档 MatchingStrategy: 精确/包含/正则) → 返回 snippet + sourcePath。配套 `scripts/refresh-knowledge.sh`: Playwright 抓取学校官网公开页,解析 HTML 转 Markdown,每周 cron 或手动触发。失败保留旧版并写 `KNOWLEDGE_STALE`。
+
+- **错误码扩展**: 新增 `KNOWLEDGE_STALE`: 文档超 7 天未更新,触发 cron 告警,保留旧版本; `KNOWLEDGE_NOT_FOUND`: 关键词匹配无结果,返回空 snippet 而非抛异常。
+
+- **设计模式复用**: Builder 模式——`KnowledgeDocBuilder` 构造含 frontmatter 的 Markdown; MatchingStrategy 接口实现三档匹配,体现 OCP。均不依赖 `BrowserLifecycle`,体现与自动化业务的解耦。
+
+- **风险与挑战**: 仅抓公开页面,不采集私有系统数据,每周 cron 在可接受范围内;关键词检索面对同义词(如"图书馆"vs"图馆")可能漏检;需维护 changelog 避免 Agent 使用过期信息。
 
 ---
 
