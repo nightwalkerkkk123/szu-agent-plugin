@@ -40,6 +40,10 @@ public final class BookingContext {
     private Path outputDir;
     private List<CourseEntry> scheduleCourses;
 
+    public BookingContext(BookingRequest request) {
+        this(request, null, null, null);
+    }
+
     public BookingContext(BookingRequest request, Account account) {
         this(request, account, null, null);
     }
@@ -64,6 +68,10 @@ public final class BookingContext {
 
     public BookingContext withLastFailure(BookingResult.Failure lastFailure) {
         return new BookingContext(request, account, selectedVenue, lastFailure);
+    }
+
+    public BookingRequest request() {
+        return request;
     }
 
     public Account account() {

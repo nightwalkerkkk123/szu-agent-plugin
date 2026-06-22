@@ -1,7 +1,6 @@
 package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
-import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 
@@ -42,7 +41,7 @@ public final class NavigateToHomeworkDetailStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         Objects.requireNonNull(ctx, "ctx");
         String homeworkId = ctx.homeworkId();
         if (homeworkId == null || homeworkId.isBlank()) {
@@ -51,6 +50,6 @@ public final class NavigateToHomeworkDetailStep implements BookingStep {
         }
         String url = LMS_USER_INDEX_URL + "#/" + homeworkId;
         browser.navigateTo(url);
-        return null;
+        return new StepOutcome.Continue(ctx);
     }
 }

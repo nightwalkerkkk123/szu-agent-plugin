@@ -2,7 +2,6 @@ package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.client.schedule.ScheduleListExtractor;
-import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.CourseEntry;
 import edu.szu.agent.domain.Weekday;
 import org.junit.jupiter.api.DisplayName;
@@ -36,8 +35,8 @@ class ParseScheduleStepTest {
         when(browser.evaluate(anyString())).thenReturn(json);
         BookingContext ctx = new BookingContext(null);
 
-        BookingResult r = new ParseScheduleStep().execute(browser, ctx);
-        assertThat(r).isNull();
+        StepOutcome outcome = new ParseScheduleStep().execute(browser, ctx);
+        assertThat(outcome).isInstanceOf(StepOutcome.Continue.class);
 
         List<CourseEntry> courses = ctx.scheduleCourses();
         assertThat(courses).hasSize(1);

@@ -1,6 +1,7 @@
 package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
+import edu.szu.agent.client.step.StepOutcome;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -38,14 +39,14 @@ class NavigateToHomeworkDetailStepTest {
     }
 
     @Test
-    @DisplayName("execute() 成功时返回 null(无附件是合法状态)")
+    @DisplayName("execute() 成功时返回 Continue(无附件是合法状态)")
     void executeReturnsNullOnSuccess() {
         BookingContext ctx = new BookingContext(null);
         ctx.homeworkId("185894");
 
         var result = new NavigateToHomeworkDetailStep().execute(browser, ctx);
 
-        assertThat(result).isNull();
+        assertThat(result).isInstanceOf(StepOutcome.Continue.class);
     }
 
     @Test

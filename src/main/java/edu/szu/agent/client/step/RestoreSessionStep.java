@@ -4,7 +4,6 @@ import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.client.session.SessionProbe;
 import edu.szu.agent.client.session.SessionResult;
 import edu.szu.agent.client.session.SessionStore;
-import edu.szu.agent.domain.BookingResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,18 +51,18 @@ public final class RestoreSessionStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         if (!store.exists() || !store.isFresh(ttl)) {
             log.info("No fresh persisted state for user {}", ctx.username());
             ctx.sessionOk(false);
-            return null;
+            return new StepOutcome.Continue(ctx);
         }
 
         boolean loaded = browser.importStorageState(store.defaultPath());
         if (!loaded) {
             log.info("import returned false for user {}", ctx.username());
             ctx.sessionOk(false);
-            return null;
+            return new StepOutcome.Continue(ctx);
         }
 
         SessionResult result = probe.isAlive(browser);
@@ -80,6 +79,6 @@ public final class RestoreSessionStep implements BookingStep {
             }
             ctx.sessionOk(false);
         }
-        return null;
+        return new StepOutcome.Continue(ctx);
     }
 }

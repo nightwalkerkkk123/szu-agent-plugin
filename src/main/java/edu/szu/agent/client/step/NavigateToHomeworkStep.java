@@ -1,7 +1,6 @@
 package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
-import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 
@@ -24,12 +23,12 @@ public final class NavigateToHomeworkStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         browser.navigateTo(LMS_USER_INDEX_URL);
         if (!browser.isVisible(SEL_TODO_LIST)) {
             throw new BookingException(ErrorCode.HOMEWORK_PAGE_LOAD_FAILED,
                 "todo list container not visible on " + LMS_USER_INDEX_URL);
         }
-        return null;
+        return new StepOutcome.Continue(ctx);
     }
 }

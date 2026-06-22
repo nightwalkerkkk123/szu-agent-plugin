@@ -1,7 +1,6 @@
 package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
-import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -29,8 +28,8 @@ class NavigateToScheduleStepTest {
         BrowserLifecycle browser = mock(BrowserLifecycle.class);
         when(browser.isVisible("table.wut_table")).thenReturn(true);
         BookingContext ctx = new BookingContext(null);
-        BookingResult r = new NavigateToScheduleStep().execute(browser, ctx);
-        assertThat(r).isNull();
+        StepOutcome outcome = new NavigateToScheduleStep().execute(browser, ctx);
+        assertThat(outcome).isInstanceOf(StepOutcome.Continue.class);
 
         ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         verify(browser).navigateTo(urlCaptor.capture());

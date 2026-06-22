@@ -11,6 +11,7 @@ import edu.szu.agent.client.step.NavigateToScheduleStep;
 import edu.szu.agent.client.step.ParseScheduleStep;
 import edu.szu.agent.client.step.PersistSessionStep;
 import edu.szu.agent.client.step.RestoreSessionStep;
+import edu.szu.agent.client.step.StepOutcome;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.ScheduleListResult;
 import edu.szu.agent.error.BookingException;
@@ -160,10 +161,11 @@ public class EhallScheduleClient {
 
         for (BookingStep step : steps) {
             log.info("Executing step: {}", step.name());
-            BookingResult r = step.execute(browser, ctx);
-            if (r instanceof BookingResult.Failure f) {
-                log.warn("Step {} failed: {}", step.name(), f.message());
-                return new ScheduleListResult.Failure(f.code(), f.message());
+            StepOutcome outcome = step.execute(browser, ctx);
+            if (outcome instanceof StepOutcome.Failure f) {
+                BookingResult.Failure bf = f.result();
+                log.warn("Step {} failed: {}", step.name(), bf.message());
+                return new ScheduleListResult.Failure(bf.code(), bf.message());
             }
         }
 

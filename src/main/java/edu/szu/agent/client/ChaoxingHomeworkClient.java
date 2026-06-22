@@ -11,6 +11,7 @@ import edu.szu.agent.client.step.NavigateToHomeworkStep;
 import edu.szu.agent.client.step.ParseHomeworkListStep;
 import edu.szu.agent.client.step.PersistSessionStep;
 import edu.szu.agent.client.step.RestoreSessionStep;
+import edu.szu.agent.client.step.StepOutcome;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.HomeworkListResult;
 import edu.szu.agent.error.BookingException;
@@ -161,10 +162,11 @@ public class ChaoxingHomeworkClient {
 
         for (BookingStep step : steps) {
             log.info("Executing step: {}", step.name());
-            BookingResult r = step.execute(browser, ctx);
-            if (r instanceof BookingResult.Failure f) {
-                log.warn("Step {} failed: {}", step.name(), f.message());
-                return new HomeworkListResult.Failure(f.code(), f.message());
+            StepOutcome outcome = step.execute(browser, ctx);
+            if (outcome instanceof StepOutcome.Failure f) {
+                BookingResult.Failure bf = f.result();
+                log.warn("Step {} failed: {}", step.name(), bf.message());
+                return new HomeworkListResult.Failure(bf.code(), bf.message());
             }
         }
 

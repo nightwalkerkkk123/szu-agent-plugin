@@ -2,7 +2,6 @@ package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.client.homework.attachment.FilenameSanitizer;
-import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.HomeworkAttachment;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
@@ -65,7 +64,7 @@ public final class DownloadFilesStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         Objects.requireNonNull(ctx, "ctx");
         Path outputDir = ctx.outputDir();
         if (outputDir == null) {
@@ -78,7 +77,7 @@ public final class DownloadFilesStep implements BookingStep {
         }
         List<HomeworkAttachment> inputs = ctx.attachments();
         if (inputs == null || inputs.isEmpty()) {
-            return null;
+            return new StepOutcome.Continue(ctx);
         }
 
         Set<String> existing = listExistingFilenames(outputDir);
@@ -104,7 +103,7 @@ public final class DownloadFilesStep implements BookingStep {
             }
         }
         ctx.attachments(downloaded);
-        return null;
+        return new StepOutcome.Continue(ctx);
     }
 
     private static Set<String> listExistingFilenames(Path dir) {

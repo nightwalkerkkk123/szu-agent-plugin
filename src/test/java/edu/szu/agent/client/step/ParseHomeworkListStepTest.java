@@ -2,6 +2,7 @@ package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.client.homework.HomeworkListExtractor;
+import edu.szu.agent.client.step.StepOutcome;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,7 +30,7 @@ class ParseHomeworkListStepTest {
 
         var result = new ParseHomeworkListStep().execute(browser, ctx);
 
-        assertThat(result).isNull();
+        assertThat(result).isInstanceOf(StepOutcome.Continue.class);
         assertThat(ctx.homeworks()).hasSize(1);
         assertThat(ctx.homeworks().get(0).homeworkId()).isEqualTo("1");
     }

@@ -13,6 +13,7 @@ import edu.szu.agent.client.step.NavigateToHomeworkStep;
 import edu.szu.agent.client.step.ParseAttachmentsStep;
 import edu.szu.agent.client.step.PersistSessionStep;
 import edu.szu.agent.client.step.RestoreSessionStep;
+import edu.szu.agent.client.step.StepOutcome;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.HomeworkAttachment;
 import edu.szu.agent.domain.HomeworkDownloadRequest;
@@ -149,10 +150,11 @@ public class ChaoxingAttachmentDownloadClient {
 
         for (BookingStep step : steps) {
             log.info("Executing step: {}", step.name());
-            BookingResult r = step.execute(browser, ctx);
-            if (r instanceof BookingResult.Failure f) {
-                log.warn("Step {} failed: {}", step.name(), f.message());
-                return new HomeworkDownloadResult.Failure(f.code(), f.message());
+            StepOutcome outcome = step.execute(browser, ctx);
+            if (outcome instanceof StepOutcome.Failure f) {
+                BookingResult.Failure bf = f.result();
+                log.warn("Step {} failed: {}", step.name(), bf.message());
+                return new HomeworkDownloadResult.Failure(bf.code(), bf.message());
             }
         }
 

@@ -1,6 +1,7 @@
 package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
+import edu.szu.agent.client.step.StepOutcome;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -35,11 +36,11 @@ class NavigateToHomeworkStepTest {
     }
 
     @Test
-    @DisplayName("execute() returns null on success")
+    @DisplayName("execute() returns Continue on success")
     void executeReturnsNullOnSuccess() {
         when(browser.isVisible(NavigateToHomeworkStep.SEL_TODO_LIST)).thenReturn(true);
         var result = new NavigateToHomeworkStep().execute(browser, new BookingContext(null));
-        assertThat(result).isNull();
+        assertThat(result).isInstanceOf(StepOutcome.Continue.class);
     }
 
     @Test

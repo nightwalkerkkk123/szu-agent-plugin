@@ -6,6 +6,7 @@ import edu.szu.agent.client.session.SessionProbe;
 import edu.szu.agent.client.session.SessionStore;
 import edu.szu.agent.client.step.BookingContext;
 import edu.szu.agent.client.step.BookingStep;
+import edu.szu.agent.client.step.StepOutcome;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Homework;
 import edu.szu.agent.domain.HomeworkListResult;
@@ -165,8 +166,8 @@ class ChaoxingHomeworkClientTest {
     private static BookingStep noop(String name) {
         return new BookingStep() {
             @Override public String name() { return name; }
-            @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
-                return null;
+            @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
+                return new StepOutcome.Continue(ctx);
             }
         };
     }
@@ -174,9 +175,9 @@ class ChaoxingHomeworkClientTest {
     private static BookingStep captureHomeworks(String name, List<Homework> homeworks) {
         return new BookingStep() {
             @Override public String name() { return name; }
-            @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
+            @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
                 ctx.homeworks(homeworks);
-                return null;
+                return new StepOutcome.Continue(ctx);
             }
         };
     }
@@ -184,8 +185,11 @@ class ChaoxingHomeworkClientTest {
     private static BookingStep returning(String name, BookingResult result) {
         return new BookingStep() {
             @Override public String name() { return name; }
-            @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
-                return result;
+            @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
+                if (result instanceof BookingResult.Failure f) {
+                    return new StepOutcome.Failure(f);
+                }
+                return new StepOutcome.Continue(ctx);
             }
         };
     }
@@ -193,9 +197,9 @@ class ChaoxingHomeworkClientTest {
     private static BookingStep sideEffect(String name, Runnable sideEffect) {
         return new BookingStep() {
             @Override public String name() { return name; }
-            @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
+            @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
                 sideEffect.run();
-                return null;
+                return new StepOutcome.Continue(ctx);
             }
         };
     }
@@ -203,7 +207,7 @@ class ChaoxingHomeworkClientTest {
     private static BookingStep throwing(BookingException ex) {
         return new BookingStep() {
             @Override public String name() { return "THROW"; }
-            @Override public BookingResult execute(BrowserLifecycle b, BookingContext ctx) {
+            @Override public StepOutcome execute(BrowserLifecycle b, BookingContext ctx) {
                 throw ex;
             }
         };

@@ -40,7 +40,7 @@ class ToolSchemaTest {
         Map<String, Object> response = MCPToolProvider.listTools();
         assertThat(response).containsKeys("schemaVersion", "tools");
         assertThat(response.get("schemaVersion")).isEqualTo("1.1");
-        assertThat((List<?>) response.get("tools")).hasSize(2);
+        assertThat((List<?>) response.get("tools")).hasSize(5);
     }
 
     @Test

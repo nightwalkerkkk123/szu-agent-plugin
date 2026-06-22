@@ -5,6 +5,7 @@ import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.client.schedule.PeriodMapping;
 import edu.szu.agent.client.step.BookingContext;
 import edu.szu.agent.client.step.BookingStep;
+import edu.szu.agent.client.step.StepOutcome;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.CourseEntry;
 import edu.szu.agent.domain.ScheduleListResult;
@@ -109,9 +110,9 @@ class EhallScheduleClientTest {
                 }
 
                 @Override
-                public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+                public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
                     ctx.scheduleCourses(expectedCourses);
-                    return null;
+                    return new StepOutcome.Continue(ctx);
                 }
             });
         }
@@ -134,8 +135,11 @@ class EhallScheduleClientTest {
         }
 
         @Override
-        public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
-            return result;
+        public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
+            if (result instanceof BookingResult.Failure f) {
+                return new StepOutcome.Failure(f);
+            }
+            return new StepOutcome.Continue(ctx);
         }
     }
 }
