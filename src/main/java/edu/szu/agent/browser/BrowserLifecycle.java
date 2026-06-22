@@ -185,5 +185,34 @@ public interface BrowserLifecycle {
      */
     long downloadAttachment(String url, java.nio.file.Path target);
 
-    // Phase 5 (US-007): now 13 methods (US-008: +downloadAttachment).
+    /**
+     * Polls {@link #isVisible(String)} until the selector resolves to a
+     * visible element or {@code timeoutMs} elapses.
+     *
+     * <p>Default implementation is a 250ms poll loop; adapters may override
+     * with SDK-native waits for better efficiency.
+     *
+     * @param selector  CSS selector
+     * @param timeoutMs maximum time to wait, in milliseconds
+     * @return {@code true} if the element became visible, {@code false} if the
+     *         timeout elapsed
+     */
+    default boolean waitForVisible(String selector, long timeoutMs) {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        long pollMs = 250L;
+        while (true) {
+            if (isVisible(selector)) {
+                return true;
+            }
+            if (System.currentTimeMillis() >= deadline) {
+                return false;
+            }
+            try {
+                Thread.sleep(pollMs);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+    }
 }

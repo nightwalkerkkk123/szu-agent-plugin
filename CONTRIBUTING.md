@@ -69,7 +69,7 @@ java -jar target/szu-agent-plugin.jar skill list --format json
 | **枚举** | `grep -rn "enum" src/` 应找到 `ErrorCode`、`TaskStatus`、`AccountState`，每个枚举值携带方法 |
 | **注解** | `grep -rn "@interface" src/` 应找到 `@AgentTool` 自定义注解 |
 | **重载** | `grep -rn "public.*(" src/` 应找到同名方法不同参数形式 |
-| **抽象类** | `grep -rn "abstract class" src/` 应找到 `AbstractMatcher<T>` 抽象基类 |
+| **抽象类** | `grep -rn "abstract class" src/` 当前为 0;项目使用接口 + default 方法替代 |
 | **Lambda + Stream** | `grep -rn "\.stream\(\)" src/` 应找到列表过滤/映射/聚合 |
 
 ### 设计模式（4 种，每种必须在代码中显式可见）
@@ -85,9 +85,9 @@ grep -rn "Design Pattern:" src/
 | 模式 | 类 |
 |---|---|
 | Builder | `BookingRequest.Builder` |
-| 单例 | `ConfigManager`、`Tracer` |
-| 策略 | `Matcher<T>`、`RetryPolicy` |
-| 适配器 | `PlaywrightBrowserAdapter` |
+| 单例 | `ConfigManager`、`Tracer`、`Skills` |
+| 策略 | `BookingStep`、`VenueSelector`、`RetryPolicy` |
+| 适配器 | `BrowserLifecycle`、`PlaywrightBrowserAdapter`、`BookingFlowLauncher` |
 
 > ADR-0007 D1:删 Static Factory / `BrowserFactory`,改 `ConfigManager` 配置注入,5 模式 → 4 模式
 
@@ -125,7 +125,7 @@ grep -rn "Design Pattern:" src/
 |---|---|---|
 | Builder | `domain/BookingRequest.java` | `// Design Pattern: Builder` |
 | 单例 | `config/ConfigManager.java` | `// Design Pattern: Singleton` |
-| 策略 | `matcher/Matcher.java` | `// Design Pattern: Strategy` |
+| 策略 | `client/step/BookingStep.java` | `// Design Pattern: Strategy` |
 | 适配器 | `browser/PlaywrightBrowserAdapter.java` | `// Design Pattern: Adapter` |
 
 ---

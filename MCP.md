@@ -1,7 +1,7 @@
 # MCP Tools — SZU Agent Plugin
 
 > MCP (Model Context Protocol) 工具导出，供外部 AI Agent 调用。
-> 版本 v1.0 · 学号 2023150090 · 姓名 王子豪
+> 版本 v1.1 · 学号 2023150090 · 姓名 王子豪
 
 > ⚠️ **ADR 校准声明**(2026-06-11):MCP 是 CLI 的**薄壳 wrapper**(ADR-0001 D5),
 > 通过 `tools/call` 收到后 fork 这个 jar。`--dry-run` 不作为 demo 标志(ADR-0001 D4)。
@@ -11,13 +11,15 @@
 
 ## Tool Provider 入口
 
-`MCPToolProvider` 类（位于 `edu.szu.agent.mcp`）导出标准 MCP `tools/list` 和 `tools/call` 接口。
-实现状态：**P1 薄壳 wrapper**（按 ADR-0001 D5 推迟,MCP 进程 `tools/call` 收到后 fork jar 执行,
-不嵌 MCP server 在 CLI 里）。
+`MCPToolProvider` / `MCPToolCallHandler` / `ToolSchema` 类（位于 `edu.szu.agent.mcp`）已实现，
+导出标准 MCP `tools/list` 和 `tools/call` 接口。
+
+实现状态：**P1 薄壳 wrapper 已落地**，并新增了 `mcp serve` 子命令作为真正的 stdio MCP server，
+可直接被 Claude Code / Claude Desktop / OpenClaw 等跨平台主机调用。
 
 ---
 
-## 工具列表
+## 已交付工具
 
 ### `booking_venue`
 
@@ -28,10 +30,11 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `username` | string | ✅ | 学号 |
-| `campus` | string | ✅ | 校区（粤海/丽湖） |
-| `sport` | string | ✅ | 体育项目（网球/羽毛球/...） |
+| `campus` | string | ✅ | 校区（YUEHAI / LIHU） |
+| `sport` | string | ✅ | 体育项目（TENNIS / BADMINTON / ...） |
 | `date` | string | ✅ | ISO 8601 日期（如 2026-06-12,见 ADR-0006 §1.2） |
 | `timeSlot` | object | ✅ | `{"start": "19:00", "end": "20:00"}`（见 ADR-0006 §1.5） |
+| `preferredVenue` | integer | ❌ | 1-based 场地序号，默认 1 |
 
 > **注意**:`dryRun` 参数**已移除**（ADR-0001 D4）。MCP `tools/call` 收到请求后 fork jar
 > 执行真演示路径,`FakeBrowser` 不出现在 MCP 工具路径中。
@@ -47,21 +50,23 @@
     "time": "19:00-20:00"
   },
   "errorCode": null,
+  "errorMessage": null,
   "traceId": "20240610-abc123",
   "elapsedMs": 4321
 }
 ```
 
-### `notice_list` (P1 预留)
+### `kb_query` (P1 骨架已交付)
 
-公文通查询（**P1 扩展接口**,对应 `CampusTask<T>` 扩展点,按 ADR-0001 D10 延后）
+深大知识库查询（**P1 骨架已落地**,对应 CLI `kb query`）
 
 **参数:**
 
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `keyword` | string | ❌ | 关键词筛选 |
-| `limit` | integer | ❌ | 返回数量（默认 10） |
+| `query` | string | ✅ | 查询关键词，例如 图书馆、食堂、选课 |
+| `limit` | integer | ❌ | 返回数量（默认 5） |
+| `category` | string | ❌ | 分类过滤：CAMPUS_BASICS / DINING / LIBRARY / ACADEMICS / FAQ |
 
 **返回:**
 
@@ -69,46 +74,18 @@
 {
   "success": true,
   "data": {
-    "notices": [
+    "count": 2,
+    "results": [
       {
-        "title": "关于举办运动会的通知",
-        "publishTime": "2024-06-10",
-        "department": "体育部"
+        "snippet": "深圳大学图书馆开放时间...",
+        "sourcePath": "knowledge/03-library.md",
+        "relevanceScore": 0.85
       }
     ]
   },
   "errorCode": null,
   "traceId": "20240610-def456",
-  "elapsedMs": 1234
-}
-```
-
-### `skill_list`
-
-列出所有可用 Skill/MCP 工具
-
-**参数:** 无
-
-**返回:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "skills": [
-      {
-        "name": "booking_venue",
-        "description": "体育场馆定时预约"
-      },
-      {
-        "name": "notice_list",
-        "description": "公文通查询"
-      }
-    ]
-  },
-  "errorCode": null,
-  "traceId": "...",
-  "elapsedMs": 50
+  "elapsedMs": 12
 }
 ```
 
@@ -122,21 +99,17 @@
 
 ```json
 {
+  "schemaVersion": "1.1",
   "tools": [
     {
       "name": "booking_venue",
       "description": "体育场馆定时预约",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "username": { "type": "string" },
-          "campus": { "type": "string" },
-          "sport": { "type": "string" },
-          "date": { "type": "string", "format": "date", "description": "ISO 8601 格式,如 2026-06-12" },
-          "timeSlot": { "type": "object", "properties": { "start": {"type":"string"}, "end": {"type":"string"} } },
-        },
-        "required": ["username", "campus", "sport", "date", "timeSlot"]
-      }
+      "inputSchema": { ... }
+    },
+    {
+      "name": "kb_query",
+      "description": "深大知识库查询",
+      "inputSchema": { ... }
     }
   ]
 }
@@ -148,33 +121,52 @@
 
 ```json
 {
-  "name": "booking_venue",
+  "name": "kb_query",
   "arguments": {
-    "username": "2023150090",
-    "campus": "YUEHAI",
-    "sport": "TENNIS",
-    "date": "2026-06-12",
-    "timeSlot": {"start": "19:00", "end": "20:00"}
+    "query": "图书馆开放时间",
+    "limit": 3
   }
 }
 ```
 
 ---
 
-## 实现位置（待实现）
+## 跨平台 MCP Server 使用方式
 
-```
-edu.szu.agent.mcp/
-├── MCPToolProvider.java       # tools/list 实现（待创建）
-├── MCPToolCallHandler.java    # tools/call 实现（待创建）
-└── ToolSchema.java            # schema 定义（待创建）
+`mcp serve` 以 JSON-RPC 2.0 + stdio 方式对外暴露工具，纯 Java 实现，无需平台专属脚本。
+
+### Claude Desktop 配置示例（macOS / Windows / Linux）
+
+```json
+{
+  "mcpServers": {
+    "szu-agent": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "/absolute/path/to/szu-agent-plugin.jar",
+        "mcp",
+        "serve"
+      ]
+    }
+  }
+}
 ```
 
-设计说明：
-- `MCPToolProvider` 扫描所有标注 `@AgentTool` 的方法
-- 运行期通过反射生成 `tools/list` 的 schema
-- 每个工具最终调用对应的 `CampusTask<T>` 执行
-- 所有执行共享 `Tracer` 单例的 trace_id
+### Claude Code 配置示例
+
+```json
+{
+  "mcpServers": {
+    "szu-agent": {
+      "command": "java",
+      "args": ["-jar", "/absolute/path/to/szu-agent-plugin.jar", "mcp", "serve"]
+    }
+  }
+}
+```
+
+> 日志统一输出到 `stderr`，`stdout` 仅用于 JSON-RPC 消息流，避免污染传输协议。
 
 ---
 
@@ -188,9 +180,24 @@ java -jar target/szu-agent-plugin.jar booking venue \
   --username 2023150090 --campus YUEHAI --sport TENNIS \
   --date 2026-06-12 --time-slot 19:00-20:00 --format json
 
-# 等效于 notice_list 工具
-java -jar target/szu-agent-plugin.jar notice list --keyword 讲座 --limit 10 --format json
+# 等效于 kb_query 工具
+java -jar target/szu-agent-plugin.jar kb query --query 图书馆 --limit 5 --format json
 
-# 等效于 skill_list 工具
-java -jar target/szu-agent-plugin.jar skill list --format json
+# 等效于 tools/list
+java -jar target/szu-agent-plugin.jar mcp list
+
+# 运行 stdio MCP server
+java -jar target/szu-agent-plugin.jar mcp serve
+```
+
+---
+
+## 实现位置
+
+```
+edu.szu.agent.mcp/
+├── MCPToolProvider.java       # tools/list 实现
+├── MCPToolCallHandler.java    # tools/call 实现
+├── ToolSchema.java            # schema 定义
+└── McpStdioServer.java        # stdio JSON-RPC server (新增)
 ```

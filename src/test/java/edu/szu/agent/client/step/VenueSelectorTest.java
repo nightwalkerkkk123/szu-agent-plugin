@@ -36,6 +36,7 @@ class VenueSelectorTest {
     @BeforeEach
     void setUp() {
         System.setProperty("szu.agent.slot-wait-ms", "0");
+        System.setProperty("szu.agent.venue-wait-ms", "0");
         account = new Account("2023150090", "test-pwd", "test-user");
     }
 
@@ -58,7 +59,7 @@ class VenueSelectorTest {
         @DisplayName("selects the N-th available court")
         void selectsNthCourt() {
             ctx = contextWith(2);
-            when(browser.isVisible(CourtListSelector.SEL_COURT_LABEL_AVAILABLE)).thenReturn(true);
+            when(browser.waitForVisible(CourtListSelector.SEL_COURT_LABEL_AVAILABLE, 0L)).thenReturn(true);
             when(browser.allTextOf(CourtListSelector.SEL_COURT_LABEL_AVAILABLE + " div.element"))
                 .thenReturn(List.of("北区网球1号场(可预约)", "北区网球2号场(可预约)", "北区网球3号场(可预约)"));
 
@@ -72,7 +73,7 @@ class VenueSelectorTest {
         @DisplayName("falls back to the last court when preferred index exceeds availability")
         void fallsBackToLastCourt() {
             ctx = contextWith(10);
-            when(browser.isVisible(CourtListSelector.SEL_COURT_LABEL_AVAILABLE)).thenReturn(true);
+            when(browser.waitForVisible(CourtListSelector.SEL_COURT_LABEL_AVAILABLE, 0L)).thenReturn(true);
             when(browser.allTextOf(CourtListSelector.SEL_COURT_LABEL_AVAILABLE + " div.element"))
                 .thenReturn(List.of("北区网球1号场(可预约)", "北区网球2号场(可预约)"));
 
@@ -86,7 +87,7 @@ class VenueSelectorTest {
         @DisplayName("throws NO_AVAILABLE_VENUE when no bookable courts exist")
         void throwsWhenNoCourts() {
             ctx = contextWith(1);
-            when(browser.isVisible(CourtListSelector.SEL_COURT_LABEL_AVAILABLE)).thenReturn(false);
+            when(browser.waitForVisible(CourtListSelector.SEL_COURT_LABEL_AVAILABLE, 0L)).thenReturn(false);
 
             assertThatThrownBy(() -> new CourtListSelector().selectAndClick(browser, ctx))
                 .isInstanceOf(BookingException.class)
@@ -113,7 +114,7 @@ class VenueSelectorTest {
         @DisplayName("selects a single capacity venue and strips the capacity suffix")
         void selectsCapacityVenue() {
             ctx = gymContextWith(1);
-            when(browser.isVisible(CapacityVenueSelector.SEL_VENUE_LABEL)).thenReturn(true);
+            when(browser.waitForVisible(CapacityVenueSelector.SEL_VENUE_LABEL, 0L)).thenReturn(true);
             when(browser.allTextOf(CapacityVenueSelector.SEL_VENUE_LABEL + " div.element"))
                 .thenReturn(List.of("二楼健身房(42/50)"));
 
@@ -127,7 +128,7 @@ class VenueSelectorTest {
         @DisplayName("scopes venue search to the 选择场地 section")
         void scopesToVenueSectionOnly() {
             ctx = gymContextWith(1);
-            when(browser.isVisible(CapacityVenueSelector.SEL_VENUE_LABEL)).thenReturn(true);
+            when(browser.waitForVisible(CapacityVenueSelector.SEL_VENUE_LABEL, 0L)).thenReturn(true);
             when(browser.allTextOf(CapacityVenueSelector.SEL_VENUE_LABEL + " div.element"))
                 .thenReturn(List.of("二楼健身房(42/50)"));
 
@@ -146,7 +147,7 @@ class VenueSelectorTest {
         @DisplayName("throws NO_AVAILABLE_VENUE when capacity is zero")
         void throwsWhenFull() {
             ctx = gymContextWith(1);
-            when(browser.isVisible(CapacityVenueSelector.SEL_VENUE_LABEL)).thenReturn(true);
+            when(browser.waitForVisible(CapacityVenueSelector.SEL_VENUE_LABEL, 0L)).thenReturn(true);
             when(browser.allTextOf(CapacityVenueSelector.SEL_VENUE_LABEL + " div.element"))
                 .thenReturn(List.of("二楼健身房(0/50)"));
 
@@ -159,7 +160,7 @@ class VenueSelectorTest {
         @DisplayName("throws NO_AVAILABLE_VENUE when no capacity pattern is present")
         void throwsWhenNoCapacityPattern() {
             ctx = gymContextWith(1);
-            when(browser.isVisible(CapacityVenueSelector.SEL_VENUE_LABEL)).thenReturn(true);
+            when(browser.waitForVisible(CapacityVenueSelector.SEL_VENUE_LABEL, 0L)).thenReturn(true);
             when(browser.allTextOf(CapacityVenueSelector.SEL_VENUE_LABEL + " div.element"))
                 .thenReturn(List.of("未知场地"));
 

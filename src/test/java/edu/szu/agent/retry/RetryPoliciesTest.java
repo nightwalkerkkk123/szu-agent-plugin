@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for {@link RetryPolicies} factory and {@link RetryPolicy#orElse}
@@ -63,5 +64,31 @@ class RetryPoliciesTest {
         String result = primary.orElse(fallback).execute(() -> "from-fallback");
 
         assertThat(result).isEqualTo("from-fallback");
+    }
+
+    @Test
+    @DisplayName("orElse preserves the primary exception when the fallback also fails")
+    void orElsePreservesPrimaryExceptionOnFallbackFailure() {
+        BookingException primary = new BookingException(
+            ErrorCode.NETWORK_TIMEOUT, "primary exhausted");
+        BookingException fallback = new BookingException(
+            ErrorCode.ELEMENT_NOT_FOUND, "fallback also failed");
+
+        RetryPolicy primaryPolicy = new RetryPolicy() {
+            @Override
+            public <T> T execute(java.util.function.Supplier<T> action) {
+                throw primary;
+            }
+        };
+        RetryPolicy fallbackPolicy = new RetryPolicy() {
+            @Override
+            public <T> T execute(java.util.function.Supplier<T> action) {
+                throw fallback;
+            }
+        };
+
+        assertThatThrownBy(() -> primaryPolicy.orElse(fallbackPolicy).execute(() -> "n/a"))
+            .isSameAs(primary)
+            .satisfies(e -> assertThat(e.getSuppressed()).containsExactly(fallback));
     }
 }

@@ -91,9 +91,9 @@ eeff327  docs(design): add 大作业自拟题目 proposal document
 |---|---|---|
 | Builder | 1 文件 | `domain.BookingRequest.Builder` |
 | 单例 | 3 文件 | `config.ConfigManager` / `observability.Tracer` / `skill.Skills`(均双检锁 + volatile,P1 增) |
-| 策略 | 18 文件 | `Matcher<T>`(5)+ `RetryPolicy`(3)+ `BookingStep`(9 含 Context) |
-| 适配器 | 2 文件 | `browser.BrowserLifecycle`(目标)+ `PlaywrightBrowserAdapter`(适配) |
-| **合计** | **24 文件** | `docs/grep-evidence.md` 静态守卫 |
+| 策略 | 19 文件 | `BookingStep`(7)+ `VenueSelector`(2)+ `RetryPolicy`(3)+ `Sport` |
+| 适配器 | 3 文件 | `browser.BrowserLifecycle`(目标)+ `PlaywrightBrowserAdapter`(适配)+ `client.BookingFlowLauncher`(seam) |
+| **合计** | **26 文件** | `docs/grep-evidence.md` 静态守卫 |
 
 > ⚠️ `ErrorClassifier` 已删除(枚举自带元数据);`ClientFactory` 已删除(只 1 个 Skill 无业务价值);
 > `BrowserFactory` 已删除(ADR-0007 D1),改 `ConfigManager` 配 `browser.kind` 注入;
@@ -108,15 +108,17 @@ eeff327  docs(design): add 大作业自拟题目 proposal document
 
 | 技术 | grep 命中 | 关键示例 |
 |---|---|---|
-| 泛型 | 9 文件 | P0: `Matcher<T>` / `RetryPolicy` / `BookingStep<T>` · P1: `Skill<T>` / `CampusTask<T>` / `BookingTask<T>` / `MCPToolCallHandler` / `MCPToolProvider` / `Skills` |
-| 枚举 | 16 文件 | P0: 13 文件 · P1: `MCPToolCallHandler` / `Skills` / `BookingTask` |
-| 注解 | 4 文件 | picocli `@Command/@Option/@Spec/@Parameters` 在 CLI 类(P0 + P1) |
+| 泛型 | 8 文件 | `RetryPolicy` / `BookingStep` / `Skill<T>` / `CampusTask<T>` / `BookingTask<T>` / `MCPToolCallHandler` / `MCPToolProvider` / `Skills` |
+| 枚举 | 20 文件 | CLI / client.step / domain / error / account / config / mcp / skill / task / observability |
+| 注解 | 4 文件 | picocli `@Command/@Option/@Spec/@Parameters` 在 CLI 类 |
 | 重载 | 4 文件 | `AccountResolver.resolve` / `ConfigManager.load` / `ExponentialBackoff` / `FixedDelay` |
-| 抽象类 | 1 文件 | `AbstractMatcher`(4 个具体 Matcher 继承) |
-| Lambda+Stream | 17 文件 | P0: 12 文件 · P1: `SkillCommand` / `MCPCommand` / `MCPToolCallHandler` / `Skills` / `BookingTask` |
-| **合计** | **46 文件** | `docs/grep-evidence.md` 静态守卫 |
+| 抽象类 | 0 文件 | 已删除 `AbstractMatcher`,P0 使用接口 + default 方法 |
+| Lambda+Stream | 16 文件 | CLI / client.step / config / error / mcp / retry / skill / task |
+| **合计** | **50 文件** | `docs/grep-evidence.md` 静态守卫 |
 
-> 注: `@FunctionalInterface` 出现在 matcher/retry/task,散落在 Strategy/CampusTask 接口命中文件中,未单独计入"注解"类。JUnit 注解在测试代码,未计入。
+> 注: `@FunctionalInterface` 出现在 step/retry/task/skill 接口,散落在 Strategy/CampusTask 接口命中文件中,未单独计入"注解"类。JUnit 注解在测试代码,未计入。
+>
+> **Phase 5 清理**: `matcher/` 包(7 main + 5 test 文件)已删除;`// Design Pattern: Type Object` 从枚举注释中移除。当前为 4 种设计模式 + 6 种编程技术。
 
 ---
 
@@ -125,7 +127,7 @@ eeff327  docs(design): add 大作业自拟题目 proposal document
 | Phase | 时长 | 内容 | 状态 |
 |---|---|---|---|
 | 0 | 0.5d | 骨架:pom.xml + 包结构 + Logback + dotenv-java | ✅ 完成 |
-| 1 | 1.0d | 无依赖基础:domain/ + error/ + retry/ + matcher/ | ✅ 完成 |
+| 1 | 1.0d | 无依赖基础:domain/ + error/ + retry/ + step/ | ✅ 完成 |
 | 2 | 1.0d | 浏览器抽象:browser/ + BrowserLifecycle 10 方法 | ✅ 完成 |
 | 3 | 1.0d | 业务编排:client/ + config/ + observability/ + account/ | ✅ 完成 |
 | 4 | 1.0d | CLI + Wrapper:cli/ + skill/ + mcp/ | ✅ CLI 完成;skill/mcp 是 P1 薄壳 |

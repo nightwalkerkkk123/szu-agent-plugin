@@ -56,26 +56,26 @@ public final class SelectTimeSlotStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         var timeSlot = ctx.request().timeSlot();
         String slotId = timeSlot.slotId();
         String labelSelector = String.format(SEL_SLOT_LABEL_TEMPLATE, slotId);
 
         if (!waitForVisible(browser, labelSelector, labelWaitMs())) {
-            return new BookingResult.Failure(ErrorCode.ELEMENT_NOT_FOUND,
-                "Time slot label not found: " + slotId);
+            return new StepOutcome.Failure(new BookingResult.Failure(ErrorCode.ELEMENT_NOT_FOUND,
+                "Time slot label not found: " + slotId));
         }
 
         // Reject 已满员 / 无开放场地 — only "可预约" is bookable.
         String availableSelector = String.format(SEL_SLOT_AVAILABLE_TEMPLATE, slotId);
         if (!browser.isVisible(availableSelector)) {
-            return new BookingResult.Failure(ErrorCode.NO_AVAILABLE_VENUE,
-                "Time slot not bookable (已满员 or 无开放场地): " + slotId);
+            return new StepOutcome.Failure(new BookingResult.Failure(ErrorCode.NO_AVAILABLE_VENUE,
+                "Time slot not bookable (已满员 or 无开放场地): " + slotId));
         }
 
         log.info("Clicking time slot: {}", slotId);
         browser.click(availableSelector);
-        return null;
+        return new StepOutcome.Continue(ctx);
     }
 
     /**

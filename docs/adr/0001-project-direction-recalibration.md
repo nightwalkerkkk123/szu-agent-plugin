@@ -56,7 +56,7 @@ jar 永远不含凭证。使用 `io.github.cdimascio:dotenv-java`。
 |---|---|---|
 | Builder | `BookingRequest.Builder` | 6 参数请求,链式构造 |
 | Singleton | `ConfigManager` / `Tracer` | 配置 / trace 全局唯一 |
-| Strategy | `Matcher<T>` (4 实现) + `RetryPolicy` (3 实现) | 真有精确/包含/正则/业务 4 种匹配 + 固定/退避/不重试 3 种重试 |
+| Strategy | `BookingStep` (7 实现) + `VenueSelector` (2 实现) + `RetryPolicy` (3 实现) | 步骤可替换 + 场地选择策略 + 固定/退避/不重试 3 种重试 |
 | Adapter | `PlaywrightBrowserAdapter` | 包装 Playwright API 适配 `BrowserLifecycle`(教科书深度:把链式 API 收成直接方法) |
 
 **删除**:
@@ -94,7 +94,7 @@ jar 永远不含凭证。使用 `io.github.cdimascio:dotenv-java`。
 
 ```
 Phase 0 [0.5d]  骨架       pom.xml + 包结构 + Logback + dotenv-java
-Phase 1 [1.0d]  无依赖基础  domain/ + error/ + retry/ + matcher/
+Phase 1 [1.0d]  无依赖基础  domain/ + error/ + retry/ + step/
 Phase 2 [1.0d]  浏览器抽象  browser/ (+BrowserFactory) + selectors/
 Phase 3 [1.0d]  业务编排    task/ + client/ + config/ + observability/ + account/
 Phase 4 [1.0d]  CLI + Wrapper  cli/ + skill/ + mcp/

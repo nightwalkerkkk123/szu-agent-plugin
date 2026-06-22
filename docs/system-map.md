@@ -72,20 +72,6 @@ edu.szu.agent
 │   ├── BookingException            # 统一异常(extends RuntimeException,见 ADR-0001 D9 + ADR-0006 error 子决定)
 │   └── LogMasker                   # 静态脱敏工具(9 字段名正则 + 2 值正则,见 ADR-0005 D2)
 │
-├── matcher/                        # Design Pattern: Strategy(泛型 + 抽象类 + 4 default 组合)
-│   ├── Matcher<T>                  # 策略接口(@FunctionalInterface,4 default 组合)
-│   ├── AbstractMatcher<T>          # 抽象基类(description + toString)
-│   ├── ExactMatcher                # 精确文本
-│   ├── ContainsMatcher             # 包含(支持 ignoreCase)
-│   ├── RegexMatcher                # 正则(预编译 Pattern)
-│   ├── VenueIndexMatcher           # 业务专用:4 种 ehall 编号写法
-│   └── Matchers                    # 工厂(exact/contains/regex/venueIndex/all/any)
-│
-├── account/                        # 凭证层(ADR-0005 D1,单立包)
-│   ├── Account                     # record(学号 + 密码 + 显示名)
-│   ├── AccountResolver             # 三层凭证查找(进程 env → --env-file → Skill 注入)
-│   └── EnvVarName                  # 工厂 enum(forStudentId 返回 SZU_PASSWORD_XXXX)
-│
 ├── observability/
 │   ├── Tracer                      # Design Pattern: Singleton(trace_id 管理 + 步骤记录)
 │   │   # 接口纯数据:recordFailure(ErrorCode, String, Optional<Path>)
@@ -110,13 +96,15 @@ edu.szu.agent
 ```
 (无 Facade 入口;CLI 直接路由,ADR-0001 D9 删 AgentToolPlatform;ADR-0007 D1 删 BrowserFactory)
 cli.Main
-  └──► cli.BookingCommand
+  └──► cli.BookingCommand / cli.VenueCommand
         ├──► domain.BookingRequest (Builder)
         ├──► config.ConfigManager.browser() (Singleton,按 browser.kind 配置注入)
         │     └──► browser.PlaywrightBrowserAdapter
         │           └──► browser.BrowserLifecycle
-        ├──► matcher.Matcher (Strategy)
-        ├──► retry.RetryPolicy (Strategy,详见 ADR-0006 retry 子决定)
+        ├──► client.BookingFlowLauncher (seam)
+        │     └──► client.VenueBookingClient
+        │           ├──► client.step.BookingStep (Strategy)
+        │           └──► retry.RetryPolicy (Strategy,详见 ADR-0006 retry 子决定)
         ├──► config.ConfigManager (Singleton)
         ├──► observability.Tracer (Singleton)
         └──► domain / error.ErrorCode
@@ -150,12 +138,9 @@ login(username, pwd)                          │
 selectCampus(campus)                          │
 selectSport(sport)                            │
 selectTimeSlot(slot)                          │
-    │     ▼                                    │
-    │   Matcher.match(elements)                │ Strategy
-    │                                          │
 selectVenue()                                 │
     │     ▼                                    │
-    │   Matcher.filter(venues, regex)          │ Strategy
+    │   VenueSelector.selectAndClick(...)      │ Strategy
     │                                          │
 confirm()                                     │
     │     ▼                                    │
@@ -464,7 +449,7 @@ BrowserLifecycle browser = ConfigManager.getInstance().browser();
 
 ---
 
-### 6.9 策略模式 (`Matcher` / `RetryPolicy`)
+### 6.9 策略模式 (`BookingStep` / `VenueSelector` / `RetryPolicy`)
 
 **局限性:**
 

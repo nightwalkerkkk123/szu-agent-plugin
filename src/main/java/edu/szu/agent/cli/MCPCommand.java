@@ -1,7 +1,10 @@
 package edu.szu.agent.cli;
 
+import edu.szu.agent.mcp.McpStdioServer;
 import edu.szu.agent.mcp.MCPToolCallHandler;
 import edu.szu.agent.mcp.MCPToolProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -30,6 +33,7 @@ import java.util.concurrent.Callable;
  *       (schema version + tools array)
  *   <li>{@code mcp call <name> --args k=v} — emit the MCP
  *       {@code tools/call} response
+ *   <li>{@code mcp serve} — run the stdio MCP server for external hosts
  * </ul>
  *
  * <p>picocli is a framework, not a project pattern (per ADR-0007 D1).
@@ -41,11 +45,12 @@ import java.util.concurrent.Callable;
  */
 @Command(
     name = "mcp",
-    description = "MCP protocol surface (tools/list, tools/call)",
+    description = "MCP protocol surface (tools/list, tools/call, serve)",
     mixinStandardHelpOptions = true,
     subcommands = {
         MCPCommand.McpListAction.class,
-        MCPCommand.McpCallAction.class
+        MCPCommand.McpCallAction.class,
+        MCPCommand.McpServeAction.class
     }
 )
 public class MCPCommand implements Callable<Integer> {
@@ -107,6 +112,30 @@ public class MCPCommand implements Callable<Integer> {
                     "errorMessage", e.getMessage());
                 out.println(SkillCommand.toJson(err));
                 return 2;
+            }
+        }
+    }
+
+    // ---------- mcp serve ----------
+
+    @Command(
+        name = "serve",
+        description = "Run the stdio MCP server (for Claude Code / Desktop / OpenClaw hosts)"
+    )
+    public static class McpServeAction implements Callable<Integer> {
+
+        private static final Logger LOG = LoggerFactory.getLogger(McpServeAction.class);
+
+        @Override
+        public Integer call() {
+            try {
+                new McpStdioServer().run();
+                return 0;
+            } catch (Exception e) {
+                // MCP communication errors are logged to stderr so they do
+                // not corrupt the stdout JSON-RPC stream.
+                LOG.error("MCP server failed", e);
+                return 1;
             }
         }
     }

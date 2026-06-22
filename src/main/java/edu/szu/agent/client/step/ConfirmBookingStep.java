@@ -35,11 +35,12 @@ public final class ConfirmBookingStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         String venueName = ctx.selectedVenue();
         log.info("Confirming booking for venue: {}", venueName);
         browser.click(SEL_CONFIRM_BUTTON);
-        String confirmation = "CONFIRMED-" + System.currentTimeMillis();
-        return new BookingResult.Success(venueName, confirmation);
+        // This is the last step; returning Continue lets VenueBookingClient
+        // construct the final Success result with a fresh confirmation id.
+        return new StepOutcome.Continue(ctx);
     }
 }

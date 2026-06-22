@@ -37,22 +37,21 @@ model: sonnet
 - 报告要求能 grep 到这些标注
 
 ### HIGH — 面向对象 / 设计模式
-- **静态工厂**: `ClientFactory.create()` 应通过 `Supplier<CampusTask<?>>` 注册,非 switch-case 字符串硬编码
 - **Builder**: `BookingRequest.Builder` 应不可变构建,`build()` 时校验参数
-- **单例**: `ConfigManager.getInstance()` / `Tracer.getInstance()` 必须是双重检查锁或枚举单例
-- **策略**: `RetryPolicy` / `Matcher` / `ErrorClassifier` 应通过接口而非具体类使用
-- **适配器**: `CloakBrowserAdapter` 应实现 `BrowserLifecycle` 接口,业务层不感知 Playwright
+- **单例**: `ConfigManager.getInstance()` / `Tracer.getInstance()` / `Skills.getInstance()` 必须是双重检查锁或枚举单例
+- **策略**: `BookingStep` / `VenueSelector` / `RetryPolicy` 应通过接口而非具体类使用
+- **适配器**: `PlaywrightBrowserAdapter` 应实现 `BrowserLifecycle` 接口,业务层不感知 Playwright
 
 ### HIGH — Java 21 特性
 - **Record**: 值对象(Campus, Sport, TimeSlot, TaskResult, BookingRequest)应用 record 而非 class
 - **Pattern Matching for switch**: `instanceof` 后强转应用 `instanceof String s` 形式
-- **Sealed interface**: 策略接口(RetryPolicy, Matcher)可用 sealed 限制实现集合
+- **Sealed interface**: 策略接口(RetryPolicy, BookingStep, VenueSelector)可用 sealed 限制实现集合
 - **Virtual Threads**: I/O 密集任务优先用 `Thread.ofVirtual().start()`
 
 ### HIGH — 编码规范
 - **Javadoc**: 所有公开方法有 `@since 0.1.0` 和 `@author 王子豪`
 - **泛型**: `TaskResult<T>` / `CampusTask<T>` / `Repository<T>` 应正确使用泛型,无 raw type
-- **枚举方法**: `ErrorCode.isRetryable()` / `TaskStatus` 每个枚举值携带行为
+- **枚举方法**: `ErrorCode.isRetryable()` / `AccountState` 每个枚举值携带行为
 - **注解使用**: `@AgentTool` 应仅用于标记可暴露给 Agent 的方法,无多余注解
 - **Lambda/Stream**: 列表过滤/映射/聚合应用 Stream API,不用显式循环
 

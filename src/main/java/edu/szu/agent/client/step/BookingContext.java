@@ -11,14 +11,17 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * Mutable context passed through the booking pipeline.
+ * Context passed through the booking pipeline.
  *
- * <p>Each step reads from {@link #request} and writes intermediate results
- * here (e.g. {@link #selectedVenue}). The {@link #account} field holds
- * resolved credentials injected by the caller before the pipeline runs.
- * This keeps {@link BookingRequest} free of credential types.
+ * <p>The {@code request} and {@code account} fields are final (immutable
+ * inputs set once by the caller). The mutable fields ({@code selectedVenue},
+ * {@code lastFailure}, {@code homeworks}, etc.) are populated by steps as
+ * the pipeline progresses. {@link #withSelectedVenue(String)} and
+ * {@link #withLastFailure(BookingResult.Failure)} provide an immutable-style
+ * API for booking steps; homework/schedule steps mutate the relevant fields
+ * directly because their pipelines are more linear.
  *
- * // 编程技术: record(不可变外壳) / Lambda
+ * <p>// 编程技术: 不可变字段 + 可变步骤状态(record 风格构造 + setter 风格写入)
  *
  * @since 0.1.0
  * @author 王子豪
@@ -28,7 +31,7 @@ public final class BookingContext {
     private final BookingRequest request;
     private final Account account;
     private String selectedVenue;
-    private BookingResult lastFailure;
+    private BookingResult.Failure lastFailure;
     private List<Homework> homeworks;
     private boolean sessionOk;
     private String username;
@@ -38,23 +41,29 @@ public final class BookingContext {
     private List<CourseEntry> scheduleCourses;
 
     public BookingContext(BookingRequest request, Account account) {
-        this.request = request;
-        this.account = account;
+        this(request, account, null, null);
     }
 
     /**
-     * Convenience constructor for steps that don't need credentials
-     * (e.g. {@link SelectCampusStep}, {@link SelectSportStep},
-     * {@link SelectTimeSlotStep}, {@link SelectVenueStep},
-     * {@link ConfirmBookingStep}). Equivalent to passing {@code null}
-     * for {@code account}.
+     * Canonical 4-arg constructor used by the immutable-style helpers
+     * {@link #withSelectedVenue(String)} and {@link #withLastFailure(BookingResult.Failure)}.
      */
-    public BookingContext(BookingRequest request) {
-        this(request, null);
+    public BookingContext(BookingRequest request,
+                          Account account,
+                          String selectedVenue,
+                          BookingResult.Failure lastFailure) {
+        this.request = request;
+        this.account = account;
+        this.selectedVenue = selectedVenue;
+        this.lastFailure = lastFailure;
     }
 
-    public BookingRequest request() {
-        return request;
+    public BookingContext withSelectedVenue(String selectedVenue) {
+        return new BookingContext(request, account, selectedVenue, lastFailure);
+    }
+
+    public BookingContext withLastFailure(BookingResult.Failure lastFailure) {
+        return new BookingContext(request, account, selectedVenue, lastFailure);
     }
 
     public Account account() {

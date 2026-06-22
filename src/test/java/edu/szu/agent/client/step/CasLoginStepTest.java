@@ -72,9 +72,9 @@ class CasLoginStepTest {
     }
 
     @Test
-    @DisplayName("execute() returns null on success")
-    void executeReturnsNullOnSuccess() {
-        var result = new CasLoginStep().execute(browser, ctx);
-        assertThat(result).isNull();
+    @DisplayName("execute() returns Continue on success")
+    void executeReturnsContinueOnSuccess() {
+        StepOutcome outcome = new CasLoginStep().execute(browser, ctx);
+        assertThat(outcome).isInstanceOf(StepOutcome.Continue.class);
     }
 }

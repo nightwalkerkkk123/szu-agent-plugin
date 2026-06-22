@@ -112,4 +112,18 @@ class MCPToolCallHandlerTest {
         Map<String, Object> response = MCPToolCallHandler.call("booking_venue", null);
         assertThat(response).containsKey("success");
     }
+
+    @Test
+    @DisplayName("kb_query returns knowledge results")
+    void kbQuery() {
+        Map<String, Object> args = Map.of(
+            "query", "图书馆",
+            "limit", 3
+        );
+
+        Map<String, Object> response = MCPToolCallHandler.call("kb_query", args);
+        assertThat(response.get("success")).isEqualTo(true);
+        assertThat(response).containsKey("data");
+        assertThat(response).containsKey("traceId");
+    }
 }

@@ -36,14 +36,14 @@
 
 **当前阶段：Phase 2 完成，Phase 3 进行中（ADR-0001/0002/0005/0006/0007 Accepted）**
 
-项目已完成 Phase 0骨架（pom.xml + 13 packages + Logback）和 Phase 1 核心域（domain/ + error/ + retry/ + matcher/），Phase 2 浏览器抽象（BrowserLifecycle 10 方法 + PlaywrightBrowserAdapter）已完成。
+项目已完成 Phase 0骨架（pom.xml + 13 packages + Logback）和 Phase 1 核心域（domain/ + error/ + retry/ + step/），Phase 2 浏览器抽象（BrowserLifecycle 10 方法 + PlaywrightBrowserAdapter）已完成。
 
 **实施路径**（5 天）：
 
 | Phase | 时长 | 内容 | 状态 |
 |---|---|---|---|
 | P0 | 0.5d | 骨架（pom.xml + 包结构 + Logback + dotenv-java） | ✅ 完成 |
-| P1 | 1.0d | 无依赖基础（domain/ + error/ + retry/ + matcher/） | ✅ 完成 |
+| P1 | 1.0d | 无依赖基础（domain/ + error/ + retry/ + step/） | ✅ 完成 |
 | P2 | 1.0d | 浏览器抽象（browser/ + BrowserLifecycle 10 方法） | ✅ 完成 |
 | P3 | 1.0d | 业务编排（client/ + config/ + observability/ + account/） | 🔄 进行中 |
 | P4 | 1.0d | CLI + Wrapper（cli/ + skill/ + mcp/） | 待开始 |
@@ -94,13 +94,13 @@ edu.szu.agent
 ├── domain/        Campus / Sport / TimeSlot / BookingRequest(Builder) / BookingResult
 ├── browser/       BrowserLifecycle(10 方法,见 ADR-0002 D1) + PlaywrightBrowserAdapter
 │   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager 配 browser.kind 注入
-├── matcher/       Matcher<T>(Strategy) + AbstractMatcher + Exact/Contains/Regex/VenueIndex
+├── client/        VenueBookingClient(P0 唯一业务) + BookingFlowLauncher(seam) + step/
+│   └── step/      BookingStep(Strategy,7 实现) + VenueSelector(Strategy,2 实现)
 ├── retry/         RetryPolicy(Strategy,3 实现:FixedDelay/ExponentialBackoff/NoRetry,见 ADR-0007 D2) + RetryPolicies
 ├── error/         ErrorCode(枚举,12 值 5 元数据) + Severity + BookingException + LogMasker
 ├── config/        ConfigManager(单例,Singleton)
 ├── observability/ Tracer(单例,Singleton) + RunRecord(JSON 落盘)
 ├── account/       Account + AccountResolver(3 层凭证,ADR-0005 D1) + EnvVarName
-├── client/        VenueBookingClient(P0 唯一业务,Phase 3)
 ├── task/          CampusTask<T>(P1 扩展点,代码层保留)
 ├── skill/         Skill + SkillManager(P1 薄壳 wrapper)
 └── mcp/           MCPToolProvider(P1 薄壳 wrapper,ADR-0001 D5)
@@ -118,7 +118,7 @@ edu.szu.agent
 |---|---|---|
 | **Builder** | `BookingRequest.Builder` | 拼装 6 参数预约请求（校区/项目/日期/时段/场地号/备注） |
 | **单例** | `ConfigManager` / `Tracer` | 全局唯一，保证配置/追踪上下文一致 |
-| **策略** | `Matcher<T>` (4 实现) / `RetryPolicy` (3 实现) | 行为族可替换，新增策略不改调用方 |
+| **策略** | `BookingStep` (7 实现) / `VenueSelector` (2 实现) / `RetryPolicy` (3 实现) | 步骤/选择器/重试策略可替换，新增策略不改调用方 |
 | **适配器** | `PlaywrightBrowserAdapter` 适配 `BrowserLifecycle` | 把 Playwright 封装为统一接口，业务不感知具体浏览器 |
 
 > **5 → 4 模式变更**(ADR-0007 D1):`BrowserFactory` / Static Factory 删除,改 `ConfigManager` 配置 `browser.kind` 注入;seam 深度提升,调用方零决策。详见 [docs/design-patterns.md](docs/design-patterns.md) §5。
@@ -129,12 +129,12 @@ edu.szu.agent
 
 | 技术 | 体现 |
 |---|---|
-| **泛型** | `TaskResult<T>` / `CampusTask<T>` |
-| **枚举** | `TaskStatus` / `AccountState` / `ErrorCode`（每个枚举值携带元数据） |
-| **注解** | `@AgentTool` 标记可暴露给 Agent 的方法，运行期反射生成 Skill / MCP schema |
-| **重载** | `BookingRequest.Builder.addAccount(String)` / `.addAccount(Account)` 等多形式构造 |
-| **抽象类** | `AbstractMatcher<T>` 抽象基类，`Matcher<T>` 接口 default 方法组合 |
-| **Lambda + Stream** | 账号过滤、结果聚合、观察者通知 |
+| **泛型** | `CampusTask<T>` / `Skill<T>` / `RetryPolicy.execute(Supplier<T>)` |
+| **枚举** | `ErrorCode` / `Campus` / `Sport` / `TimeSlot`（每个枚举值携带元数据） |
+| **注解** | picocli `@Command` / `@Option` / `@Spec` / `@Parameters` |
+| **重载** | `AccountResolver.resolve(String)` / `resolve(String, Map)` 等多形式构造 |
+| **抽象类** | P0 已删除 `AbstractMatcher`;使用接口 + default 方法替代 |
+| **Lambda + Stream** | 默认方法组合、Stream 过滤、函数式接口实现 |
 
 ## 局限性分析与改进
 

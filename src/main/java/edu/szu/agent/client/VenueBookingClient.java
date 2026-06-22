@@ -43,7 +43,6 @@ public class VenueBookingClient {
 
     private static final Logger log = LoggerFactory.getLogger(VenueBookingClient.class);
 
-    private final Account account;
     private final BrowserLifecycle browser;
     private final RetryPolicy retryPolicy;
     private final List<BookingStep> steps;
@@ -51,14 +50,11 @@ public class VenueBookingClient {
     /**
      * Production constructor — uses the default 8-step pipeline.
      *
-     * @param account      resolved credentials (from AccountResolver)
      * @param browser      the browser adapter (injected by ConfigManager.browser())
      * @param retryPolicy  retry policy for the booking flow
      */
-    public VenueBookingClient(Account account,
-                               BrowserLifecycle browser,
-                               RetryPolicy retryPolicy) {
-        this(account, browser, retryPolicy, List.of(
+    public VenueBookingClient(BrowserLifecycle browser, RetryPolicy retryPolicy) {
+        this(browser, retryPolicy, List.of(
             new CasLoginStep(),
             new NavigateToBookingStep(),
             new SelectCampusStep(),
@@ -73,16 +69,13 @@ public class VenueBookingClient {
     /**
      * Full DI constructor — for testing with custom step lists.
      *
-     * @param account      resolved credentials (from AccountResolver)
      * @param browser      the browser adapter
      * @param retryPolicy  retry policy for the booking flow
      * @param steps        the booking steps to execute in order
      */
-    VenueBookingClient(Account account,
-                        BrowserLifecycle browser,
+    VenueBookingClient(BrowserLifecycle browser,
                         RetryPolicy retryPolicy,
                         List<BookingStep> steps) {
-        this.account = Objects.requireNonNull(account, "account");
         this.browser = Objects.requireNonNull(browser, "browser");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
         this.steps = List.copyOf(steps);
@@ -96,11 +89,13 @@ public class VenueBookingClient {
      * {@link BrowserLifecycle#close()} is called in a finally block.
      *
      * @param request the booking request (non-null, fully populated)
+     * @param account resolved credentials (from AccountResolver)
      * @return {@link BookingResult.Success} on confirmation,
      *         {@link BookingResult.Failure} on business failure
      */
-    public BookingResult book(BookingRequest request) {
+    public BookingResult book(BookingRequest request, Account account) {
         Objects.requireNonNull(request, "BookingRequest must not be null");
+        Objects.requireNonNull(account, "Account must not be null; resolve credentials with AccountResolver first");
         BookingContext ctx = new BookingContext(request, account);
         try {
             browser.open();
@@ -130,7 +125,7 @@ public class VenueBookingClient {
     }
 
     /**
-     * Runs all steps in sequence. Stops on first {@link BookingResult.Failure}.
+     * Runs all steps in sequence. Stops on first {@link StepOutcome.Failure}.
      */
     private BookingResult executePipeline(BookingContext ctx) {
         log.info("Starting booking flow: campus={} sport={} date={} slot={}",
@@ -139,17 +134,21 @@ public class VenueBookingClient {
             ctx.request().date(),
             ctx.request().timeSlot());
 
+        BookingContext current = ctx;
         for (BookingStep step : steps) {
             log.info("Executing step: {}", step.name());
-            BookingResult r = step.execute(browser, ctx);
-            if (r instanceof BookingResult.Failure f) {
-                log.warn("Step {} failed: {}", step.name(), f.message());
-                return f;
+            StepOutcome outcome = step.execute(browser, current);
+            if (outcome instanceof StepOutcome.Failure f) {
+                log.warn("Step {} failed: {}", step.name(), f.result().message());
+                return f.result();
+            }
+            if (outcome instanceof StepOutcome.Continue c) {
+                current = c.nextContext();
             }
         }
 
-        String venueName = ctx.selectedVenue() != null
-            ? ctx.selectedVenue()
+        String venueName = current.selectedVenue() != null
+            ? current.selectedVenue()
             : "unknown";
         log.info("Booking confirmed: venue={}", venueName);
         return new BookingResult.Success(venueName, "CONFIRMED-" + System.currentTimeMillis());

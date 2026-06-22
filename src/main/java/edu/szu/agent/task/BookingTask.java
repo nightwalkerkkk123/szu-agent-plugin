@@ -1,6 +1,7 @@
 package edu.szu.agent.task;
 
 import edu.szu.agent.account.Account;
+import edu.szu.agent.account.AccountResolver;
 import edu.szu.agent.client.VenueBookingClient;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
@@ -10,13 +11,15 @@ import edu.szu.agent.domain.TimeSlot;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.function.Function;
 
 /**
  * {@code booking_venue} CampusTask — the P0 realized implementation
  * of {@link CampusTask}.
  *
  * <p>Per ADR-0001 D10: thin adapter that translates {@link TaskInput}
- * → {@link BookingRequest}, delegates to {@link VenueBookingClient},
+ * → {@link BookingRequest}, resolves the account via
+ * {@link AccountResolver}, delegates to {@link VenueBookingClient},
  * and unwraps the result.
  *
  * <p>Parameter keys (string contract, matches MCP {@code inputSchema}):
@@ -37,11 +40,21 @@ import java.time.format.DateTimeParseException;
 public class BookingTask implements CampusTask<BookingResult> {
 
     private final VenueBookingClient client;
-    private final Account account;
+    private final Function<String, Account> accountResolver;
 
-    public BookingTask(VenueBookingClient client, Account account) {
+    /**
+     * Production constructor — uses {@link AccountResolver#resolve(String)}.
+     */
+    public BookingTask(VenueBookingClient client) {
+        this(client, AccountResolver::resolve);
+    }
+
+    /**
+     * Test constructor — inject a custom account resolver.
+     */
+    BookingTask(VenueBookingClient client, Function<String, Account> accountResolver) {
         this.client = client;
-        this.account = account;
+        this.accountResolver = accountResolver;
     }
 
     @Override
@@ -68,9 +81,10 @@ public class BookingTask implements CampusTask<BookingResult> {
         TimeSlot slot = TimeSlot.of(input.require("timeSlot"));
 
         int preferredVenue = input.getInt("preferredVenue", 1);
+        String username = input.require("username");
 
         BookingRequest request = BookingRequest.builder()
-            .username(input.require("username"))
+            .username(username)
             .campus(campus)
             .sport(sport)
             .date(date)
@@ -78,6 +92,6 @@ public class BookingTask implements CampusTask<BookingResult> {
             .preferredVenueIndex(preferredVenue)
             .build();
 
-        return client.book(request);
+        return client.book(request, accountResolver.apply(username));
     }
 }

@@ -1,7 +1,6 @@
 package edu.szu.agent.client.step;
 
 import edu.szu.agent.browser.BrowserLifecycle;
-import edu.szu.agent.domain.BookingResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,9 +25,9 @@ public final class NavigateToBookingStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         log.info("Navigating to ehall booking page");
         browser.navigateTo(EHALL_BOOKING_URL);
-        return null;
+        return new StepOutcome.Continue(ctx);
     }
 }

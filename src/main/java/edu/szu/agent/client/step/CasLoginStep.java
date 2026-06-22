@@ -15,6 +15,10 @@ import java.util.Objects;
  * which is injected by the caller after {@link edu.szu.agent.account.AccountResolver}
  * resolves them.
  *
+ * <p>Per US-007: if the caller has already validated a persisted session
+ * (via {@code ctx.sessionOk()}), this step short-circuits and returns
+ * {@code Continue(ctx)} without touching the browser.
+ *
  * // Design Pattern: Strategy (concrete step in booking pipeline)
  * // 编程技术: 枚举 / Lambda
  *
@@ -108,11 +112,11 @@ public final class CasLoginStep implements BookingStep {
     }
 
     @Override
-    public BookingResult execute(BrowserLifecycle browser, BookingContext ctx) {
+    public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
         if (ctx.sessionOk()) {
             log.info("Skipping CAS login, persisted state valid for {}",
                 ctx.account() != null ? ctx.account().studentId() : "unknown");
-            return null;
+            return new StepOutcome.Continue(ctx);
         }
 
         var account = ctx.account();
@@ -139,6 +143,6 @@ public final class CasLoginStep implements BookingStep {
         log.info("CAS login submitted for {} (landed on ehall: {})",
             account.studentId(), landed);
 
-        return null;
+        return new StepOutcome.Continue(ctx);
     }
 }

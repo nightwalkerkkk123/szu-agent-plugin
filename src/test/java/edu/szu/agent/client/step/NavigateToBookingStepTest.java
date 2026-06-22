@@ -3,7 +3,7 @@ package edu.szu.agent.client.step;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.domain.BookingRequest;
-import edu.szu.agent.domain.BookingResult;
+
 import edu.szu.agent.domain.Campus;
 import edu.szu.agent.domain.Sport;
 import edu.szu.agent.domain.YuehaiSport;
@@ -48,11 +48,11 @@ class NavigateToBookingStepTest {
     }
 
     @Test
-    @DisplayName("execute() navigates to ehall booking URL and returns null")
+    @DisplayName("execute() navigates to ehall booking URL and returns Continue")
     void executeNavigatesToBookingUrl() {
-        BookingResult result = new NavigateToBookingStep().execute(browser, ctx);
+        StepOutcome outcome = new NavigateToBookingStep().execute(browser, ctx);
 
-        assertThat(result).isNull();
+        assertThat(outcome).isInstanceOf(StepOutcome.Continue.class);
         verify(browser).navigateTo(NavigateToBookingStep.EHALL_BOOKING_URL);
     }
 }

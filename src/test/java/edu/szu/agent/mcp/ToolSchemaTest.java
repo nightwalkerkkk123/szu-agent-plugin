@@ -39,8 +39,8 @@ class ToolSchemaTest {
     void listToolsShape() {
         Map<String, Object> response = MCPToolProvider.listTools();
         assertThat(response).containsKeys("schemaVersion", "tools");
-        assertThat(response.get("schemaVersion")).isEqualTo("1.0");
-        assertThat((List<?>) response.get("tools")).isNotEmpty();
+        assertThat(response.get("schemaVersion")).isEqualTo("1.1");
+        assertThat((List<?>) response.get("tools")).hasSize(2);
     }
 
     @Test
@@ -69,6 +69,33 @@ class ToolSchemaTest {
         @SuppressWarnings("unchecked")
         List<String> required = (List<String>) inputSchema.get("required");
         assertThat(required).contains("username", "campus", "sport", "date", "timeSlot");
+    }
+
+    @Test
+    @DisplayName("kb_query tool has the documented inputSchema")
+    void kbQuerySchema() {
+        Map<String, Object> response = MCPToolProvider.listTools();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> tools = (List<Map<String, Object>>) response.get("tools");
+
+        Map<String, Object> kb = tools.stream()
+            .filter(t -> "kb_query".equals(t.get("name")))
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(kb.get("description")).isEqualTo("深大知识库查询");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> inputSchema = (Map<String, Object>) kb.get("inputSchema");
+        assertThat(inputSchema.get("type")).isEqualTo("object");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> properties = (Map<String, Object>) inputSchema.get("properties");
+        assertThat(properties).containsKeys("query", "limit", "category");
+
+        @SuppressWarnings("unchecked")
+        List<String> required = (List<String>) inputSchema.get("required");
+        assertThat(required).containsExactly("query");
     }
 
     @Test

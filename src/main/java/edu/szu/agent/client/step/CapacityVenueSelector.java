@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static edu.szu.agent.client.step.CourtListSelector.venueWaitMs;
+
 /**
  * Venue selector for capacity-style sports such as gym.
  *
@@ -50,8 +52,7 @@ public final class CapacityVenueSelector implements VenueSelector {
     @Override
     public String selectAndClick(BrowserLifecycle browser, BookingContext ctx)
         throws BookingException {
-        if (!SelectTimeSlotStep.waitForVisible(browser, SEL_VENUE_LABEL,
-                SelectTimeSlotStep.labelWaitMs())) {
+        if (!browser.waitForVisible(SEL_VENUE_LABEL, venueWaitMs())) {
             throw new BookingException(ErrorCode.NO_AVAILABLE_VENUE,
                 "No venue section (" + VENUE_SECTION_HEADER + ") rendered on the page");
         }

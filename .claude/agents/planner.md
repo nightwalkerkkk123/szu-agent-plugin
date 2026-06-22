@@ -95,23 +95,26 @@ model: opus
 
 | 模式 | 使用场景 |
 |---|---|
-| **静态工厂** | `ClientFactory.create(skillName)` 创建不同客户端 |
 | **Builder** | `BookingRequest.Builder` 构造多参数请求 |
-| **单例** | `ConfigManager.getInstance()` / `Tracer.getInstance()` |
-| **策略** | `RetryPolicy` / `Matcher` / `ErrorClassifier` 行为可替换 |
-| **适配器** | `CloakBrowserAdapter` 封装 Playwright/CloakBrowser |
+| **单例** | `ConfigManager.getInstance()` / `Tracer.getInstance()` / `Skills.getInstance()` |
+| **策略** | `BookingStep` / `VenueSelector` / `RetryPolicy` 行为可替换 |
+| **适配器** | `PlaywrightBrowserAdapter` 实现 `BrowserLifecycle` 接口,业务层不感知 Playwright |
 
 ## 本项目特有的包顺序
 
 实现顺序必须遵循:
 1. `domain/` → 值对象 records (Campus, Sport, TimeSlot, BookingRequest)
 2. `error/` → ErrorCode 枚举 + BookingException
-3. `retry/` → RetryPolicy 接口 + FixedDelay/ExponentialBackoff
-4. `browser/` → BrowserLifecycle 接口 + FakeBrowser
-5. `client/` → VenueBookingClient + ClientFactory
-6. `task/` → CampusTask<T> + TaskResult<T>
-7. `platform/` → AgentToolPlatform (Facade)
-8. `cli/` → picocli 入口
+3. `retry/` → RetryPolicy 接口 + FixedDelay/ExponentialBackoff/NoRetry
+4. `browser/` → BrowserLifecycle 接口 + PlaywrightBrowserAdapter + FakeBrowser
+5. `account/` → AccountState 枚举 + AccountResolver
+6. `client/` → VenueBookingClient + BookingFlowLauncher
+7. `task/` → CampusTask<T> + TaskResult<T> + BookingTask
+8. `config/` → ConfigManager(单例) + Config
+9. `observability/` → Tracer(单例)
+10. `skill/` → Skill<T> + Skills(单例注册中心)
+11. `mcp/` → MCPToolProvider + MCPToolCallHandler
+12. `cli/` → picocli 入口(Main / BookingCommand / VenueCommand / SkillCommand / MCPCommand)
 
 ## Red Flags
 

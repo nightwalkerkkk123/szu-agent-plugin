@@ -49,6 +49,21 @@ public final class AccountResolver {
     }
 
     /**
+     * Resolves credentials using the current process environment.
+     *
+     * <p>Convenience overload for callers (such as {@link edu.szu.agent.task.BookingTask})
+     * that do not already hold an env map. Keeps {@code System.getenv()} inside
+     * this class so ArchUnit rules remain satisfied.
+     *
+     * @param studentId the student ID to look up
+     * @return the resolved Account
+     * @throws AccountResolutionException if no credential found
+     */
+    public static Account resolve(String studentId) {
+        return resolve(studentId, System.getenv());
+    }
+
+    /**
      * Resolves credentials using process env, then env file as fallback.
      *
      * @param studentId the student ID to look up

@@ -101,7 +101,7 @@ mvn package  # ✅ Built szu-agent-plugin-0.1.0.jar
 
 如果 story 未完成，列出下一步：
 
-- [ ] 实现 `Matcher` 策略族
+- [x] ~~实现 `Matcher` 策略族~~ 已删除(无生产调用),场地选择走 `VenueSelector` Strategy
 - [ ] 添加单元测试覆盖 `BookingRequest.Builder`
 ```
 

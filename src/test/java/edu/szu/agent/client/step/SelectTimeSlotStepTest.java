@@ -3,7 +3,6 @@ package edu.szu.agent.client.step;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.domain.BookingRequest;
-import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Campus;
 import edu.szu.agent.domain.Sport;
 import edu.szu.agent.domain.YuehaiSport;
@@ -69,9 +68,9 @@ class SelectTimeSlotStepTest {
     void executeReturnsFailureWhenLabelMissing() {
         when(browser.isVisible(labelSel("19:00-20:00"))).thenReturn(false);
 
-        BookingResult result = new SelectTimeSlotStep().execute(browser, ctx);
+        StepOutcome outcome = new SelectTimeSlotStep().execute(browser, ctx);
 
-        assertThat(result).isInstanceOf(BookingResult.Failure.class);
+        assertThat(outcome).isInstanceOf(StepOutcome.Failure.class);
     }
 
     @Test
@@ -80,17 +79,18 @@ class SelectTimeSlotStepTest {
         when(browser.isVisible(labelSel("19:00-20:00"))).thenReturn(true);
         when(browser.isVisible(availableSel("19:00-20:00"))).thenReturn(false);
 
-        BookingResult result = new SelectTimeSlotStep().execute(browser, ctx);
+        StepOutcome outcome = new SelectTimeSlotStep().execute(browser, ctx);
 
-        assertThat(result).isInstanceOf(BookingResult.Failure.class);
+        assertThat(outcome).isInstanceOf(StepOutcome.Failure.class);
     }
 
     @Test
-    @DisplayName("execute() returns null on success")
-    void executeReturnsNullOnSuccess() {
+    @DisplayName("execute() returns Continue on success")
+    void executeReturnsContinueOnSuccess() {
         when(browser.isVisible(labelSel("19:00-20:00"))).thenReturn(true);
         when(browser.isVisible(availableSel("19:00-20:00"))).thenReturn(true);
 
-        assertThat(new SelectTimeSlotStep().execute(browser, ctx)).isNull();
+        assertThat(new SelectTimeSlotStep().execute(browser, ctx))
+            .isInstanceOf(StepOutcome.Continue.class);
     }
 }

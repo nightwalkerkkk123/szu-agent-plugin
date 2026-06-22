@@ -8,7 +8,6 @@ import edu.szu.agent.client.step.VenueSelector;
  * Sports offered at the 粤海 campus. As of 2026-06: 9 entries (matches
  * the {@code .frame-4} tile list rendered by ehall after selecting 粤海).
  *
- * <p>// Design Pattern: Type Object
  * <p>// 编程技术: 枚举(携带元数据字段) / sealed-interface 实现
  *
  * @since 0.1.0
