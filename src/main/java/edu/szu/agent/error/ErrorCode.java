@@ -84,7 +84,25 @@ public enum ErrorCode {
     /** 课表解析失败(选择器失效 / 周次非法). */
     SCHEDULE_PARSE_FAILED    (Severity.MEDIUM, true,  false, true,  "课表解析失败"),
     /** 课表为空(可能学期未开始). */
-    SCHEDULE_EMPTY           (Severity.LOW,    false, false, false, "课表为空(可能学期未开始)");
+    SCHEDULE_EMPTY           (Severity.LOW,    false, false, false, "课表为空(可能学期未开始)"),
+
+    // ----- 校历查询(US-010) -----
+    /** 校历 HTML 表格解析失败(降级告警). */
+    CALENDAR_PARSE_FAILED    (Severity.LOW,    false, false, false, "校历解析失败，返回已解析部分"),
+
+    // ----- 公文通查询(US-011) -----
+    /** 公文通列表为空. */
+    NOTICE_LIST_EMPTY        (Severity.LOW,    false, false, false, "公文通列表为空"),
+    /** 公文通分类无效. */
+    NOTICE_CATEGORY_INVALID  (Severity.LOW,    false, false, false, "公文通分类无效"),
+
+    // ----- 外部独立 Skill -----
+    /** 外部 Skill 入口脚本缺失. */
+    EXTERNAL_SKILL_NOT_FOUND  (Severity.LOW,    false, false, false, "外部 Skill 入口脚本缺失"),
+    /** 外部 Skill 执行超时. */
+    EXTERNAL_SKILL_TIMEOUT    (Severity.LOW,    false, false, false, "外部 Skill 执行超时"),
+    /** 外部 Skill 输出非法 JSON. */
+    EXTERNAL_SKILL_JSON_ERROR (Severity.LOW,    false, false, false, "外部 Skill 输出非法 JSON");
 
     private final Severity severity;
     private final boolean retryable;

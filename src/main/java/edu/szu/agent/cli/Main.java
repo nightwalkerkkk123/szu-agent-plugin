@@ -11,10 +11,13 @@ import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.retry.RetryPolicies;
 import edu.szu.agent.skill.Skill;
 import edu.szu.agent.skill.Skills;
+import edu.szu.agent.skill.external.ExternalSkillLoader;
 import edu.szu.agent.task.BookingTask;
+import edu.szu.agent.task.CalendarTask;
 import edu.szu.agent.task.HomeworkDownloadTask;
 import edu.szu.agent.task.HomeworkTask;
 import edu.szu.agent.task.KnowledgeTask;
+import edu.szu.agent.task.NoticeTask;
 import edu.szu.agent.task.ScheduleListTask;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -56,6 +59,8 @@ import java.util.stream.Collectors;
         BookingCommand.class,
         HomeworkCommand.class,
         ScheduleCommand.class,
+        CalendarCommand.class,
+        NoticeCommand.class,
         KnowledgeCommand.class,
         SkillCommand.class,
         MCPCommand.class
@@ -128,9 +133,21 @@ public class Main implements Callable<Integer> {
                 new ScheduleListTask(client, placeholder)));
         }
 
+        if (!existing.contains("calendar_get")) {
+            registry.register(new Skill<>("calendar_get", "查询深大校历",
+                new CalendarTask()));
+        }
+
+        if (!existing.contains("notice_list")) {
+            registry.register(new Skill<>("notice_list", "查询深大公文通通知列表",
+                new NoticeTask()));
+        }
+
         if (!existing.contains("kb_query")) {
             registry.register(new Skill<>("kb_query", "深大知识库查询", new KnowledgeTask()));
         }
+
+        ExternalSkillLoader.loadFromEnvironment();
     }
 
     /**

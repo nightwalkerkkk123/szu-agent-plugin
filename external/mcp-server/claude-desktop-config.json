@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "szu-agent": {
+      "command": "node",
+      "args": [
+        "E:/CODE/szu-agent-plugin/external/mcp-server/szu-agent-mcp.js",
+        "--jar",
+        "E:/CODE/szu-agent-plugin/target/szu-agent-plugin.jar"
+      ],
+      "env": {
+        "SZU_AGENT_JAVA": "E:/tools/jdk-21/bin/java.exe"
+      }
+    }
+  }
+}

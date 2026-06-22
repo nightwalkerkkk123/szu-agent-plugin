@@ -1,0 +1,29 @@
+{
+  "name": "szu-agent-mcp",
+  "version": "0.1.0",
+  "description": "Standalone MCP server for szu-agent-plugin. Exposes SZU campus skills over stdio or SSE without modifying the Java core.",
+  "main": "szu-agent-mcp.js",
+  "bin": {
+    "szu-agent-mcp": "./szu-agent-mcp.js"
+  },
+  "scripts": {
+    "start": "node szu-agent-mcp.js",
+    "serve": "node szu-agent-mcp.js --transport sse --port 3000"
+  },
+  "keywords": [
+    "mcp",
+    "szu",
+    "szu-agent",
+    "campus",
+    "claude"
+  ],
+  "author": "王子豪",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "express": "^4.21.0"
+  }
+}

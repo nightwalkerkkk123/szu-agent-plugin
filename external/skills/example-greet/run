@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# 包装脚本：调用同目录下的 run.py，从 stdin 读取参数 JSON
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+python3 "$SCRIPT_DIR/run.py" "$@"

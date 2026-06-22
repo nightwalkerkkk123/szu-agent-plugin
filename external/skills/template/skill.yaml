@@ -1,0 +1,15 @@
+name: template_echo
+version: "0.1.0"
+description: 最小外部 Skill 模板：把输入参数原样返回
+author: 王子豪
+license: MIT
+runtime: bash
+
+inputSchema:
+  type: object
+  properties:
+    message:
+      type: string
+      description: 要回显的消息
+      default: "hello"
+  required: []

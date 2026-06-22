@@ -1,6 +1,8 @@
 package edu.szu.agent.mcp;
 
 import edu.szu.agent.skill.Skill;
+import edu.szu.agent.skill.external.ExternalSkill;
+import edu.szu.agent.skill.external.ExternalSkillManifest;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,7 +32,7 @@ public final class ToolSchema {
     }
 
     /** Schema version. Bump when inputSchema changes. */
-    public static final String SCHEMA_VERSION = "1.1";
+    public static final String SCHEMA_VERSION = "1.2";
 
     /**
      * Returns the {@code tools/list} entry for a Skill.
@@ -52,7 +54,7 @@ public final class ToolSchema {
         Map<String, Object> tool = new LinkedHashMap<>();
         tool.put("name", skill.name());
         tool.put("description", skill.description());
-        tool.put("inputSchema", schemaFor(skill.name()));
+        tool.put("inputSchema", schemaFor(skill));
         return tool;
     }
 
@@ -77,14 +79,23 @@ public final class ToolSchema {
      * Hand-curated inputSchema per Skill. Matches MCP.md §tools/list.
      * New Skills add a switch branch here.
      *
+     * <p>External skills return the schema declared in their
+     * {@code skill.yaml} manifest.
+     *
      * @since 0.1.0
      */
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> schemaFor(String skillName) {
-        return switch (skillName) {
+    private static Map<String, Object> schemaFor(Skill<?> skill) {
+        if (skill.task() instanceof ExternalSkill external) {
+            ExternalSkillManifest manifest = external.manifest();
+            return manifest.inputSchema();
+        }
+        return switch (skill.name()) {
             case "booking_venue" -> bookingVenueSchema();
             case "homework_list" -> homeworkListSchema();
             case "schedule_list" -> scheduleListSchema();
+            case "calendar_get" -> calendarGetSchema();
+            case "notice_list" -> noticeListSchema();
             case "kb_query" -> kbQuerySchema();
             default -> Map.of("type", "object", "additionalProperties", true);
         };
@@ -198,6 +209,48 @@ public final class ToolSchema {
 
         schema.put("properties", properties);
         schema.put("required", List.of("query"));
+        return schema;
+    }
+
+    private static Map<String, Object> calendarGetSchema() {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+
+        Map<String, Object> properties = new LinkedHashMap<>();
+
+        Map<String, Object> academicYear = new LinkedHashMap<>();
+        academicYear.put("type", "string");
+        academicYear.put("description", "学年,例如 2025-2026");
+        properties.put("academicYear", academicYear);
+
+        schema.put("properties", properties);
+        return schema;
+    }
+
+    private static Map<String, Object> noticeListSchema() {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+
+        Map<String, Object> properties = new LinkedHashMap<>();
+
+        Map<String, Object> username = new LinkedHashMap<>();
+        username.put("type", "string");
+        username.put("description", "学号");
+        properties.put("username", username);
+
+        Map<String, Object> category = new LinkedHashMap<>();
+        category.put("type", "string");
+        category.put("description", "可选分类过滤: ANNOUNCEMENT / LECTURE / COMPETITION / PUBLICITY");
+        properties.put("category", category);
+
+        Map<String, Object> daysBack = new LinkedHashMap<>();
+        daysBack.put("type", "integer");
+        daysBack.put("description", "查询最近 N 天,默认 30");
+        daysBack.put("default", 30);
+        properties.put("daysBack", daysBack);
+
+        schema.put("properties", properties);
+        schema.put("required", List.of("username"));
         return schema;
     }
 }

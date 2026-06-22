@@ -17,11 +17,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrorCodeTest {
 
     @Test
-    @DisplayName("has exactly 23 constants")
+    @DisplayName("has exactly 29 constants")
     void hasTwentyConstants() {
         // 14 existing + 3 SESSION_* (US-007) + 3 ATTACHMENT_*/OUTPUT_DIR_INVALID (US-008)
-        // + 3 SCHEDULE_* (US-009) = 23
-        assertThat(ErrorCode.values()).hasSize(23);
+        // + 3 SCHEDULE_* (US-009) + 1 CALENDAR_PARSE_FAILED (US-010)
+        // + 2 NOTICE_* (US-011) + 3 EXTERNAL_SKILL_* = 29
+        assertThat(ErrorCode.values()).hasSize(29);
     }
 
     @Test
@@ -120,6 +121,39 @@ class ErrorCodeTest {
 
         assertThat(code.severity()).isEqualTo(Severity.LOW);
         assertThat(code.isRetryable()).isFalse();
+    }
+
+    @Test
+    @DisplayName("EXTERNAL_SKILL_NOT_FOUND 元数据正确")
+    void externalSkillNotFoundMetadata() {
+        ErrorCode c = ErrorCode.EXTERNAL_SKILL_NOT_FOUND;
+        assertThat(c.severity()).isEqualTo(Severity.LOW);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("外部 Skill 入口脚本缺失");
+    }
+
+    @Test
+    @DisplayName("EXTERNAL_SKILL_TIMEOUT 元数据正确")
+    void externalSkillTimeoutMetadata() {
+        ErrorCode c = ErrorCode.EXTERNAL_SKILL_TIMEOUT;
+        assertThat(c.severity()).isEqualTo(Severity.LOW);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("外部 Skill 执行超时");
+    }
+
+    @Test
+    @DisplayName("EXTERNAL_SKILL_JSON_ERROR 元数据正确")
+    void externalSkillJsonErrorMetadata() {
+        ErrorCode c = ErrorCode.EXTERNAL_SKILL_JSON_ERROR;
+        assertThat(c.severity()).isEqualTo(Severity.LOW);
+        assertThat(c.isRetryable()).isFalse();
+        assertThat(c.shouldSwitchAccount()).isFalse();
+        assertThat(c.shouldScreenshot()).isFalse();
+        assertThat(c.hint()).isEqualTo("外部 Skill 输出非法 JSON");
     }
 
     @Test

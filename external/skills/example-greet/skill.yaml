@@ -1,0 +1,19 @@
+name: example_greet
+version: "0.1.0"
+description: 示例：用指定语言打招呼
+author: 王子豪
+license: MIT
+runtime: python3
+
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: 要问候的名字
+    language:
+      type: string
+      description: 语言代码
+      enum: [zh, en, jp]
+      default: zh
+  required: [name]

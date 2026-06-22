@@ -39,8 +39,8 @@ class ToolSchemaTest {
     void listToolsShape() {
         Map<String, Object> response = MCPToolProvider.listTools();
         assertThat(response).containsKeys("schemaVersion", "tools");
-        assertThat(response.get("schemaVersion")).isEqualTo("1.1");
-        assertThat((List<?>) response.get("tools")).hasSize(5);
+        assertThat(response.get("schemaVersion")).isEqualTo("1.2");
+        assertThat((List<?>) response.get("tools")).hasSize(7);
     }
 
     @Test
@@ -96,6 +96,56 @@ class ToolSchemaTest {
         @SuppressWarnings("unchecked")
         List<String> required = (List<String>) inputSchema.get("required");
         assertThat(required).containsExactly("query");
+    }
+
+    @Test
+    @DisplayName("calendar_get tool has the documented inputSchema")
+    void calendarGetSchema() {
+        Map<String, Object> response = MCPToolProvider.listTools();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> tools = (List<Map<String, Object>>) response.get("tools");
+
+        Map<String, Object> calendar = tools.stream()
+            .filter(t -> "calendar_get".equals(t.get("name")))
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(calendar.get("description")).isEqualTo("查询深大校历");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> inputSchema = (Map<String, Object>) calendar.get("inputSchema");
+        assertThat(inputSchema.get("type")).isEqualTo("object");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> properties = (Map<String, Object>) inputSchema.get("properties");
+        assertThat(properties).containsKeys("academicYear");
+    }
+
+    @Test
+    @DisplayName("notice_list tool has the documented inputSchema")
+    void noticeListSchema() {
+        Map<String, Object> response = MCPToolProvider.listTools();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> tools = (List<Map<String, Object>>) response.get("tools");
+
+        Map<String, Object> notice = tools.stream()
+            .filter(t -> "notice_list".equals(t.get("name")))
+            .findFirst()
+            .orElseThrow();
+
+        assertThat(notice.get("description")).isEqualTo("查询深大公文通通知列表");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> inputSchema = (Map<String, Object>) notice.get("inputSchema");
+        assertThat(inputSchema.get("type")).isEqualTo("object");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> properties = (Map<String, Object>) inputSchema.get("properties");
+        assertThat(properties).containsKeys("username", "category", "daysBack");
+
+        @SuppressWarnings("unchecked")
+        List<String> required = (List<String>) inputSchema.get("required");
+        assertThat(required).containsExactly("username");
     }
 
     @Test

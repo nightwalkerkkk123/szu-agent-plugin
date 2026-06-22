@@ -102,7 +102,7 @@ class SkillCommandTest {
         int exit = runCli("mcp", "list");
         assertThat(exit).isEqualTo(0);
         JsonNode root = MAPPER.readTree(out.toString().trim());
-        assertThat(root.get("schemaVersion").asText()).isEqualTo("1.1");
+        assertThat(root.get("schemaVersion").asText()).isEqualTo("1.2");
         JsonNode tools = root.get("tools");
         assertThat(tools.isArray()).isTrue();
         JsonNode booking = null;
