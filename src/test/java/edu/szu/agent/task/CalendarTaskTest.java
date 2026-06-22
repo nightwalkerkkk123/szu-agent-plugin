@@ -1,0 +1,67 @@
+package edu.szu.agent.task;
+
+import edu.szu.agent.domain.calendar.AcademicEvent;
+import edu.szu.agent.domain.calendar.AcademicEventType;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DisplayName("CalendarTask")
+class CalendarTaskTest {
+
+    @Test
+    @DisplayName("name = calendar_get")
+    void nameAndDescriptionAreCorrect() {
+        CalendarTask task = new CalendarTask();
+        assertThat(task.name()).isEqualTo("calendar_get");
+        assertThat(task.description()).isEqualTo("查询深大校历(静态 MVP)");
+    }
+
+    @Test
+    @DisplayName("返回 2025-2026 春季学期静态校历")
+    void returnsStaticSpring2026Calendar() {
+        CalendarTask task = new CalendarTask();
+
+        List<AcademicEvent> events = task.execute(
+            new TaskInput(Map.of("academicYear", "2025-2026")));
+
+        assertThat(events).isNotEmpty();
+        assertThat(events).allMatch(e -> "2025-2026-SPRING".equals(e.semester()));
+        assertThat(events).anyMatch(e ->
+            e.date().equals(LocalDate.of(2026, 3, 5)) &&
+            e.type() == AcademicEventType.SEMESTER_START &&
+            e.description().contains("学生报到"));
+        assertThat(events).anyMatch(e ->
+            e.date().equals(LocalDate.of(2026, 6, 26)) &&
+            e.type() == AcademicEventType.HOLIDAY &&
+            e.description().contains("毕业典礼"));
+        assertThat(events).anyMatch(e ->
+            e.date().equals(LocalDate.of(2026, 7, 18)) &&
+            e.type() == AcademicEventType.BREAK &&
+            e.description().contains("暑假开始"));
+    }
+
+    @Test
+    @DisplayName("不支持的学年返回空列表")
+    void unsupportedYearReturnsEmptyList() {
+        CalendarTask task = new CalendarTask();
+
+        List<AcademicEvent> events = task.execute(
+            new TaskInput(Map.of("academicYear", "2099-2100")));
+
+        assertThat(events).isEmpty();
+    }
+
+    @Test
+    @DisplayName("默认学年推断规则")
+    void defaultAcademicYearInference() {
+        // 当前日期在 2026-06-22，属于第二学期(春季)，默认应为 2025-2026
+        String year = CalendarTask.defaultAcademicYear();
+        assertThat(year).isEqualTo("2025-2026");
+    }
+}
