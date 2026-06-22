@@ -1,8 +1,6 @@
 package edu.szu.agent.mcp;
 
 import edu.szu.agent.skill.Skill;
-import edu.szu.agent.skill.external.ExternalSkill;
-import edu.szu.agent.skill.external.ExternalSkillManifest;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,12 +10,13 @@ import java.util.Map;
  * ToolSchema — converts a {@link Skill} into a JSON-Schema-shaped
  * description suitable for MCP {@code tools/list}.
  *
- * <p>Per ADR-0001 D5: this is a thin schema emitter. The actual
- * schema is hand-curated (not runtime-generated) because MCP clients
- * are strict about schema shape, and the parameter set for
- * {@code booking_venue} is small and stable.
+ * <p>Per the architecture-deepening plan (改动 2): schemas are declared on
+ * each {@link edu.szu.agent.task.CampusTask} via {@code inputSchema()}.
+ * This class delegates to that method, eliminating the former switch
+ * dispatch. External skills ({@link ExternalSkill}) continue to source
+ * their schema from the skill manifest.
  *
- * <p>Schema versioning: when the Skill's parameter set changes,
+ * <p>Schema versioning: when a task's parameter set changes,
  * bump the schema version string returned here so MCP clients can
  * detect the change.
  *
@@ -76,181 +75,12 @@ public final class ToolSchema {
     }
 
     /**
-     * Hand-curated inputSchema per Skill. Matches MCP.md §tools/list.
-     * New Skills add a switch branch here.
-     *
-     * <p>External skills return the schema declared in their
-     * {@code skill.yaml} manifest.
+     * Delegates to the task's own {@code inputSchema()} method.
+     * External skills override that method to return their manifest schema.
      *
      * @since 0.1.0
      */
-    @SuppressWarnings("unchecked")
     private static Map<String, Object> schemaFor(Skill<?> skill) {
-        if (skill.task() instanceof ExternalSkill external) {
-            ExternalSkillManifest manifest = external.manifest();
-            return manifest.inputSchema();
-        }
-        return switch (skill.name()) {
-            case "booking_venue" -> bookingVenueSchema();
-            case "homework_list" -> homeworkListSchema();
-            case "schedule_list" -> scheduleListSchema();
-            case "calendar_get" -> calendarGetSchema();
-            case "notice_list" -> noticeListSchema();
-            case "kb_query" -> kbQuerySchema();
-            default -> Map.of("type", "object", "additionalProperties", true);
-        };
-    }
-
-    private static Map<String, Object> bookingVenueSchema() {
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("type", "object");
-
-        Map<String, Object> properties = new LinkedHashMap<>();
-
-        Map<String, Object> username = new LinkedHashMap<>();
-        username.put("type", "string");
-        username.put("description", "学号");
-        properties.put("username", username);
-
-        Map<String, Object> campus = new LinkedHashMap<>();
-        campus.put("type", "string");
-        campus.put("description", "校区(YUEHAI/LYULAKU/...)");
-        properties.put("campus", campus);
-
-        Map<String, Object> sport = new LinkedHashMap<>();
-        sport.put("type", "string");
-        sport.put("description", "运动项目(TENNIS/BADMINTON/...)");
-        properties.put("sport", sport);
-
-        Map<String, Object> date = new LinkedHashMap<>();
-        date.put("type", "string");
-        date.put("format", "date");
-        date.put("description", "ISO 8601 日期,例如 2026-06-13");
-        properties.put("date", date);
-
-        Map<String, Object> timeSlot = new LinkedHashMap<>();
-        timeSlot.put("type", "object");
-        timeSlot.put("description", "预约时段,例如 {\"start\": \"19:00\", \"end\": \"20:00\"}");
-
-        Map<String, Object> tsProps = new LinkedHashMap<>();
-        Map<String, Object> start = new LinkedHashMap<>();
-        start.put("type", "string");
-        start.put("description", "HH:mm 格式");
-        tsProps.put("start", start);
-        Map<String, Object> end = new LinkedHashMap<>();
-        end.put("type", "string");
-        end.put("description", "HH:mm 格式");
-        tsProps.put("end", end);
-        timeSlot.put("properties", tsProps);
-        properties.put("timeSlot", timeSlot);
-
-        Map<String, Object> preferredVenue = new LinkedHashMap<>();
-        preferredVenue.put("type", "integer");
-        preferredVenue.put("description", "1-based 场地序号,默认 1");
-        preferredVenue.put("default", 1);
-        properties.put("preferredVenue", preferredVenue);
-
-        schema.put("properties", properties);
-        schema.put("required", List.of("username", "campus", "sport", "date", "timeSlot"));
-        return schema;
-    }
-
-    private static Map<String, Object> homeworkListSchema() {
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("type", "object");
-
-        Map<String, Object> properties = new LinkedHashMap<>();
-        Map<String, Object> username = new LinkedHashMap<>();
-        username.put("type", "string");
-        username.put("description", "学号");
-        properties.put("username", username);
-
-        schema.put("properties", properties);
-        schema.put("required", List.of("username"));
-        return schema;
-    }
-
-    private static Map<String, Object> scheduleListSchema() {
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("type", "object");
-
-        Map<String, Object> properties = new LinkedHashMap<>();
-        Map<String, Object> username = new LinkedHashMap<>();
-        username.put("type", "string");
-        username.put("description", "学号");
-        properties.put("username", username);
-
-        schema.put("properties", properties);
-        schema.put("required", List.of("username"));
-        return schema;
-    }
-
-    private static Map<String, Object> kbQuerySchema() {
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("type", "object");
-
-        Map<String, Object> properties = new LinkedHashMap<>();
-
-        Map<String, Object> query = new LinkedHashMap<>();
-        query.put("type", "string");
-        query.put("description", "查询关键词,例如 图书馆、食堂、选课");
-        properties.put("query", query);
-
-        Map<String, Object> limit = new LinkedHashMap<>();
-        limit.put("type", "integer");
-        limit.put("description", "最大返回条数,默认 5");
-        limit.put("default", 5);
-        properties.put("limit", limit);
-
-        Map<String, Object> category = new LinkedHashMap<>();
-        category.put("type", "string");
-        category.put("description", "可选分类过滤: CAMPUS_BASICS / DINING / LIBRARY / ACADEMICS / FAQ");
-        properties.put("category", category);
-
-        schema.put("properties", properties);
-        schema.put("required", List.of("query"));
-        return schema;
-    }
-
-    private static Map<String, Object> calendarGetSchema() {
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("type", "object");
-
-        Map<String, Object> properties = new LinkedHashMap<>();
-
-        Map<String, Object> academicYear = new LinkedHashMap<>();
-        academicYear.put("type", "string");
-        academicYear.put("description", "学年,例如 2025-2026");
-        properties.put("academicYear", academicYear);
-
-        schema.put("properties", properties);
-        return schema;
-    }
-
-    private static Map<String, Object> noticeListSchema() {
-        Map<String, Object> schema = new LinkedHashMap<>();
-        schema.put("type", "object");
-
-        Map<String, Object> properties = new LinkedHashMap<>();
-
-        Map<String, Object> username = new LinkedHashMap<>();
-        username.put("type", "string");
-        username.put("description", "学号");
-        properties.put("username", username);
-
-        Map<String, Object> category = new LinkedHashMap<>();
-        category.put("type", "string");
-        category.put("description", "可选分类过滤: ANNOUNCEMENT / LECTURE / COMPETITION / PUBLICITY");
-        properties.put("category", category);
-
-        Map<String, Object> daysBack = new LinkedHashMap<>();
-        daysBack.put("type", "integer");
-        daysBack.put("description", "查询最近 N 天,默认 30");
-        daysBack.put("default", 30);
-        properties.put("daysBack", daysBack);
-
-        schema.put("properties", properties);
-        schema.put("required", List.of("username"));
-        return schema;
+        return skill.task().inputSchema();
     }
 }

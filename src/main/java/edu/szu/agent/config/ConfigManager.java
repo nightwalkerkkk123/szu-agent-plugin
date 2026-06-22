@@ -6,6 +6,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.microsoft.playwright.Playwright;
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.browser.PlaywrightBrowserAdapter;
+import edu.szu.agent.client.cache.CacheStore;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,10 +15,13 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -55,6 +59,9 @@ public final class ConfigManager {
     private static final Logger log = LoggerFactory.getLogger(ConfigManager.class);
 
     private static final String CLASSPATH_YML = "application.yml";
+
+    /** Matches {@code ${name}} placeholders in config values. */
+    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\$\\{([^}]+)\\}");
 
     /** Dispatch keys (kept here so {@link #browser()} has a single source of truth). */
     private enum BrowserKind {
@@ -195,6 +202,87 @@ public final class ConfigManager {
      */
     public String browserKind() {
         return get("browser.kind");
+    }
+
+    /**
+     * Returns a {@link CacheStore} pre-configured with per-scope TTLs
+     * from YAML keys {@code cache.home}, {@code cache.ttl.schedule},
+     * {@code cache.ttl.calendar}, {@code cache.ttl.exam}.
+     *
+     * <p>Per the architecture-deepening plan (改动 3): this replaces the former
+     * {@code cacheConfig()} method which returned a separate {@code CacheConfig}
+     * record that was immediately decomposed. The TTL table now lives inside
+     * {@code CacheStore} itself.
+     *
+     * @return a configured {@link CacheStore} (never {@code null})
+     * @since 0.3.0
+     * @author 王子豪
+     */
+    public CacheStore cacheStore() {
+        Path home = resolveCacheHome();
+        CacheStore.Builder builder = CacheStore.builder(home);
+        Duration scheduleTtl = parseDuration(get("cache.ttl.schedule"));
+        Duration calendarTtl = parseDuration(get("cache.ttl.calendar"));
+        Duration examTtl = parseDuration(get("cache.ttl.exam"));
+        if (!scheduleTtl.isZero())  builder.ttl("schedule", scheduleTtl);
+        if (!calendarTtl.isZero())   builder.ttl("calendar", calendarTtl);
+        if (!examTtl.isZero())      builder.ttl("exam", examTtl);
+        return builder.build();
+    }
+
+    /**
+     * Resolves the cache home directory from {@code cache.home}, interpolating
+     * {@code ${property}} placeholders (e.g. {@code ${user.home}}) against
+     * system properties then environment variables. Falls back to
+     * {@code user.home} when {@code cache.home} is unset.
+     *
+     * @return the resolved cache home path (never {@code null})
+     * @since 0.3.0
+     * @author 王子豪
+     */
+    private Path resolveCacheHome() {
+        String raw = get("cache.home", System.getenv());
+        if (raw == null || raw.isBlank()) {
+            return Path.of(System.getProperty("user.home"));
+        }
+        return Path.of(interpolate(raw));
+    }
+
+    /**
+     * Replaces every {@code ${name}} token with the matching system property
+     * (or environment variable). Unresolved tokens are left verbatim so the
+     * path stays debuggable rather than silently degrading.
+     *
+     * @param value raw config string, possibly containing placeholders
+     * @return the interpolated string
+     * @since 0.3.0
+     * @author 王子豪
+     */
+    static String interpolate(String value) {
+        Matcher m = PLACEHOLDER_PATTERN.matcher(value);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            String ref = m.group(1);
+            String resolved = System.getProperty(ref);
+            if (resolved == null) {
+                resolved = System.getenv(ref);
+            }
+            m.appendReplacement(sb, Matcher.quoteReplacement(
+                resolved != null ? resolved : "${" + ref + "}"));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    private static Duration parseDuration(String value) {
+        if (value == null || value.isBlank()) {
+            return Duration.ZERO; // caller decides default
+        }
+        try {
+            return Duration.parse(value);
+        } catch (Exception e) {
+            return Duration.ZERO;
+        }
     }
 
     // ---------- package-private test seams ----------

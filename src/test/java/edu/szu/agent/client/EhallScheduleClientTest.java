@@ -81,6 +81,33 @@ class EhallScheduleClientTest {
     }
 
     @Test
+    @DisplayName("short-circuit step stops later schedule steps")
+    void shortCircuitStopsLaterSteps() {
+        BrowserLifecycle browser = mock(BrowserLifecycle.class);
+        CourseEntry course = sampleCourse();
+        BookingStep hit = new BookingStep() {
+            @Override
+            public String name() {
+                return "cache-hit";
+            }
+
+            @Override
+            public StepOutcome execute(BrowserLifecycle browser, BookingContext ctx) {
+                ctx.scheduleCourses(List.of(course));
+                return new StepOutcome.ShortCircuit(ctx);
+            }
+        };
+        BookingStep shouldNotRun = new StubStep("should-not-run", new BookingResult.Failure(
+            ErrorCode.SCHEDULE_PAGE_LOAD_FAILED, "should not run"));
+
+        EhallScheduleClient client = clientWith(browser, null, hit, shouldNotRun);
+
+        ScheduleListResult r = client.list();
+
+        assertThat(r).isInstanceOf(ScheduleListResult.Success.class);
+    }
+
+    @Test
     @DisplayName("list browser.open 抛异常后仍关闭 browser")
     void browserClosedOnException() {
         BrowserLifecycle browser = mock(BrowserLifecycle.class);

@@ -26,6 +26,14 @@ public sealed interface StepOutcome {
     record Continue(BookingContext nextContext) implements StepOutcome {}
 
     /**
+     * Step succeeded and produced a complete result on its own (e.g. a cache
+     * hit): the pipeline should STOP and skip all remaining steps. Unlike
+     * {@link Failure} this is a success — the context already holds the data
+     * the pipeline owner needs to build a success result.
+     */
+    record ShortCircuit(BookingContext nextContext) implements StepOutcome {}
+
+    /**
      * Step failed terminally; pipeline should stop and return this failure.
      */
     record Failure(BookingResult.Failure result) implements StepOutcome {}

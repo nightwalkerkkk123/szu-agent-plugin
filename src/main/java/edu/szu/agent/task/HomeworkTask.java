@@ -4,6 +4,9 @@ import edu.szu.agent.account.Account;
 import edu.szu.agent.client.ChaoxingHomeworkClient;
 import edu.szu.agent.domain.HomeworkListResult;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -41,6 +44,22 @@ public class HomeworkTask implements CampusTask<HomeworkListResult> {
     @Override
     public String description() {
         return "查询畅课作业列表";
+    }
+
+    @Override
+    public Map<String, Object> inputSchema() {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+
+        Map<String, Object> properties = new LinkedHashMap<>();
+        Map<String, Object> username = new LinkedHashMap<>();
+        username.put("type", "string");
+        username.put("description", "学号");
+        properties.put("username", username);
+
+        schema.put("properties", properties);
+        schema.put("required", List.of("username"));
+        return schema;
     }
 
     @Override

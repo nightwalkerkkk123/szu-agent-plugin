@@ -7,6 +7,7 @@ import edu.szu.agent.domain.CourseEntry;
 import edu.szu.agent.domain.ScheduleListResult;
 import edu.szu.agent.domain.WeekRange;
 import edu.szu.agent.domain.Weekday;
+import edu.szu.agent.error.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -86,6 +87,19 @@ class ScheduleListCommandTest {
         assertThat(root.get("success").asBoolean()).isTrue();
         assertThat(root.get("data").get("count").asInt()).isEqualTo(1);
         assertThat(root.get("data").get("courses")).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("failure exit code uses shared CommandOutput mapping")
+    void failureExitCodeUsesSharedMapping() {
+        ScheduleListCommand command = new ScheduleListCommand();
+        ScheduleListResult.Failure failure = new ScheduleListResult.Failure(
+            ErrorCode.SCHEDULE_EMPTY, "empty");
+
+        int exitCode = command.formatAndOutput(new PrintWriter(new StringWriter()),
+            failure, "t", 0L);
+
+        assertThat(exitCode).isEqualTo(CommandOutput.exitCodeFor(ErrorCode.SCHEDULE_EMPTY));
     }
 
     @Test

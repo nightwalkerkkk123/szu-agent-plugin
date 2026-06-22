@@ -1,7 +1,7 @@
 package edu.szu.agent.error;
 
 /**
- * Error code enum — 12 values with 5 metadata fields.
+ * Error code enum — 34 values with 5 metadata fields.
  *
  * <p>Per ADR-0006 §二.2: replaces Python's {@code ERROR_MAP} by hanging
  * metadata directly on the enum. Each constant carries:
@@ -85,6 +85,30 @@ public enum ErrorCode {
     SCHEDULE_PARSE_FAILED    (Severity.MEDIUM, true,  false, true,  "课表解析失败"),
     /** 课表为空(可能学期未开始). */
     SCHEDULE_EMPTY           (Severity.LOW,    false, false, false, "课表为空(可能学期未开始)"),
+    /** 当前学期课表未发布或不存在. */
+    SCHEDULE_NOT_FOUND       (Severity.MEDIUM, false, false, false, "当前学期课表未发布或为空"),
+    /** 课表缓存跨学期已失效,已重新抓取. */
+    SCHEDULE_CACHE_STALE     (Severity.LOW,    false, false, false, "课表缓存跨学期,已失效并重新抓取"),
+
+    // ----- 畅课/学习通作业(chaoxing_tasks) -----
+    /** 畅课 SSO Cookie 过期,需重新登录. */
+    CHAOXING_AUTH_EXPIRED    (Severity.HIGH,   true,  false, true,  "畅课 SSO Cookie 过期,需重新登录"),
+    /** 课程不存在或已归档. */
+    CHAOXING_COURSE_NOT_FOUND(Severity.MEDIUM, true,  false, true,  "课程不存在或已归档"),
+    /** 触发畅课反爬,请稍后重试或切换账号. */
+    CHAOXING_ANTI_BOT        (Severity.HIGH,   true,  true,  true,  "触发畅课反爬,请稍后重试或切换账号"),
+
+    // ----- 考试安排(exam_list) -----
+    /** 考试安排未发布或已结束. */
+    EXAM_NOT_FOUND           (Severity.MEDIUM, true,  false, true,  "考试安排未发布或已结束"),
+    /** 考试时间地点冲突,请联系教务. */
+    EXAM_LOCATION_CONFLICT   (Severity.HIGH,   false, false, false, "考试时间地点冲突,请联系教务"),
+
+    // ----- 知识库(kb_query) -----
+    /** 知识库索引已过期,基于旧版本回答. */
+    KNOWLEDGE_STALE          (Severity.LOW,    false, false, false, "知识库索引已过期,基于旧版本回答"),
+    /** 知识库未收录该问题. */
+    KNOWLEDGE_NOT_FOUND      (Severity.MEDIUM, false, false, false, "知识库未收录该问题"),
 
     // ----- 校历查询(US-010) -----
     /** 校历 HTML 表格解析失败(降级告警). */

@@ -6,6 +6,7 @@ import edu.szu.agent.domain.notice.NoticeCategory;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * {@code notice_list} CampusTask — lists SZU board (公文通) notices.
@@ -53,6 +54,22 @@ public class NoticeTask implements CampusTask<List<Notice>> {
     @Override
     public String description() {
         return "查询深大公文通通知列表(静态 MVP)";
+    }
+
+    @Override
+    public Map<String, Object> inputSchema() {
+        return TaskInputSchema.schemaWithOptional(
+            "username", "学号",
+            Map.of(
+                "category", Map.of(
+                    "type", "string",
+                    "description", "可选分类过滤: ANNOUNCEMENT / LECTURE / COMPETITION / PUBLICITY"),
+                "daysBack", Map.of(
+                    "type", "integer",
+                    "description", "查询最近 N 天,默认 30",
+                    "default", 30)
+            )
+        );
     }
 
     @Override

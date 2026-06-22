@@ -35,18 +35,18 @@ class ToolSchemaTest {
     }
 
     @Test
-    @DisplayName("MCPToolProvider.listTools returns schemaVersion + tools[]")
+    @DisplayName("ToolSchema.toolsList returns schemaVersion + tools[]")
     void listToolsShape() {
-        Map<String, Object> response = MCPToolProvider.listTools();
+        Map<String, Object> response = ToolSchema.toolsList(Skills.getInstance().all());
         assertThat(response).containsKeys("schemaVersion", "tools");
         assertThat(response.get("schemaVersion")).isEqualTo("1.2");
-        assertThat((List<?>) response.get("tools")).hasSize(7);
+        assertThat((List<?>) response.get("tools")).hasSize(8);
     }
 
     @Test
     @DisplayName("booking_venue tool has the documented inputSchema")
     void bookingVenueSchema() {
-        Map<String, Object> response = MCPToolProvider.listTools();
+        Map<String, Object> response = ToolSchema.toolsList(Skills.getInstance().all());
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> tools = (List<Map<String, Object>>) response.get("tools");
 
@@ -74,7 +74,7 @@ class ToolSchemaTest {
     @Test
     @DisplayName("kb_query tool has the documented inputSchema")
     void kbQuerySchema() {
-        Map<String, Object> response = MCPToolProvider.listTools();
+        Map<String, Object> response = ToolSchema.toolsList(Skills.getInstance().all());
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> tools = (List<Map<String, Object>>) response.get("tools");
 
@@ -101,7 +101,7 @@ class ToolSchemaTest {
     @Test
     @DisplayName("calendar_get tool has the documented inputSchema")
     void calendarGetSchema() {
-        Map<String, Object> response = MCPToolProvider.listTools();
+        Map<String, Object> response = ToolSchema.toolsList(Skills.getInstance().all());
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> tools = (List<Map<String, Object>>) response.get("tools");
 
@@ -124,7 +124,7 @@ class ToolSchemaTest {
     @Test
     @DisplayName("notice_list tool has the documented inputSchema")
     void noticeListSchema() {
-        Map<String, Object> response = MCPToolProvider.listTools();
+        Map<String, Object> response = ToolSchema.toolsList(Skills.getInstance().all());
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> tools = (List<Map<String, Object>>) response.get("tools");
 

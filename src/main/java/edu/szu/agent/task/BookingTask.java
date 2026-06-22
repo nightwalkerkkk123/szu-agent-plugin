@@ -11,6 +11,9 @@ import edu.szu.agent.domain.TimeSlot;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -65,6 +68,60 @@ public class BookingTask implements CampusTask<BookingResult> {
     @Override
     public String description() {
         return "体育场馆定时预约";
+    }
+
+    @Override
+    public Map<String, Object> inputSchema() {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+
+        Map<String, Object> properties = new LinkedHashMap<>();
+
+        Map<String, Object> username = new LinkedHashMap<>();
+        username.put("type", "string");
+        username.put("description", "学号");
+        properties.put("username", username);
+
+        Map<String, Object> campus = new LinkedHashMap<>();
+        campus.put("type", "string");
+        campus.put("description", "校区(YUEHAI/LYULAKU/...)");
+        properties.put("campus", campus);
+
+        Map<String, Object> sport = new LinkedHashMap<>();
+        sport.put("type", "string");
+        sport.put("description", "运动项目(TENNIS/BADMINTON/...)");
+        properties.put("sport", sport);
+
+        Map<String, Object> date = new LinkedHashMap<>();
+        date.put("type", "string");
+        date.put("format", "date");
+        date.put("description", "ISO 8601 日期,例如 2026-06-13");
+        properties.put("date", date);
+
+        Map<String, Object> timeSlot = new LinkedHashMap<>();
+        timeSlot.put("type", "object");
+        timeSlot.put("description", "预约时段,例如 {\"start\": \"19:00\", \"end\": \"20:00\"}");
+        Map<String, Object> tsProps = new LinkedHashMap<>();
+        Map<String, Object> start = new LinkedHashMap<>();
+        start.put("type", "string");
+        start.put("description", "HH:mm 格式");
+        tsProps.put("start", start);
+        Map<String, Object> end = new LinkedHashMap<>();
+        end.put("type", "string");
+        end.put("description", "HH:mm 格式");
+        tsProps.put("end", end);
+        timeSlot.put("properties", tsProps);
+        properties.put("timeSlot", timeSlot);
+
+        Map<String, Object> preferredVenue = new LinkedHashMap<>();
+        preferredVenue.put("type", "integer");
+        preferredVenue.put("description", "1-based 场地序号,默认 1");
+        preferredVenue.put("default", 1);
+        properties.put("preferredVenue", preferredVenue);
+
+        schema.put("properties", properties);
+        schema.put("required", List.of("username", "campus", "sport", "date", "timeSlot"));
+        return schema;
     }
 
     @Override

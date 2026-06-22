@@ -1,6 +1,13 @@
 browser:
   kind: PLAYWRIGHT
 
+cache:
+  home: ${user.home}
+  ttl:
+    schedule: PT24H
+    calendar: P7D
+    exam: PT1H
+
 retry:
   default:
     maxAttempts: 3

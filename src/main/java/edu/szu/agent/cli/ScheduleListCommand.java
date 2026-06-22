@@ -3,34 +3,23 @@ package edu.szu.agent.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import edu.szu.agent.account.Account;
-import edu.szu.agent.account.AccountResolutionException;
-import edu.szu.agent.account.AccountResolver;
-import edu.szu.agent.client.EhallScheduleClient;
-import edu.szu.agent.config.ConfigManager;
+import edu.szu.agent.client.schedule.ScheduleListClient;
 import edu.szu.agent.domain.CourseEntry;
 import edu.szu.agent.domain.ScheduleListResult;
-import edu.szu.agent.error.BookingException;
 import edu.szu.agent.observability.Tracer;
-import edu.szu.agent.retry.RetryPolicies;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 
 import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
- * {@code schedule list} subcommand — lists all course entries from the ehall
- * schedule grid for the current semester.
+ * {@code schedule list} subcommand — lists all course entries from the static
+ * schedule snapshot (MVP).
  *
  * <p>Output JSON schema:
  * <pre>{@code
@@ -39,28 +28,8 @@ import java.util.concurrent.Callable;
  *   "data": {
  *     "snapshotAt": "2026-06-18T10:00:00+08:00",
  *     "count": 4,
- *     "courses": [
- *       {
- *         "courseName": "操作系统",
- *         "section": "05",
- *         "teacher": "杜智华",
- *         "room": "致理楼L1-601",
- *         "weekday": 3,
- *         "weekdayName": "星期三",
- *         "beginUnit": 1,
- *         "endUnit": 2,
- *         "startTime": "08:00",
- *         "endTime": "09:50",
- *         "weekRange": "1-17",
- *         "weeks": [1, 2, 3, "..."],
- *         "isAdjusted": false
- *       }
- *     ]
- *   },
- *   "errorCode": null,
- *   "errorMessage": null,
- *   "traceId": "20260618-ABC123",
- *   "elapsedMs": 4321
+ *     "courses": [...]
+ *   }
  * }
  * }</pre>
  *
@@ -71,7 +40,7 @@ import java.util.concurrent.Callable;
  */
 @Command(
     name = "list",
-    description = "List schedule courses from SZU ehall",
+    description = "List schedule courses from static snapshot (MVP)",
     mixinStandardHelpOptions = true
 )
 public class ScheduleListCommand implements Callable<Integer> {
@@ -89,12 +58,6 @@ public class ScheduleListCommand implements Callable<Integer> {
     @Option(names = {"-f", "--format"}, description = "Output format: json or human", defaultValue = "json")
     private String format;
 
-    @Option(names = {"-e", "--env-file"}, description = "Path to .env file for credentials")
-    private String envFile;
-
-    @Option(names = {"--dry-run"}, description = "Dry-run mode (unit test fixture only)")
-    private boolean dryRun;
-
     @Override
     public Integer call() {
         PrintWriter out = spec.commandLine().getOut();
@@ -102,52 +65,18 @@ public class ScheduleListCommand implements Callable<Integer> {
         String traceId = Tracer.getInstance().generateTraceId();
 
         try {
-            if (dryRun) {
+            if (username == null || username.isBlank()) {
                 long elapsed = System.currentTimeMillis() - startMs;
-                out.println(CommandOutput.formatResult(true, buildDryRunData(),
-                    null, null, traceId, elapsed, format));
-                return 0;
+                out.println(CommandOutput.formatResult(false, null,
+                    "INVALID_REQUEST", "Missing required option: --username",
+                    traceId, elapsed, format));
+                return 2;
             }
 
-            if (envFile != null) {
-                Path envPath = Path.of(envFile);
-                if (!Files.exists(envPath)) {
-                    long elapsed = System.currentTimeMillis() - startMs;
-                    out.println(CommandOutput.formatResult(false, null,
-                        "INVALID_REQUEST", "env file not found: " + envFile,
-                        traceId, elapsed, format));
-                    return 3;
-                }
-                ConfigManager.getInstance().loadEnvFile(envPath);
-            }
-
-            Map<String, String> effectiveEnv = new LinkedHashMap<>(System.getenv());
-            if (envFile != null) {
-                effectiveEnv.putAll(ConfigManager.getInstance().envFileProps());
-            }
-
-            Account account = AccountResolver.resolve(username, effectiveEnv);
-
-            ConfigManager.getInstance().load();
-            EhallScheduleClient client = new EhallScheduleClient(
-                account,
-                ConfigManager.getInstance().browser(),
-                RetryPolicies.defaultBooking());
-
-            ScheduleListResult result = client.list();
+            ScheduleListResult result = new ScheduleListClient().list();
 
             long elapsed = System.currentTimeMillis() - startMs;
             return formatAndOutput(out, result, traceId, elapsed);
-        } catch (AccountResolutionException e) {
-            long elapsed = System.currentTimeMillis() - startMs;
-            out.println(CommandOutput.formatResult(false, null,
-                "CREDENTIAL_NOT_FOUND", e.getMessage(), traceId, elapsed, format));
-            return 3;
-        } catch (BookingException e) {
-            long elapsed = System.currentTimeMillis() - startMs;
-            out.println(CommandOutput.formatResult(false, null,
-                e.code().name(), e.getMessage(), traceId, elapsed, format));
-            return CommandOutput.exitCodeFor(e.code());
         } catch (IllegalArgumentException e) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
@@ -161,8 +90,8 @@ public class ScheduleListCommand implements Callable<Integer> {
         }
     }
 
-    private int formatAndOutput(PrintWriter out, ScheduleListResult result,
-                                String traceId, long elapsedMs) {
+    int formatAndOutput(PrintWriter out, ScheduleListResult result,
+                        String traceId, long elapsedMs) {
         if (result instanceof ScheduleListResult.Success s) {
             ObjectNode data = buildSuccessData(s);
             out.println(CommandOutput.formatResult(true, data, null, null,
@@ -212,30 +141,5 @@ public class ScheduleListCommand implements Callable<Integer> {
         node.set("weeks", weeks);
         node.put("isAdjusted", c.isAdjusted());
         return node;
-    }
-
-    private static ObjectNode buildDryRunData() {
-        ObjectNode data = JSON.createObjectNode();
-        data.put("snapshotAt",
-            LocalDate.now().atStartOfDay(ZoneId.systemDefault()).format(SNAPSHOT_FMT));
-        data.put("count", 1);
-        ArrayNode courses = JSON.createArrayNode();
-        ObjectNode stub = JSON.createObjectNode();
-        stub.put("courseName", "dry-run-course");
-        stub.put("section", "00");
-        stub.put("teacher", "dry-run-teacher");
-        stub.put("room", "dry-run-room");
-        stub.put("weekday", 1);
-        stub.put("weekdayName", "星期一");
-        stub.put("beginUnit", 1);
-        stub.put("endUnit", 2);
-        stub.put("startTime", "08:00");
-        stub.put("endTime", "09:50");
-        stub.put("weekRange", "1-17");
-        stub.set("weeks", JSON.createArrayNode());
-        stub.put("isAdjusted", false);
-        courses.add(stub);
-        data.set("courses", courses);
-        return data;
     }
 }

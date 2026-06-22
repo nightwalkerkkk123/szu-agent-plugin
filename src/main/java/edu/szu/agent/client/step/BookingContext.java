@@ -8,14 +8,59 @@ import edu.szu.agent.domain.Homework;
 import edu.szu.agent.domain.HomeworkAttachment;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 
 /**
  * Context passed through the booking pipeline.
  *
+ * <p>Per the architecture-deepening plan (改动 5, 降级路径): this class
+ * services three otherwise-independent pipelines (booking / schedule /
+ * homework download). The field set is grouped below by which pipeline
+ * owns it. A future refactor may split this into a {@code sealed} hierarchy
+ * with {@code BookingContext / ScheduleContext / HomeworkContext} and
+ * {@code BookingStep<T extends BookingContext>}; for now we accept the
+ * cross-pipeline field visibility in exchange for not breaking the 30+
+ * files that pass {@code BookingContext} around. Each pipeline should
+ * only read/write its own fields — the grouping is the contract.
+ *
+ * <h2>Booking pipeline (VenueBookingClient)</h2>
+ * <ul>
+ *   <li>{@link #request()} — input</li>
+ *   <li>{@link #account()} — input</li>
+ *   <li>{@link #selectedVenue()} / {@link #selectedVenue(String)} — mutable</li>
+ *   <li>{@link #lastFailure()} / {@link #lastFailure(BookingResult.Failure)} — mutable</li>
+ *   <li>{@link #withSelectedVenue(String)} / {@link #withLastFailure(BookingResult.Failure)} —
+ *       immutable-style helpers</li>
+ * </ul>
+ *
+ * <h2>Schedule pipeline (EhallScheduleClient)</h2>
+ * <ul>
+ *   <li>{@link #account()} — input</li>
+ *   <li>{@link #username()} / {@link #username(String)} — input</li>
+ *   <li>{@link #scheduleCourses()} / {@link #scheduleCourses(List)} — mutable</li>
+ *   <li>{@link #cacheHit()} / {@link #cacheHit(boolean)} — cache status</li>
+ *   <li>{@link #cacheFetchedAt()} / {@link #cacheFetchedAt(Instant)} — cache timestamp</li>
+ * </ul>
+ *
+ * <h2>Homework pipeline (ChaoxingHomeworkClient, ChaoxingAttachmentDownloadClient)</h2>
+ * <ul>
+ *   <li>{@link #username()} / {@link #username(String)} — input</li>
+ *   <li>{@link #homeworks()} / {@link #homeworks(List)} — mutable (list flow)</li>
+ *   <li>{@link #homeworkId()} / {@link #homeworkId(String)} — input (download flow)</li>
+ *   <li>{@link #attachments()} / {@link #attachments(List)} — mutable (download flow)</li>
+ *   <li>{@link #outputDir()} / {@link #outputDir(Path)} — input (download flow)</li>
+ * </ul>
+ *
+ * <h2>Cross-cutting</h2>
+ * <ul>
+ *   <li>{@link #sessionOk()} / {@link #sessionOk(boolean)} — set by
+ *       {@code RestoreSessionStep}, read by {@code CasLoginStep} across all
+ *       pipelines</li>
+ * </ul>
+ *
  * <p>The {@code request} and {@code account} fields are final (immutable
- * inputs set once by the caller). The mutable fields ({@code selectedVenue},
- * {@code lastFailure}, {@code homeworks}, etc.) are populated by steps as
+ * inputs set once by the caller). The mutable fields are populated by steps as
  * the pipeline progresses. {@link #withSelectedVenue(String)} and
  * {@link #withLastFailure(BookingResult.Failure)} provide an immutable-style
  * API for booking steps; homework/schedule steps mutate the relevant fields
@@ -28,17 +73,30 @@ import java.util.List;
  */
 public final class BookingContext {
 
+    // ---------- booking pipeline ----------
     private final BookingRequest request;
     private final Account account;
     private String selectedVenue;
     private BookingResult.Failure lastFailure;
-    private List<Homework> homeworks;
+
+    // ---------- cross-cutting ----------
     private boolean sessionOk;
     private String username;
+
+    // ---------- homework pipeline ----------
+    private List<Homework> homeworks;
     private String homeworkId;
     private List<HomeworkAttachment> attachments;
     private Path outputDir;
+
+    // ---------- schedule pipeline ----------
     private List<CourseEntry> scheduleCourses;
+
+    // ---------- cache (used by schedule + future pipelines) ----------
+    /** Whether the last CacheLookupStep hit cached data. */
+    private boolean cacheHit;
+    /** When the cached data was fetched (populated on cache hit). */
+    private Instant cacheFetchedAt;
 
     public BookingContext(BookingRequest request) {
         this(request, null, null, null);
@@ -70,6 +128,8 @@ public final class BookingContext {
         return new BookingContext(request, account, selectedVenue, lastFailure);
     }
 
+    // ---------- booking pipeline accessors ----------
+
     public BookingRequest request() {
         return request;
     }
@@ -94,13 +154,7 @@ public final class BookingContext {
         this.lastFailure = lastFailure;
     }
 
-    public List<Homework> homeworks() {
-        return homeworks;
-    }
-
-    public void homeworks(List<Homework> homeworks) {
-        this.homeworks = homeworks;
-    }
+    // ---------- cross-cutting accessors ----------
 
     public boolean sessionOk() {
         return sessionOk;
@@ -116,6 +170,16 @@ public final class BookingContext {
 
     public void username(String username) {
         this.username = username;
+    }
+
+    // ---------- homework pipeline accessors ----------
+
+    public List<Homework> homeworks() {
+        return homeworks;
+    }
+
+    public void homeworks(List<Homework> homeworks) {
+        this.homeworks = homeworks;
     }
 
     /**
@@ -155,6 +219,8 @@ public final class BookingContext {
         this.outputDir = outputDir;
     }
 
+    // ---------- schedule pipeline accessors ----------
+
     /**
      * Parsed schedule courses (US-009). Populated by
      * {@code ParseScheduleStep}. {@code null} for non-schedule flows.
@@ -166,6 +232,46 @@ public final class BookingContext {
     public void scheduleCourses(List<CourseEntry> scheduleCourses) {
         this.scheduleCourses = scheduleCourses;
     }
+
+    // ---------- cache accessors ----------
+
+    /**
+     * Whether the last CacheLookupStep hit cached data.
+     */
+    public boolean cacheHit() {
+        return cacheHit;
+    }
+
+    /**
+     * Sets the cache hit flag.
+     *
+     * @param cacheHit {@code true} if cache was hit
+     * @since 0.3.0
+     * @author 王子豪
+     */
+    public void cacheHit(boolean cacheHit) {
+        this.cacheHit = cacheHit;
+    }
+
+    /**
+     * When the cached data was fetched (populated on cache hit).
+     */
+    public Instant cacheFetchedAt() {
+        return cacheFetchedAt;
+    }
+
+    /**
+     * Sets the cache fetched-at timestamp.
+     *
+     * @param cacheFetchedAt timestamp from the cache envelope
+     * @since 0.3.0
+     * @author 王子豪
+     */
+    public void cacheFetchedAt(Instant cacheFetchedAt) {
+        this.cacheFetchedAt = cacheFetchedAt;
+    }
+
+    // ---------- helpers ----------
 
     public BookingResult.Success success(String venueName, String confirmation) {
         return new BookingResult.Success(venueName, confirmation);

@@ -6,6 +6,7 @@ import edu.szu.agent.domain.calendar.AcademicEventType;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * {@code calendar_get} CampusTask — returns the SZU academic calendar.
@@ -39,6 +40,15 @@ public class CalendarTask implements CampusTask<List<AcademicEvent>> {
     @Override
     public String description() {
         return "查询深大校历(静态 MVP)";
+    }
+
+    @Override
+    public Map<String, Object> inputSchema() {
+        return TaskInputSchema.optionalOnly(
+            Map.of("academicYear", Map.of(
+                "type", "string",
+                "description", "学年,例如 2025-2026"))
+        );
     }
 
     @Override

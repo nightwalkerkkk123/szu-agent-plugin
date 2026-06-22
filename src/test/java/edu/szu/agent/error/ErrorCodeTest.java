@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tests for {@link ErrorCode} enum metadata.
  *
- * <p>Per ADR-0006 §二.1: 12 values. Per §二.2: 5 metadata fields per constant.
+ * <p>Per ADR-0006 §二.1: 34 values. Per §二.2: 5 metadata fields per constant.
  *
  * @since 0.1.0
  * @author 王子豪
@@ -17,12 +17,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrorCodeTest {
 
     @Test
-    @DisplayName("has exactly 29 constants")
-    void hasTwentyConstants() {
-        // 14 existing + 3 SESSION_* (US-007) + 3 ATTACHMENT_*/OUTPUT_DIR_INVALID (US-008)
-        // + 3 SCHEDULE_* (US-009) + 1 CALENDAR_PARSE_FAILED (US-010)
-        // + 2 NOTICE_* (US-011) + 3 EXTERNAL_SKILL_* = 29
-        assertThat(ErrorCode.values()).hasSize(29);
+    @DisplayName("has exactly 38 constants")
+    void hasThirtyEightConstants() {
+        // 14 original + 3 SESSION_* + 3 ATTACHMENT_* + 5 SCHEDULE_*
+        // + 3 CHAOXING_* + 2 EXAM_* + 2 KNOWLEDGE_* + 1 CALENDAR_*
+        // + 2 NOTICE_* + 3 EXTERNAL_SKILL_* = 38
+        assertThat(ErrorCode.values()).hasSize(38);
     }
 
     @Test

@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Runs picocli end-to-end and asserts JSON / human format output.
  * Exercises the wiring between {@code Main} → subcommands → Skills
- * registry → MCPToolProvider / MCPToolCallHandler.
+ * registry → ToolSchema / MCPToolCallHandler.
  *
  * <p>// 编程技术: Lambda / @Nested
  *

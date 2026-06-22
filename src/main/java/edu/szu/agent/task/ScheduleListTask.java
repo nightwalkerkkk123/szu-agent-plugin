@@ -1,10 +1,10 @@
 package edu.szu.agent.task;
 
-import edu.szu.agent.account.Account;
-import edu.szu.agent.client.EhallScheduleClient;
+import edu.szu.agent.client.schedule.ScheduleListClient;
 import edu.szu.agent.domain.ScheduleListResult;
 
-import java.util.Objects;
+import java.util.List;
+import java.util.Map;
 
 /**
  * {@code schedule_list} CampusTask — queries the ehall schedule grid.
@@ -14,9 +14,9 @@ import java.util.Objects;
  *   <li>{@code username} (required) — student ID</li>
  * </ul>
  *
- * <p>The actual credentials are held by the injected client; this task is a
- * thin adapter translating {@link TaskInput} into a result, mirroring
- * {@link HomeworkTask}.
+ * <p>This MVP implementation ships with a static snapshot of the schedule
+ * page so the Skill is always available. It can later be replaced by
+ * browser automation after CAS login.
  *
  * // 编程技术: 泛型 / 枚举 / Lambda
  *
@@ -25,12 +25,17 @@ import java.util.Objects;
  */
 public class ScheduleListTask implements CampusTask<ScheduleListResult> {
 
-    private final EhallScheduleClient client;
-    private final Account account;
+    private final ScheduleListClient client;
 
-    public ScheduleListTask(EhallScheduleClient client, Account account) {
-        this.client = Objects.requireNonNull(client, "client");
-        this.account = Objects.requireNonNull(account, "account");
+    public ScheduleListTask() {
+        this(new ScheduleListClient());
+    }
+
+    /**
+     * Test constructor — inject a custom client.
+     */
+    public ScheduleListTask(ScheduleListClient client) {
+        this.client = client;
     }
 
     @Override
@@ -40,7 +45,12 @@ public class ScheduleListTask implements CampusTask<ScheduleListResult> {
 
     @Override
     public String description() {
-        return "查询学生课表";
+        return "查询学生课表(静态 MVP)";
+    }
+
+    @Override
+    public Map<String, Object> inputSchema() {
+        return TaskInputSchema.requiredSingle("username", "学号");
     }
 
     @Override

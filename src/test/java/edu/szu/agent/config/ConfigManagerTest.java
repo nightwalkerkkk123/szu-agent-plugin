@@ -76,6 +76,18 @@ class ConfigManagerTest {
     }
 
     @Test
+    @DisplayName("cacheStore() resolves ${user.home} placeholder to user.home")
+    void cacheStore_resolvesUserHomePlaceholder() {
+        ConfigManager config = ConfigManager.getInstance();
+        config.setYamlProperty("cache.home", "${user.home}");
+        config.setYamlProperty("cache.ttl.schedule", "PT24H");
+
+        assertThat(config.cacheStore().defaultPath("schedule", "k"))
+            .isEqualTo(Path.of(System.getProperty("user.home"))
+                .resolve(".szu-agent/cache/schedule/k.json"));
+    }
+
+    @Test
     @DisplayName("get() returns null for keys not present in any layer")
     void get_returnsNullForMissingKey() {
         ConfigManager.getInstance().load();

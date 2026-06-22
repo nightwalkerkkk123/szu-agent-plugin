@@ -3,6 +3,7 @@ package edu.szu.agent.mcp;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.szu.agent.cli.Main;
+import edu.szu.agent.skill.Skills;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -112,7 +113,7 @@ public final class McpStdioServer {
         return switch (method) {
             case "initialize" -> response(id, initializeResult());
             case "notifications/initialized" -> null;
-            case "tools/list" -> response(id, MCPToolProvider.listTools());
+            case "tools/list" -> response(id, ToolSchema.toolsList(Skills.getInstance().all()));
             case "tools/call" -> response(id, handleToolCall(request));
             default -> errorResponse(id, -32601, "Method not found: " + method);
         };

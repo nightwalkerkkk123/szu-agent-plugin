@@ -2,6 +2,7 @@ package edu.szu.agent.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import edu.szu.agent.mcp.MCPToolCallHandler;
 import edu.szu.agent.skill.Skill;
 import edu.szu.agent.skill.Skills;
@@ -56,6 +57,7 @@ public class SkillCommand implements Callable<Integer> {
     }
 
     static final ObjectMapper JSON = new ObjectMapper()
+        .registerModule(new JavaTimeModule())
         .enable(SerializationFeature.INDENT_OUTPUT);
 
     static String toJson(Object value) {

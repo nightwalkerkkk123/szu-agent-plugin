@@ -1,5 +1,7 @@
 package edu.szu.agent.task;
 
+import java.util.Map;
+
 /**
  * Generic campus task contract — every campus-bound action
  * (booking, notice, growth, ...) implements this.
@@ -55,4 +57,21 @@ public interface CampusTask<T> {
      * @since 0.1.0
      */
     T execute(TaskInput input);
+
+    /**
+     * Returns the MCP {@code inputSchema} for this task.
+     *
+     * <p>Per the architecture-deepening plan (改动 2): schema is declared on
+     * the task itself so that new skills automatically participate in
+     * {@code tools/list} without adding a switch branch in {@link edu.szu.agent.mcp.ToolSchema}.
+     *
+     * @return a JSON-Schema-shaped map with {@code type: "object"} and
+     *         {@code properties} / {@code required} keys
+     * @since 0.4.0
+     */
+    default Map<String, Object> inputSchema() {
+        return Map.of(
+            "type", "object",
+            "additionalProperties", true);
+    }
 }

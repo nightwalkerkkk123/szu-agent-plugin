@@ -19,6 +19,10 @@ dependency-reduced-pom.xml
 .DS_Store
 Thumbs.db
 
+# Editor swap files
+*.swp
+*.swo
+
 # Logs
 *.log
 

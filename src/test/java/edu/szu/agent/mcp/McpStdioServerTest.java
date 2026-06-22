@@ -65,11 +65,11 @@ class McpStdioServerTest {
         @SuppressWarnings("unchecked")
         java.util.List<Map<String, Object>> tools = (java.util.List<Map<String, Object>>) result.get("tools");
 
-        assertThat(tools).hasSize(7);
+        assertThat(tools).hasSize(8);
         assertThat(tools.stream().map(t -> t.get("name")))
             .containsExactlyInAnyOrder("booking_venue", "kb_query",
                 "homework_list", "homework_download", "schedule_list",
-                "calendar_get", "notice_list");
+                "calendar_get", "notice_list", "exam_list");
     }
 
     @Test

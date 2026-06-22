@@ -6,6 +6,9 @@ import edu.szu.agent.domain.HomeworkDownloadRequest;
 import edu.szu.agent.domain.HomeworkDownloadResult;
 
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -48,6 +51,45 @@ public class HomeworkDownloadTask implements CampusTask<HomeworkDownloadResult> 
     @Override
     public String description() {
         return "下载畅课作业的全部附件到本地目录";
+    }
+
+    @Override
+    public Map<String, Object> inputSchema() {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+
+        Map<String, Object> properties = new LinkedHashMap<>();
+
+        Map<String, Object> username = new LinkedHashMap<>();
+        username.put("type", "string");
+        username.put("description", "学号");
+        properties.put("username", username);
+
+        Map<String, Object> homeworkId = new LinkedHashMap<>();
+        homeworkId.put("type", "string");
+        homeworkId.put("description", "作业编号");
+        properties.put("homeworkId", homeworkId);
+
+        Map<String, Object> outputDir = new LinkedHashMap<>();
+        outputDir.put("type", "string");
+        outputDir.put("description", "本地输出目录");
+        properties.put("outputDir", outputDir);
+
+        Map<String, Object> throttleMs = new LinkedHashMap<>();
+        throttleMs.put("type", "integer");
+        throttleMs.put("description", "下载间隔毫秒,默认 500");
+        throttleMs.put("default", 500);
+        properties.put("throttleMs", throttleMs);
+
+        Map<String, Object> maxRetries = new LinkedHashMap<>();
+        maxRetries.put("type", "integer");
+        maxRetries.put("description", "最大重试次数,默认 2");
+        maxRetries.put("default", 2);
+        properties.put("maxRetries", maxRetries);
+
+        schema.put("properties", properties);
+        schema.put("required", List.of("username", "homeworkId", "outputDir"));
+        return schema;
     }
 
     @Override

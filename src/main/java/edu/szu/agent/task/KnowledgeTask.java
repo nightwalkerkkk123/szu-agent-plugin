@@ -5,6 +5,7 @@ import edu.szu.agent.knowledge.KnowledgeRepository;
 import edu.szu.agent.knowledge.KnowledgeResult;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * {@code kb_query} CampusTask — answers SZU knowledge-base queries.
@@ -45,6 +46,22 @@ public class KnowledgeTask implements CampusTask<List<KnowledgeResult>> {
     @Override
     public String description() {
         return "深大知识库查询";
+    }
+
+    @Override
+    public Map<String, Object> inputSchema() {
+        return TaskInputSchema.schemaWithOptional(
+            "query", "查询关键词,例如 图书馆、食堂、选课",
+            Map.of(
+                "limit", Map.of(
+                    "type", "integer",
+                    "description", "最大返回条数,默认 5",
+                    "default", 5),
+                "category", Map.of(
+                    "type", "string",
+                    "description", "可选分类过滤: CAMPUS_BASICS / DINING / LIBRARY / ACADEMICS / FAQ")
+            )
+        );
     }
 
     @Override

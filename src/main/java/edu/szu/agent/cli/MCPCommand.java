@@ -2,7 +2,8 @@ package edu.szu.agent.cli;
 
 import edu.szu.agent.mcp.McpStdioServer;
 import edu.szu.agent.mcp.MCPToolCallHandler;
-import edu.szu.agent.mcp.MCPToolProvider;
+import edu.szu.agent.mcp.ToolSchema;
+import edu.szu.agent.skill.Skills;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
@@ -75,7 +76,7 @@ public class MCPCommand implements Callable<Integer> {
         @Override
         public Integer call() {
             PrintWriter out = spec.commandLine().getOut();
-            out.println(SkillCommand.toJson(MCPToolProvider.listTools()));
+            out.println(SkillCommand.toJson(ToolSchema.toolsList(Skills.getInstance().all())));
             return 0;
         }
     }

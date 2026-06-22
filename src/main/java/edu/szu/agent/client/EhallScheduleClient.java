@@ -2,16 +2,17 @@ package edu.szu.agent.client;
 
 import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
+import edu.szu.agent.client.cache.CacheStore;
 import edu.szu.agent.client.session.SessionProbe;
 import edu.szu.agent.client.session.SessionStore;
 import edu.szu.agent.client.step.BookingContext;
 import edu.szu.agent.client.step.BookingStep;
+import edu.szu.agent.client.step.CachePipelineBuilder;
 import edu.szu.agent.client.step.CasLoginStep;
 import edu.szu.agent.client.step.NavigateToScheduleStep;
 import edu.szu.agent.client.step.ParseScheduleStep;
-import edu.szu.agent.client.step.PersistSessionStep;
-import edu.szu.agent.client.step.RestoreSessionStep;
 import edu.szu.agent.client.step.StepOutcome;
+import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.ScheduleListResult;
 import edu.szu.agent.error.BookingException;
@@ -81,10 +82,33 @@ public class EhallScheduleClient {
                                 SessionProbe sessionProbe,
                                 Duration sessionTtl) {
         this(account, browser, retryPolicy,
-            defaultSteps(
+            defaultStepsWithCache(
                 Objects.requireNonNull(sessionStore, "sessionStore"),
                 Objects.requireNonNull(sessionProbe, "sessionProbe"),
-                Objects.requireNonNull(sessionTtl, "sessionTtl")));
+                Objects.requireNonNull(sessionTtl, "sessionTtl"),
+                null, null));
+    }
+
+    /**
+     * Production constructor — wires caching into the schedule pipeline.
+     * Pipeline becomes:
+     * {@code RestoreSession → CasLogin → CacheLookup (short-circuits on hit)
+     * → NavigateToSchedule → ParseSchedule → CacheWrite → PersistSession}.
+     *
+     * @since 0.3.0
+     */
+    public EhallScheduleClient(Account account,
+                                BrowserLifecycle browser,
+                                RetryPolicy retryPolicy,
+                                SessionStore sessionStore,
+                                SessionProbe sessionProbe,
+                                Duration sessionTtl,
+                                CacheStore cacheStore) {
+        this(account, browser, retryPolicy,
+            defaultStepsWithCache(
+                sessionStore, sessionProbe, sessionTtl,
+                Objects.requireNonNull(cacheStore, "cacheStore"),
+                Objects.requireNonNull(account, "account")));
     }
 
     /**
@@ -103,16 +127,30 @@ public class EhallScheduleClient {
     private static List<BookingStep> defaultSteps(SessionStore store,
                                                   SessionProbe probe,
                                                   Duration ttl) {
+        return defaultStepsWithCache(store, probe, ttl, null, null);
+    }
+
+    // 编程技术: 泛型 / Lambda / Jackson TypeReference
+    private static List<BookingStep> defaultStepsWithCache(SessionStore store,
+                                                            SessionProbe probe,
+                                                            Duration ttl,
+                                                            CacheStore cacheStore,
+                                                            Account account) {
         List<BookingStep> built = new ArrayList<>();
-        if (store != null && probe != null && ttl != null) {
-            built.add(new RestoreSessionStep(store, probe, ttl));
-        }
+        built.addAll(CachePipelineBuilder.sessionRestore(store, probe, ttl));
         built.add(new CasLoginStep(NavigateToScheduleStep.EHALL_SCHEDULE_URL));
+
+        if (cacheStore != null && account != null) {
+            String key = "schedule-" + account.studentId();
+            built.addAll(CachePipelineBuilder.scheduleLookupAndWrite(
+                cacheStore, key,
+                (ctx, courses) -> ctx.scheduleCourses(courses),
+                BookingContext::scheduleCourses));
+        }
+
         built.add(new NavigateToScheduleStep());
         built.add(new ParseScheduleStep());
-        if (store != null) {
-            built.add(new PersistSessionStep(store));
-        }
+        built.addAll(CachePipelineBuilder.sessionPersist(store));
         return List.copyOf(built);
     }
 
@@ -166,6 +204,13 @@ public class EhallScheduleClient {
                 BookingResult.Failure bf = f.result();
                 log.warn("Step {} failed: {}", step.name(), bf.message());
                 return new ScheduleListResult.Failure(bf.code(), bf.message());
+            }
+            if (outcome instanceof StepOutcome.ShortCircuit sc) {
+                // Cache hit (or other self-sufficient step): stop the pipeline
+                // and skip remaining browser-automation steps.
+                ctx = sc.nextContext();
+                log.info("Step {} short-circuited the pipeline", step.name());
+                break;
             }
         }
 
