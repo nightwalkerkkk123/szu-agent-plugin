@@ -40,6 +40,17 @@ done
 
 mkdir -p "$LOG_DIR"
 
+# Load project .env into this shell so the daemon inherits credentials.
+# Values are never logged; only the fact that the file was loaded is printed.
+ENV_FILE="$REPO_ROOT/.env"
+if [[ -f "$ENV_FILE" ]]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "$ENV_FILE"
+    set +a
+    echo "已加载凭据文件: $ENV_FILE (密码内容不显示)"
+fi
+
 if [[ "$MODE" == "stop" ]]; then
     if [[ -f "$PID_FILE" ]] && kill "$(cat "$PID_FILE")" 2>/dev/null; then
         echo "已停止后台服务 (PID $(cat "$PID_FILE"))"

@@ -101,27 +101,11 @@ public class Main implements Callable<Integer> {
         }
 
         if (!existing.contains("homework_list")) {
-            ChaoxingHomeworkClient client = new ChaoxingHomeworkClient(
-                placeholder,
-                ConfigManager.getInstance().browser(),
-                RetryPolicies.defaultBooking());
-            registry.register(Skill.of(new HomeworkTask(client, placeholder)));
+            registry.register(Skill.of(new HomeworkTask()));
         }
 
         if (!existing.contains("homework_download")) {
-            SessionStore store = new SessionStore(
-                Path.of(System.getProperty("user.home")),
-                placeholder.studentId());
-            SessionProbe probe = new SessionProbe(
-                "https://lms.szu.edu.cn/user/index", ".todo-list-container");
-            ChaoxingAttachmentDownloadClient client = new ChaoxingAttachmentDownloadClient(
-                placeholder,
-                ConfigManager.getInstance().browser(),
-                RetryPolicies.defaultBooking(),
-                store,
-                probe,
-                Duration.ofDays(30));
-            registry.register(Skill.of(new HomeworkDownloadTask(client, placeholder)));
+            registry.register(Skill.of(new HomeworkDownloadTask()));
         }
 
         if (!existing.contains("schedule_list")) {

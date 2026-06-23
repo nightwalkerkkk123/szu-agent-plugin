@@ -3,6 +3,7 @@ package edu.szu.agent.task;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.account.AccountResolver;
 import edu.szu.agent.client.VenueBookingClient;
+import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Campus;
@@ -67,7 +68,7 @@ public class BookingTask implements CampusTask<BookingResult> {
 
     @Override
     public String description() {
-        return "体育场馆定时预约";
+        return "体育场馆定时预约。调用前请先阅读 docs/tools/booking-venue.md;真实预约会占用实际名额,调用前必须获得用户明确确认。";
     }
 
     @Override
@@ -79,7 +80,7 @@ public class BookingTask implements CampusTask<BookingResult> {
 
         Map<String, Object> username = new LinkedHashMap<>();
         username.put("type", "string");
-        username.put("description", "学号");
+        username.put("description", "学号;若未提供,默认使用环境变量 SZU_USERNAME 配置的账号");
         properties.put("username", username);
 
         Map<String, Object> campus = new LinkedHashMap<>();
@@ -89,7 +90,7 @@ public class BookingTask implements CampusTask<BookingResult> {
 
         Map<String, Object> sport = new LinkedHashMap<>();
         sport.put("type", "string");
-        sport.put("description", "运动项目(TENNIS/BADMINTON/...)");
+        sport.put("description", "运动项目枚举名。粤海校区: BADMINTON/FOOTBALL/VOLLEYBALL/TENNIS/BASKETBALL/SQUASH/GYM_HEAVY(一楼重量型健身)/GYM_AEROBIC(二楼有氧健身)/SWIMMING; 丽湖校区: BADMINTON/VOLLEYBALL/TENNIS/BASKETBALL/SWIMMING/TABLE_TENNIS/DANCE/POOL/CYCLING/MAGIC_MIRROR/BOARD_GAME/GYM(健身房)/YOGA/PICKLEBALL/SHUTTLECOCK");
         properties.put("sport", sport);
 
         Map<String, Object> date = new LinkedHashMap<>();
@@ -99,29 +100,31 @@ public class BookingTask implements CampusTask<BookingResult> {
         properties.put("date", date);
 
         Map<String, Object> timeSlot = new LinkedHashMap<>();
-        timeSlot.put("type", "object");
-        timeSlot.put("description", "预约时段,例如 {\"start\": \"19:00\", \"end\": \"20:00\"}");
-        Map<String, Object> tsProps = new LinkedHashMap<>();
-        Map<String, Object> start = new LinkedHashMap<>();
-        start.put("type", "string");
-        start.put("description", "HH:mm 格式");
-        tsProps.put("start", start);
-        Map<String, Object> end = new LinkedHashMap<>();
-        end.put("type", "string");
-        end.put("description", "HH:mm 格式");
-        tsProps.put("end", end);
-        timeSlot.put("properties", tsProps);
+        timeSlot.put("type", "string");
+        timeSlot.put("description", "预约时段,HH:mm-HH:mm 格式,例如 12:00-13:00 或 19:00-20:00。系统只支持整点 1 小时时段(08:00-22:00)");
         properties.put("timeSlot", timeSlot);
 
         Map<String, Object> preferredVenue = new LinkedHashMap<>();
         preferredVenue.put("type", "integer");
-        preferredVenue.put("description", "1-based 场地序号,默认 1");
+        preferredVenue.put("description", "1-based 偏好序号,默认 1。对球场类项目指第几个可预约球场;对健身房类容量项目指第几个可用容量时段/区域");
         preferredVenue.put("default", 1);
         properties.put("preferredVenue", preferredVenue);
 
         schema.put("properties", properties);
-        schema.put("required", List.of("username", "campus", "sport", "date", "timeSlot"));
+        schema.put("required", List.of("campus", "sport", "date", "timeSlot"));
         return schema;
+    }
+
+    private String resolveUsername(TaskInput input) {
+        String fromInput = input.get("username");
+        if (fromInput != null && !fromInput.isBlank()) {
+            return fromInput;
+        }
+        String fromEnv = ConfigManager.getInstance().get("SZU_USERNAME");
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return fromEnv;
+        }
+        throw new IllegalArgumentException("Missing required parameter: username");
     }
 
     @Override
@@ -138,7 +141,7 @@ public class BookingTask implements CampusTask<BookingResult> {
         TimeSlot slot = TimeSlot.of(input.require("timeSlot"));
 
         int preferredVenue = input.getInt("preferredVenue", 1);
-        String username = input.require("username");
+        String username = resolveUsername(input);
 
         BookingRequest request = BookingRequest.builder()
             .username(username)
