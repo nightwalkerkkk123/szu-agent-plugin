@@ -88,8 +88,16 @@ class McpStdioServerTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> result = (Map<String, Object>) map.get("result");
 
-        assertThat(result.get("success")).isEqualTo(true);
-        assertThat(result).containsKey("traceId");
+        // MCP CallToolResult contract: { content: [{type,text}], isError }.
+        assertThat(result.get("isError")).isEqualTo(false);
+        @SuppressWarnings("unchecked")
+        java.util.List<Map<String, Object>> content =
+            (java.util.List<Map<String, Object>>) result.get("content");
+        assertThat(content).isNotEmpty();
+        assertThat(content.get(0).get("type")).isEqualTo("text");
+        // The business envelope is preserved inside the text content block.
+        String text = String.valueOf(content.get(0).get("text"));
+        assertThat(text).contains("\"success\":true").contains("traceId");
     }
 
     @Test

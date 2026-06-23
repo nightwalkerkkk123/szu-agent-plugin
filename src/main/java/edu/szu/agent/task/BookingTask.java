@@ -84,7 +84,7 @@ public class BookingTask implements CampusTask<BookingResult> {
 
         Map<String, Object> campus = new LinkedHashMap<>();
         campus.put("type", "string");
-        campus.put("description", "校区(YUEHAI/LYULAKU/...)");
+        campus.put("description", "校区(YUEHAI/LIHU)");
         properties.put("campus", campus);
 
         Map<String, Object> sport = new LinkedHashMap<>();

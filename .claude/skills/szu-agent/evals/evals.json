@@ -1,0 +1,19 @@
+{
+  "skill_name": "szu-agent",
+  "evals": [
+    {
+      "id": 0,
+      "name": "calendar-capability-query",
+      "prompt": "深大这学期什么时候开学?帮我查一下校历。我在 /Users/bytedance/szu-agent-plugin 这个项目里。",
+      "expected_output": "通过 szu-agent 服务调用 calendar_get(curl /call 或 MCP 工具),拿到真实校历数据并复述开学日期",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "service-health-troubleshoot",
+      "prompt": "我想用 szu-agent 查课表但好像连不上,帮我看看后台服务起了没,没起就启动它。项目在 /Users/bytedance/szu-agent-plugin。",
+      "expected_output": "curl /health 探活,必要时用 scripts/serve.sh 启动,然后确认可用",
+      "files": []
+    }
+  ]
+}

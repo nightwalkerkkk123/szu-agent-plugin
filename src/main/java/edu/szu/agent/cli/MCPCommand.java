@@ -1,5 +1,6 @@
 package edu.szu.agent.cli;
 
+import edu.szu.agent.mcp.McpHttpServer;
 import edu.szu.agent.mcp.McpStdioServer;
 import edu.szu.agent.mcp.MCPToolCallHandler;
 import edu.szu.agent.mcp.ToolSchema;
@@ -18,6 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * {@code mcp} subcommand — emits MCP protocol responses from the CLI.
@@ -121,14 +123,30 @@ public class MCPCommand implements Callable<Integer> {
 
     @Command(
         name = "serve",
-        description = "Run the stdio MCP server (for Claude Code / Desktop / OpenClaw hosts)"
+        description = "Run the MCP server: stdio (default) for one host, or "
+            + "--http for a resident daemon shared by Skill curl + MCP hosts"
     )
     public static class McpServeAction implements Callable<Integer> {
 
         private static final Logger LOG = LoggerFactory.getLogger(McpServeAction.class);
 
+        /** Default daemon port; chosen to avoid common dev ports (3000/8080/8000). */
+        private static final int DEFAULT_PORT = 8765;
+
+        @Option(names = "--http",
+            description = "Run as a resident HTTP daemon instead of stdio")
+        private boolean http;
+
+        @Option(names = "--port",
+            description = "HTTP daemon port (default: " + DEFAULT_PORT + ")")
+        private int port = DEFAULT_PORT;
+
         @Override
         public Integer call() {
+            return http ? serveHttp() : serveStdio();
+        }
+
+        private Integer serveStdio() {
             try {
                 new McpStdioServer().run();
                 return 0;
@@ -138,6 +156,29 @@ public class MCPCommand implements Callable<Integer> {
                 LOG.error("MCP server failed", e);
                 return 1;
             }
+        }
+
+        private Integer serveHttp() {
+            McpHttpServer daemon = new McpHttpServer(port);
+            CountDownLatch shutdown = new CountDownLatch(1);
+            try {
+                daemon.start();
+            } catch (Exception e) {
+                LOG.error("Failed to start MCP HTTP daemon on port {}", port, e);
+                return 1;
+            }
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                daemon.stop();
+                shutdown.countDown();
+            }));
+            try {
+                // Block until the JVM receives a termination signal.
+                shutdown.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                daemon.stop();
+            }
+            return 0;
         }
     }
 }

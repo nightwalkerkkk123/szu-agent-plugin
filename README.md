@@ -85,6 +85,138 @@ Agent 端只需 `exec` 本 CLI 并解析 stdout JSON / 退出码。
 凭证通过 `SZU_PASSWORD_XXXX` 进程环境变量 / `--env-file` 指向的 .env / Skill wrapper 注入(优先级见 ADR-0005 D1)。
 详细契约见 [`docs/PRD.md`](docs/PRD.md) §5。
 
+## 作为常驻服务运行 — 从零到第一次调用(跨机器完整流程)
+
+除按需 fork CLI 外,本项目可跑成一个**常驻 HTTP 服务**:一个热 JVM 同时给
+Skill(`curl`)、MCP 宿主(Claude Code / Desktop)、自带技能三个调用面提供能力,
+调用毫秒级、无重复冷启动。下面是在一台**全新机器**上从零跑通的完整顺序,
+照抄即可,**无需修改任何路径**。
+
+### 阶段 0 — 前置条件
+
+| 用途 | 要求 |
+|---|---|
+| 运行服务 | Java **21+** runtime |
+| 构建 / 测试 | Java **21**(务必;见阶段 2 说明)+ Maven 3.9+ |
+| Skill 调用 | `curl`(macOS / Linux / Win10+ 自带) |
+
+```bash
+git clone <repo-url> szu-agent-plugin && cd szu-agent-plugin
+```
+
+### 阶段 1 — 定位 Java 21
+
+构建必须用 Java 21,更高版本(如 26)会让 Mockito 插桩失败、`mvn test` 报错。
+先把 `JAVA_HOME` 钉到 21,**按安装来源选对应一行**:
+
+macOS / Linux(bash):
+
+```bash
+# macOS · Homebrew 装的 openjdk@21(java_home 找不到它,用 opt 路径):
+export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
+# macOS · 系统安装器装的 JDK:export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
+# Linux:export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+"$JAVA_HOME/bin/java" -version    # 必须显示 21.x
+export PATH="$JAVA_HOME/bin:$PATH"
+```
+
+Windows(cmd;把路径换成你本机 JDK 21 的实际位置,如 `E:\tools\jdk-21`):
+
+```bat
+set "JAVA_HOME=E:\tools\jdk-21"
+set "PATH=%JAVA_HOME%\bin;%PATH%"
+java -version    REM 必须显示 21.x
+```
+
+### 阶段 2 — 构建 fat jar
+
+```bash
+mvn -q -DskipTests package         # 首次会下载依赖;产出 target/szu-agent-plugin.jar
+# 可选:跑测试自证健康(604 测试全绿,同样需 Java 21)
+mvn test
+```
+
+### 阶段 3 — 启动常驻服务(初始化)
+
+服务进程在启动时一次性注册全部 8 个工具到内存,之后常驻、热处理每次调用:
+
+```bash
+# macOS / Linux:
+scripts/serve.sh --background      # 后台启动,默认端口 8765,PID 写入 logs/serve.pid
+#   前台运行(Ctrl-C 停):scripts/serve.sh
+#   换端口:scripts/serve.sh --background --port 9000(同时改下方 .mcp.json 的 URL)
+```
+
+```bat
+REM Windows(cmd):
+scripts\serve.bat --new-window     REM 独立窗口启动(相当于后台),关窗即停
+REM   前台运行(Ctrl-C 停):scripts\serve.bat
+REM   换端口:scripts\serve.bat --new-window --port 9000(同时改下方 .mcp.json 的 URL)
+```
+
+### 阶段 4 — 健康检查 + 确认工具就绪
+
+```bash
+curl localhost:8765/health         # {"status":"ok"} —— 服务活着
+curl -s localhost:8765/tools | grep -o '"name":"[^"]*"'   # 列出 8 个工具名
+```
+
+看到 `calendar_get` / `kb_query` / `schedule_list` / `notice_list` / `exam_list` /
+`homework_list` / `homework_download` / `booking_venue` 即初始化完成。
+
+### 阶段 5 — 三个调用面接入
+
+**A. curl 直调(最底层,验证后端)** — 请求体即 `{name, arguments}`:
+
+```bash
+curl -s localhost:8765/call -H 'Content-Type: application/json' \
+  -d '{"name":"calendar_get","arguments":{}}'        # 返回 {success,data,...,traceId}
+```
+
+**B. 自带 Skill 包装** — `external/skills/szu-campus/run` 从 stdin 读 `{name,arguments}`
+转发给服务,daemon 地址由 `SZU_AGENT_URL` 配置(默认 8765):
+
+```bash
+echo '{"name":"kb_query","arguments":{"query":"图书馆","limit":3}}' \
+  | external/skills/szu-campus/run
+```
+
+**C. MCP 接入 Claude Code** — 项目根 `.mcp.json` 已注册(纯 URL,无绝对路径):
+
+```jsonc
+{ "mcpServers": { "szu-agent": { "type": "http", "url": "http://localhost:8765/mcp" } } }
+```
+
+1. 在本项目目录启动 `claude`;
+2. 首次会提示**批准**项目级 MCP server,批准 `szu-agent`(安全机制);
+3. `/mcp` 应显示 `szu-agent` 已连接、含 8 个工具;
+4. 之后直接说人话即可,无需记命令——见下方"自带技能"。
+
+**最省心 — 自带 Claude Code 技能**:仓库内置 `.claude/skills/szu-agent/` 随仓库分发。
+在本项目目录用 Claude Code 时,说"查深大校历"、"看我的课表"、"szu-agent 起了没"
+之类的话,Claude 会自动触发技能:先探活(必要时启动 daemon)、再按 schema 调用。
+
+### 阶段 6 — 停止服务
+
+```bash
+scripts/serve.sh --stop            # macOS / Linux:停后台服务(读 logs/serve.pid)
+```
+
+Windows:前台模式按 `Ctrl-C`;`--new-window` 模式关闭那个标题为 `SZU Agent :端口` 的窗口即可。
+
+### 故障速查
+
+| 现象 | 处理 |
+|---|---|
+| `/health` 不通 | daemon 没起 → `scripts/serve.sh --background` |
+| `mvn` 报 `Mockito cannot mock` | 用了高版本 JDK → 固定 `JAVA_HOME` 指向 Java 21(阶段 1) |
+| `INVALID_REQUEST: Missing required parameter` | 缺必填参数(多为 `username`),见 [`SERVICE.md`](SERVICE.md) 工具表 |
+| MCP 工具调用返回空 | 已修复(`tools/call` 现返回 MCP `content`);若仍空,重启 daemon 用最新 jar |
+| `/mcp` 连不上但 `/call` 能通 | daemon 正常,问题在 MCP 注册:核对 `.mcp.json` 端口 = daemon 端口,并重启 `claude` 重新批准 |
+
+> 端点契约、工具凭证需求详见 [`SERVICE.md`](SERVICE.md);
+> 技能定义见 [`.claude/skills/szu-agent/SKILL.md`](.claude/skills/szu-agent/SKILL.md)。
+
 ## 架构概览
 
 ```

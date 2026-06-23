@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# 外部 Skill 入口:把请求转发给 SZU Agent 常驻 HTTP 服务。
+#
+# 用法:  ./run szu_campus   (参数 JSON 从 stdin 读取)
+# 输入:  {"name":"calendar_get","arguments":{}}
+# 输出:  daemon 返回的统一信封 {"success":..,"data":..,"traceId":..}
+#
+# 可移植:daemon 地址来自环境变量 SZU_AGENT_URL,不写死任何主机/端口。
+#   export SZU_AGENT_URL=http://localhost:8765   # 默认值
+#
+# Author: 王子豪 / 2023150090
+set -euo pipefail
+
+DAEMON_URL="${SZU_AGENT_URL:-http://localhost:8765}"
+ARGS_JSON="$(cat)"
+[ -z "$ARGS_JSON" ] && ARGS_JSON='{}'
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo '{"success":false,"errorCode":"ENV","errorMessage":"curl not found on PATH"}'
+  exit 3
+fi
+
+# 健康检查:服务没起时给出可读错误,而不是 curl 的原始报错
+if ! curl -s --max-time 2 "$DAEMON_URL/health" >/dev/null 2>&1; then
+  echo "{\"success\":false,\"errorCode\":\"ENV\",\"errorMessage\":\"SZU Agent daemon 未运行于 $DAEMON_URL — 先执行 scripts/serve.sh\"}"
+  exit 3
+fi
+
+# 透传给 daemon 的 /call;stdin 的 JSON 本身就是 {name, arguments}
+curl -s -X POST "$DAEMON_URL/call" \
+  -H 'Content-Type: application/json' \
+  -d "$ARGS_JSON"

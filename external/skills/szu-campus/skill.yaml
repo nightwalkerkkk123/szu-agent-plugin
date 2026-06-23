@@ -1,0 +1,23 @@
+name: szu_campus
+version: "1.0.0"
+description: >
+  调用 SZU Agent 常驻 HTTP 服务的任一能力(校历/公文通/课表/知识库/考试/作业/场馆预约)。
+  本 skill 是一个瘦客户端:把请求转发给后台 daemon 的 POST /call,
+  无 JVM 冷启动,毫秒级返回。daemon 地址由环境变量 SZU_AGENT_URL 配置
+  (默认 http://localhost:8765),因此同一份 skill 在任何机器上都能跑通。
+author: 王子豪
+license: MIT
+runtime: bash
+
+inputSchema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: 要调用的工具名(calendar_get / notice_list / schedule_list / kb_query / exam_list / homework_list / homework_download / booking_venue)
+    arguments:
+      type: object
+      description: 该工具的参数对象,直接透传给 daemon
+      default: {}
+  required:
+    - name

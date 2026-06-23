@@ -79,6 +79,18 @@ class SkillsTest {
     }
 
     @Test
+    @DisplayName("Skill.of derives name and description from the task")
+    void factoryDerivesMetadataFromTask() {
+        CampusTask<String> task = echoTask("derived_name");
+
+        Skill<String> skill = Skill.of(task);
+
+        assertThat(skill.name()).isEqualTo("derived_name");
+        assertThat(skill.description()).isEqualTo(task.description());
+        assertThat(skill.task()).isSameAs(task);
+    }
+
+    @Test
     @DisplayName("Skill name must match task.name()")
     void nameTaskMismatchRejected() {
         CampusTask<String> task = echoTask("real_name");
