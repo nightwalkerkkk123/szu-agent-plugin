@@ -64,7 +64,7 @@ class TaskInputTest {
         source.put("campus", "YUEHAI");
         TaskInput input = new TaskInput(source);
 
-        source.put("campus", "LYULAKU");
+        source.put("campus", "LIHU");
         assertThat(input.get("campus")).isEqualTo("YUEHAI");
     }
 }

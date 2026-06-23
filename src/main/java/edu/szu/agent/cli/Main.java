@@ -97,7 +97,7 @@ public class Main implements Callable<Integer> {
             VenueBookingClient client = new VenueBookingClient(
                 ConfigManager.getInstance().browser(),
                 RetryPolicies.defaultBooking());
-            registry.register(new Skill<>("booking_venue", "体育场馆定时预约", new BookingTask(client)));
+            registry.register(Skill.of(new BookingTask(client)));
         }
 
         if (!existing.contains("homework_list")) {
@@ -105,7 +105,7 @@ public class Main implements Callable<Integer> {
                 placeholder,
                 ConfigManager.getInstance().browser(),
                 RetryPolicies.defaultBooking());
-            registry.register(new Skill<>("homework_list", "查询畅课作业列表", new HomeworkTask(client, placeholder)));
+            registry.register(Skill.of(new HomeworkTask(client, placeholder)));
         }
 
         if (!existing.contains("homework_download")) {
@@ -121,33 +121,27 @@ public class Main implements Callable<Integer> {
                 store,
                 probe,
                 Duration.ofDays(30));
-            registry.register(new Skill<>("homework_download",
-                "下载畅课作业的全部附件到本地目录",
-                new HomeworkDownloadTask(client, placeholder)));
+            registry.register(Skill.of(new HomeworkDownloadTask(client, placeholder)));
         }
 
         if (!existing.contains("schedule_list")) {
-            registry.register(new Skill<>("schedule_list", "查询学生课表(静态 MVP)",
-                new ScheduleListTask()));
+            registry.register(Skill.of(new ScheduleListTask()));
         }
 
         if (!existing.contains("calendar_get")) {
-            registry.register(new Skill<>("calendar_get", "查询深大校历",
-                new CalendarTask()));
+            registry.register(Skill.of(new CalendarTask()));
         }
 
         if (!existing.contains("notice_list")) {
-            registry.register(new Skill<>("notice_list", "查询深大公文通通知列表",
-                new NoticeTask()));
+            registry.register(Skill.of(new NoticeTask()));
         }
 
         if (!existing.contains("exam_list")) {
-            registry.register(new Skill<>("exam_list", "查询深大考试安排列表",
-                new ExamListTask()));
+            registry.register(Skill.of(new ExamListTask()));
         }
 
         if (!existing.contains("kb_query")) {
-            registry.register(new Skill<>("kb_query", "深大知识库查询", new KnowledgeTask()));
+            registry.register(Skill.of(new KnowledgeTask()));
         }
 
         ExternalSkillLoader.loadFromEnvironment();

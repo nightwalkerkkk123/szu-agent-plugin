@@ -3,11 +3,11 @@ package edu.szu.agent.client.step;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.client.cache.CacheEnvelope;
 import edu.szu.agent.client.cache.CacheKey;
 import edu.szu.agent.client.cache.CacheStore;
+import edu.szu.agent.json.JsonMappers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +31,7 @@ import java.util.function.BiConsumer;
 public final class CacheLookupStep implements BookingStep {
 
     private static final Logger log = LoggerFactory.getLogger(CacheLookupStep.class);
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-        .registerModule(new JavaTimeModule());
+    private static final ObjectMapper MAPPER = JsonMappers.standard();
 
     private final CacheStore store;
     private final CacheKey cacheKey;

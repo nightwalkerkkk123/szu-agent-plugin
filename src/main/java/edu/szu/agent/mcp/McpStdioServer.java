@@ -3,6 +3,7 @@ package edu.szu.agent.mcp;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.szu.agent.cli.Main;
+import edu.szu.agent.json.JsonMappers;
 import edu.szu.agent.skill.Skills;
 
 import java.io.BufferedReader;
@@ -45,7 +46,9 @@ public final class McpStdioServer {
 
     private static final String CONTENT_LENGTH = "Content-Length: ";
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    // Centralized factory: java.time types serialize as ISO-8601 strings,
+    // not numeric arrays (e.g. calendar_get / exam_list date fields).
+    private final ObjectMapper mapper = JsonMappers.standard();
     private final InputStream in;
     private final OutputStream out;
 
@@ -135,11 +138,24 @@ public final class McpStdioServer {
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, Object> handleToolCall(Map<String, Object> request) {
+    private Map<String, Object> handleToolCall(Map<String, Object> request) throws JsonProcessingException {
         Map<String, Object> params = (Map<String, Object>) request.getOrDefault("params", Map.of());
         String name = String.valueOf(params.getOrDefault("name", ""));
         Map<String, Object> arguments = (Map<String, Object>) params.getOrDefault("arguments", Map.of());
-        return MCPToolCallHandler.call(name, arguments);
+        Map<String, Object> envelope = MCPToolCallHandler.call(name, arguments);
+
+        // MCP requires a CallToolResult: { content: [...], isError }. Returning
+        // our raw business envelope directly leaves the host's MCP client without
+        // a `content` array to render, so the tool appears to return nothing.
+        // Wrap the full envelope as a text content block — the caller still sees
+        // success/data/traceId/elapsedMs, now in the shape the protocol expects.
+        boolean ok = Boolean.TRUE.equals(envelope.get("success"));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("content", List.of(Map.of(
+            "type", "text",
+            "text", mapper.writeValueAsString(envelope))));
+        result.put("isError", !ok);
+        return result;
     }
 
     private String response(Object id, Map<String, Object> result) throws JsonProcessingException {

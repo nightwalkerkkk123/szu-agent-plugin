@@ -110,7 +110,7 @@ class ToolSchemaTest {
             .findFirst()
             .orElseThrow();
 
-        assertThat(calendar.get("description")).isEqualTo("查询深大校历");
+        assertThat(calendar.get("description")).isEqualTo("查询深大校历(静态 MVP)");
 
         @SuppressWarnings("unchecked")
         Map<String, Object> inputSchema = (Map<String, Object>) calendar.get("inputSchema");
@@ -133,7 +133,7 @@ class ToolSchemaTest {
             .findFirst()
             .orElseThrow();
 
-        assertThat(notice.get("description")).isEqualTo("查询深大公文通通知列表");
+        assertThat(notice.get("description")).isEqualTo("查询深大公文通通知列表(静态 MVP)");
 
         @SuppressWarnings("unchecked")
         Map<String, Object> inputSchema = (Map<String, Object>) notice.get("inputSchema");
