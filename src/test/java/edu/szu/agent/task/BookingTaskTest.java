@@ -35,7 +35,9 @@ class BookingTaskTest {
     void identity() {
         BookingTask task = newTask();
         assertThat(task.name()).isEqualTo("booking_venue");
-        assertThat(task.description()).isEqualTo("体育场馆定时预约");
+        assertThat(task.description())
+            .startsWith("深圳大学体育场馆定时预约")
+            .contains("真实预约会占用实际名额", "YUEHAI", "GYM_HEAVY(一楼重量型健身/一楼健身房)", "16:00-17:00");
     }
 
     @Test

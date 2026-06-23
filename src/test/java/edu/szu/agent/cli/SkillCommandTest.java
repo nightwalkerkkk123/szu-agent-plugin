@@ -116,7 +116,9 @@ class SkillCommandTest {
             }
         }
         assertThat(booking).isNotNull();
-        assertThat(booking.get("description").asText()).isEqualTo("体育场馆定时预约");
+        assertThat(booking.get("description").asText())
+            .startsWith("深圳大学体育场馆定时预约")
+            .contains("真实预约会占用实际名额", "YUEHAI", "GYM_HEAVY(一楼重量型健身/一楼健身房)", "16:00-17:00");
         assertThat(booking.get("inputSchema").get("type").asText()).isEqualTo("object");
         assertThat(kb).isNotNull();
         assertThat(kb.get("description").asText()).isEqualTo("深大知识库查询");

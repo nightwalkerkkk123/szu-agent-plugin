@@ -55,7 +55,9 @@ class ToolSchemaTest {
             .findFirst()
             .orElseThrow();
 
-        assertThat(booking.get("description")).isEqualTo("体育场馆定时预约");
+        assertThat(booking.get("description").toString())
+            .startsWith("深圳大学体育场馆定时预约")
+            .contains("真实预约会占用实际名额", "YUEHAI", "GYM_HEAVY(一楼重量型健身/一楼健身房)", "16:00-17:00");
 
         @SuppressWarnings("unchecked")
         Map<String, Object> inputSchema = (Map<String, Object>) booking.get("inputSchema");
@@ -68,7 +70,16 @@ class ToolSchemaTest {
 
         @SuppressWarnings("unchecked")
         List<String> required = (List<String>) inputSchema.get("required");
-        assertThat(required).contains("username", "campus", "sport", "date", "timeSlot");
+        assertThat(required).contains("campus", "sport", "date", "timeSlot");
+        assertThat(required).doesNotContain("username");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> campusProp = (Map<String, Object>) properties.get("campus");
+        assertThat(campusProp.get("enum")).asList().contains("YUEHAI", "LIHU");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> sportProp = (Map<String, Object>) properties.get("sport");
+        assertThat(sportProp.get("enum")).asList().contains("GYM_HEAVY", "GYM_AEROBIC", "GYM");
     }
 
     @Test

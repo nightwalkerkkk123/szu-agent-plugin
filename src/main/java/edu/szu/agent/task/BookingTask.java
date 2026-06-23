@@ -68,7 +68,19 @@ public class BookingTask implements CampusTask<BookingResult> {
 
     @Override
     public String description() {
-        return "体育场馆定时预约。调用前请先阅读 docs/tools/booking-venue.md;真实预约会占用实际名额,调用前必须获得用户明确确认。";
+        return """
+            深圳大学体育场馆定时预约。重要约束(必须遵守,否则调用会失败):
+            1. 真实预约会占用实际名额,调用前必须获得用户明确确认。
+            2. campus 必须是枚举值之一:YUEHAI(粤海校区)或 LIHU(丽湖校区)。
+            3. sport 必须是枚举值之一,且要与 campus 匹配:
+               - 粤海校区(YUEHAI)可选:BADMINTON(羽毛球),FOOTBALL(足球),VOLLEYBALL(排球),TENNIS(网球),BASKETBALL(篮球),SQUASH(壁球),GYM_HEAVY(一楼重量型健身/一楼健身房),GYM_AEROBIC(二楼有氧健身/二楼健身房),SWIMMING(游泳)。
+               - 丽湖校区(LIHU)可选:BADMINTON(羽毛球),VOLLEYBALL(排球),TENNIS(网球),BASKETBALL(篮球),SWIMMING(游泳),TABLE_TENNIS(乒乓球),DANCE(舞蹈),POOL(桌球),CYCLING(骑行),MAGIC_MIRROR(魔镜),BOARD_GAME(桌游),GYM(健身房),YOGA(瑜伽),PICKLEBALL(匹克球),SHUTTLECOCK(毽球)。
+            4. date 必须是 ISO 8601 日期字符串,例如 2026-06-24。
+            5. timeSlot 必须是字符串,格式 HH:mm-HH:mm,只支持整点 1 小时时段,例如 16:00-17:00。不要传对象,不要写 4-5 点 等口语。
+            6. 若用户未提供 username,默认使用环境变量 SZU_USERNAME 配置的账号(当前默认 2023150090)。
+            7. 用户说 明天 时,date 取明天的 ISO 日期;用户说 4-5点/下午4点到5点 时,timeSlot 必须转换为 16:00-17:00。
+            8. 调用前必须先向用户复述校区、项目、日期、时段,得到明确同意后再执行。
+            """;
     }
 
     @Override
@@ -80,28 +92,35 @@ public class BookingTask implements CampusTask<BookingResult> {
 
         Map<String, Object> username = new LinkedHashMap<>();
         username.put("type", "string");
-        username.put("description", "学号;若未提供,默认使用环境变量 SZU_USERNAME 配置的账号");
+        username.put("description", "学号,例如 2023150090。若未提供,默认使用环境变量 SZU_USERNAME 配置的账号");
         properties.put("username", username);
 
         Map<String, Object> campus = new LinkedHashMap<>();
         campus.put("type", "string");
-        campus.put("description", "校区(YUEHAI/LIHU)");
+        campus.put("enum", List.of("YUEHAI", "LIHU"));
+        campus.put("description", "校区枚举名:YUEHAI(粤海)或 LIHU(丽湖)");
         properties.put("campus", campus);
 
         Map<String, Object> sport = new LinkedHashMap<>();
         sport.put("type", "string");
-        sport.put("description", "运动项目枚举名。粤海校区: BADMINTON/FOOTBALL/VOLLEYBALL/TENNIS/BASKETBALL/SQUASH/GYM_HEAVY(一楼重量型健身)/GYM_AEROBIC(二楼有氧健身)/SWIMMING; 丽湖校区: BADMINTON/VOLLEYBALL/TENNIS/BASKETBALL/SWIMMING/TABLE_TENNIS/DANCE/POOL/CYCLING/MAGIC_MIRROR/BOARD_GAME/GYM(健身房)/YOGA/PICKLEBALL/SHUTTLECOCK");
+        sport.put("enum", List.of(
+            "BADMINTON", "FOOTBALL", "VOLLEYBALL", "TENNIS", "BASKETBALL", "SQUASH",
+            "GYM_HEAVY", "GYM_AEROBIC", "SWIMMING", "TABLE_TENNIS", "DANCE", "POOL",
+            "CYCLING", "MAGIC_MIRROR", "BOARD_GAME", "GYM", "YOGA", "PICKLEBALL", "SHUTTLECOCK"
+        ));
+        sport.put("description", "运动项目枚举名。必须与 campus 匹配:粤海校区用 GYM_HEAVY(一楼健身房)/GYM_AEROBIC(二楼健身房),不要用 GYM;丽湖校区用 GYM(健身房)。详见 description 中的完整映射。");
         properties.put("sport", sport);
 
         Map<String, Object> date = new LinkedHashMap<>();
         date.put("type", "string");
         date.put("format", "date");
-        date.put("description", "ISO 8601 日期,例如 2026-06-13");
+        date.put("description", "ISO 8601 日期,例如 2026-06-24");
         properties.put("date", date);
 
         Map<String, Object> timeSlot = new LinkedHashMap<>();
         timeSlot.put("type", "string");
-        timeSlot.put("description", "预约时段,HH:mm-HH:mm 格式,例如 12:00-13:00 或 19:00-20:00。系统只支持整点 1 小时时段(08:00-22:00)");
+        timeSlot.put("pattern", "^([01]?[0-9]|2[0-3]):00-([01]?[0-9]|2[0-3]):00$");
+        timeSlot.put("description", "预约时段,HH:mm-HH:mm 格式,只支持整点 1 小时时段(08:00-22:00),例如 16:00-17:00。禁止传对象。");
         properties.put("timeSlot", timeSlot);
 
         Map<String, Object> preferredVenue = new LinkedHashMap<>();

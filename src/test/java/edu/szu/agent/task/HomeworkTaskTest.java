@@ -55,13 +55,14 @@ class HomeworkTaskTest {
     }
 
     @Test
-    @DisplayName("execute() throws IllegalArgumentException when username is missing")
-    void executeRequiresUsername() {
+    @DisplayName("execute() with test constructor ignores missing username and delegates to client")
+    void executeWithTestConstructorIgnoresUsername() {
+        when(client.list()).thenReturn(new HomeworkListResult.Success(List.of()));
         HomeworkTask task = new HomeworkTask(client, account);
         TaskInput input = new TaskInput(Map.of());
 
-        assertThatThrownBy(() -> task.execute(input))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("username");
+        HomeworkListResult result = task.execute(input);
+
+        assertThat(result).isInstanceOf(HomeworkListResult.Success.class);
     }
 }
