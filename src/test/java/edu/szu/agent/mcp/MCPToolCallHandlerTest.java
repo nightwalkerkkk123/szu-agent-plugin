@@ -64,27 +64,27 @@ class MCPToolCallHandlerTest {
     }
 
     @Test
-    @DisplayName("Nested timeSlot Map is flattened to dotted keys")
+    @DisplayName("Nested timeSlot Map is flattened to dotted keys and consumed by BookingTask")
     void nestedMapFlattening() {
+        // Equal endpoints make TimeSlot reject the slot. We use an invalid
+        // slot on purpose: a *valid* one would proceed into VenueBookingClient
+        // .book() and launch a real browser inside the unit test. The
+        // "19:00-19:00" error proves the nested object was flattened to
+        // timeSlot.start / timeSlot.end AND that BookingTask read those
+        // dotted keys — the schema-drift fix — without any browser launch.
         Map<String, Object> args = Map.of(
             "username", "2023150090",
             "campus", "YUEHAI",
             "sport", "TENNIS",
             "date", "2026-06-13",
-            "timeSlot", Map.of("start", "19:00", "end", "20:00")
+            "timeSlot", Map.of("start", "19:00", "end", "19:00")
         );
 
-        // The dispatch will reach BookingTask.execute, which will call
-        // VenueBookingClient.book → may fail because we don't have a
-        // real browser. The point of THIS test is that the dispatcher
-        // doesn't itself throw on nested input — it gets as far as
-        // calling the Skill. We assert that we either succeed, or we
-        // got a typed BookingException (not an unhandled exception).
         Map<String, Object> response = MCPToolCallHandler.call("booking_venue", args);
-        assertThat(response.get("success")).isIn(true, false);
-        assertThat(response).containsKey("traceId");
-        assertThat(response).containsKey("elapsedMs");
-        // No 5xx-style unhandled — the envelope is always valid
+        assertThat(response.get("success")).isEqualTo(false);
+        assertThat(response.get("errorCode")).isEqualTo("INVALID_REQUEST");
+        assertThat((String) response.get("errorMessage")).contains("19:00-19:00");
+        // Envelope is always the 6 PRD §5.2 fields
         assertThat(response).containsKeys("success", "data", "errorCode",
             "errorMessage", "traceId", "elapsedMs");
     }

@@ -117,6 +117,43 @@ class BookingTaskTest {
             .isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test
+    @DisplayName("timeSlot as nested object (MCP flattens to dotted keys) is accepted")
+    void timeSlotNestedObjectForm() {
+        BookingTask task = newTask();
+        // The MCP layer flattens {"start":"19:00","end":"19:00"} to dotted
+        // keys timeSlot.start / timeSlot.end. Equal endpoints make TimeSlot
+        // reject the slot — the "19:00-19:00" message proves the dotted-key
+        // path was read and forwarded, rather than a premature
+        // "Missing required parameter: timeSlot" failure.
+        TaskInput input = new TaskInput(Map.of(
+            "username", "2023150090",
+            "campus", "YUEHAI",
+            "sport", "TENNIS",
+            "date", "2026-06-13",
+            "timeSlot.start", "19:00",
+            "timeSlot.end", "19:00"));
+
+        assertThatThrownBy(() -> task.execute(input))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("19:00-19:00");
+    }
+
+    @Test
+    @DisplayName("timeSlot entirely absent → Missing required parameter: timeSlot")
+    void timeSlotMissingEntirely() {
+        BookingTask task = newTask();
+        TaskInput input = new TaskInput(Map.of(
+            "username", "2023150090",
+            "campus", "YUEHAI",
+            "sport", "TENNIS",
+            "date", "2026-06-13"));
+
+        assertThatThrownBy(() -> task.execute(input))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("timeSlot");
+    }
+
     /**
      * Builds a BookingTask with a mocked browser. The mock is never
      * used because the validation tests fail before reaching the

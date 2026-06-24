@@ -106,18 +106,8 @@ public class BookingTask implements CampusTask<BookingResult> {
         properties.put("date", date);
 
         Map<String, Object> timeSlot = new LinkedHashMap<>();
-        timeSlot.put("type", "object");
-        timeSlot.put("description", "预约时段,例如 {\"start\": \"19:00\", \"end\": \"20:00\"}");
-        Map<String, Object> tsProps = new LinkedHashMap<>();
-        Map<String, Object> start = new LinkedHashMap<>();
-        start.put("type", "string");
-        start.put("description", "HH:mm 格式");
-        tsProps.put("start", start);
-        Map<String, Object> end = new LinkedHashMap<>();
-        end.put("type", "string");
-        end.put("description", "HH:mm 格式");
-        tsProps.put("end", end);
-        timeSlot.put("properties", tsProps);
+        timeSlot.put("type", "string");
+        timeSlot.put("description", "预约时段 HH:mm-HH:mm(1 小时窗口),例如 19:00-20:00");
         properties.put("timeSlot", timeSlot);
 
         Map<String, Object> preferredVenue = new LinkedHashMap<>();
@@ -142,7 +132,7 @@ public class BookingTask implements CampusTask<BookingResult> {
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("date must be ISO 8601: " + e.getMessage());
         }
-        TimeSlot slot = TimeSlot.of(input.require("timeSlot"));
+        TimeSlot slot = resolveTimeSlot(input);
 
         int preferredVenue = input.getInt("preferredVenue", 1);
         String username = input.require("username");
@@ -158,5 +148,36 @@ public class BookingTask implements CampusTask<BookingResult> {
 
         Account account = accountResolver.apply(username);
         return clientFactory.apply(account).book(request, account);
+    }
+
+    /**
+     * Resolves the {@code timeSlot} parameter, tolerating both wire shapes.
+     *
+     * <p>The canonical form is a flat {@code "HH:mm-HH:mm"} string (CLI
+     * {@code --time-slot}, the declared MCP schema). A caller may still send
+     * a nested object {@code {"start":"19:00","end":"20:00"}}; the MCP layer
+     * flattens that to dotted keys {@code timeSlot.start} / {@code timeSlot.end}
+     * (see {@code MCPToolCallHandler#flatten}). Accepting both removes the
+     * schema-vs-implementation drift that previously surfaced as a spurious
+     * "Missing required parameter: timeSlot".
+     *
+     * @param input the task input
+     * @return the parsed {@link TimeSlot}
+     * @throws IllegalArgumentException if neither shape is present, or the
+     *         slot is not a valid 1-hour boundary
+     * @since 0.1.0
+     */
+    private static TimeSlot resolveTimeSlot(TaskInput input) {
+        // 编程技术: 重载 — TimeSlot.of(String) vs TimeSlot.parse(start, end)
+        String flat = input.get("timeSlot");
+        if (flat != null && !flat.isBlank()) {
+            return TimeSlot.of(flat);
+        }
+        String start = input.get("timeSlot.start");
+        String end = input.get("timeSlot.end");
+        if (start != null && !start.isBlank() && end != null && !end.isBlank()) {
+            return TimeSlot.parse(start, end);
+        }
+        throw new IllegalArgumentException("Missing required parameter: timeSlot");
     }
 }
