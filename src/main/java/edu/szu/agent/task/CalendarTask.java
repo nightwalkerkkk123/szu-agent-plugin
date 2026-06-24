@@ -39,7 +39,7 @@ public class CalendarTask implements CampusTask<List<AcademicEvent>> {
 
     @Override
     public String description() {
-        return "查询深大校历(静态 MVP)";
+        return "查询深大校历";
     }
 
     @Override

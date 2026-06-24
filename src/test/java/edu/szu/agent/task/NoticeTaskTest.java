@@ -36,7 +36,7 @@ class NoticeTaskTest {
     void nameAndDescriptionAreCorrect() {
         NoticeTask task = new NoticeTask();
         assertThat(task.name()).isEqualTo("notice_list");
-        assertThat(task.description()).isEqualTo("查询深大公文通通知列表(静态 MVP)");
+        assertThat(task.description()).isEqualTo("查询深大公文通通知列表");
     }
 
     @Test

@@ -47,7 +47,7 @@ public class ExamListTask implements CampusTask<List<ExamSchedule>> {
 
     @Override
     public String description() {
-        return "查询深大考试安排列表(静态 MVP)";
+        return "查询深大考试安排列表";
     }
 
     @Override

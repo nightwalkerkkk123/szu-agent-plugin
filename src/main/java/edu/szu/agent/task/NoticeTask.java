@@ -53,7 +53,7 @@ public class NoticeTask implements CampusTask<List<Notice>> {
 
     @Override
     public String description() {
-        return "查询深大公文通通知列表(静态 MVP)";
+        return "查询深大公文通通知列表";
     }
 
     @Override

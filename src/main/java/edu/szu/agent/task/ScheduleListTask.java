@@ -45,7 +45,7 @@ public class ScheduleListTask implements CampusTask<ScheduleListResult> {
 
     @Override
     public String description() {
-        return "查询学生课表(静态 MVP)";
+        return "查询学生课表";
     }
 
     @Override
