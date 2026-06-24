@@ -20,6 +20,14 @@ public final class SessionProbe {
 
     private static final Logger log = LoggerFactory.getLogger(SessionProbe.class);
 
+    /**
+     * Max time to wait for the alive indicator to render. The probe target is
+     * an SPA whose indicator is injected by post-load JS/XHR, so an instant
+     * check races the render (especially on slow networks). 15s is generous
+     * enough to ride out a laggy CAS SSO redirect + SPA hydration.
+     */
+    private static final long ALIVE_TIMEOUT_MS = 15_000L;
+
     private final String probeUrl;
     private final String aliveSelector;
 
@@ -49,7 +57,9 @@ public final class SessionProbe {
         Objects.requireNonNull(browser, "browser");
         try {
             browser.navigateTo(probeUrl);
-            if (browser.isVisible(aliveSelector)) {
+            // Wait for the SPA-injected indicator instead of an instant check:
+            // navigateTo only awaits 'load', but the indicator renders later.
+            if (browser.waitForVisible(aliveSelector, ALIVE_TIMEOUT_MS)) {
                 return new SessionResult.Fresh();
             }
             return new SessionResult.Stale("indicator not visible after navigate");

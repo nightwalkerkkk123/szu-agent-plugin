@@ -10,6 +10,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -20,18 +22,18 @@ class SessionProbeTest {
     private BrowserLifecycle browser;
 
     @Test
-    @DisplayName("isAlive 返回 Fresh 当 isVisible 看到 todo-list-container")
+    @DisplayName("isAlive 返回 Fresh 当 waitForVisible 看到 todo-list-container")
     void isAliveFresh() {
-        when(browser.isVisible(".todo-list-container")).thenReturn(true);
+        when(browser.waitForVisible(eq(".todo-list-container"), anyLong())).thenReturn(true);
         SessionProbe probe = new SessionProbe(
             "https://lms.szu.edu.cn/user/index", ".todo-list-container");
         assertThat(probe.isAlive(browser)).isInstanceOf(SessionResult.Fresh.class);
     }
 
     @Test
-    @DisplayName("isAlive 返回 Stale 当 isVisible 为 false")
+    @DisplayName("isAlive 返回 Stale 当 waitForVisible 超时未见")
     void isAliveStale() {
-        when(browser.isVisible(".todo-list-container")).thenReturn(false);
+        when(browser.waitForVisible(eq(".todo-list-container"), anyLong())).thenReturn(false);
         SessionProbe probe = new SessionProbe(
             "https://lms.szu.edu.cn/user/index", ".todo-list-container");
         SessionResult r = probe.isAlive(browser);

@@ -40,7 +40,7 @@ public final class CasLoginStep implements BookingStep {
      * and a successful login redirects right back here. Mirrors how the
      * Python reference (see {@code 登录体育馆_cloak/main.py}) drives the flow.
      */
-    static final String EHALL_VENUE_URL =
+    public static final String EHALL_VENUE_URL =
         "https://ehall.szu.edu.cn/qljfwapp/sys/lwSzuCgyy/index.do#/sportVenue";
 
     private final String casEntryUrl;

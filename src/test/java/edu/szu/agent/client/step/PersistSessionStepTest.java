@@ -83,4 +83,30 @@ class PersistSessionStepTest {
 
         verify(browser, never()).exportStorageState(any());
     }
+
+    @Test
+    @DisplayName("自定义谓词为 true(无 homeworks)-> export(booking 路径)")
+    void customPredicateTrueExports() {
+        BookingContext ctx = new BookingContext(request, account);
+        ctx.username("2023150090");
+        // booking 流程没有 homeworks,但谓词恒真 -> 应持久化
+        Path target = Path.of("fake/path.json");
+        when(store.defaultPath()).thenReturn(target);
+
+        new PersistSessionStep(store, c -> true).execute(browser, ctx);
+
+        verify(browser).exportStorageState(target);
+    }
+
+    @Test
+    @DisplayName("自定义谓词为 false -> 不 export")
+    void customPredicateFalseSkips() {
+        BookingContext ctx = new BookingContext(request, account);
+        ctx.username("2023150090");
+        ctx.homeworks(List.of(new Homework("1", "OS", "lab", "2026.06.24", "待提交")));
+
+        new PersistSessionStep(store, c -> false).execute(browser, ctx);
+
+        verify(browser, never()).exportStorageState(any());
+    }
 }

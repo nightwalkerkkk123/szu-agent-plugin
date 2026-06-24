@@ -4,6 +4,7 @@ import edu.szu.agent.account.Account;
 import edu.szu.agent.client.ChaoxingAttachmentDownloadClient;
 import edu.szu.agent.client.ChaoxingHomeworkClient;
 import edu.szu.agent.client.EhallScheduleClient;
+import edu.szu.agent.client.BookingFlowLauncher;
 import edu.szu.agent.client.VenueBookingClient;
 import edu.szu.agent.client.session.SessionProbe;
 import edu.szu.agent.client.session.SessionStore;
@@ -94,10 +95,13 @@ public class Main implements Callable<Integer> {
         Account placeholder = new Account("placeholder", "placeholder", "P1-stub");
 
         if (!existing.contains("booking_venue")) {
-            VenueBookingClient client = new VenueBookingClient(
+            // Per-user session reuse: BookingFlowLauncher builds a SessionStore
+            // keyed by the resolved account at launch time, so a manual MFA pass
+            // (headed) is reused on later headless MCP/daemon calls.
+            BookingFlowLauncher launcher = new BookingFlowLauncher(
                 ConfigManager.getInstance().browser(),
                 RetryPolicies.defaultBooking());
-            registry.register(Skill.of(new BookingTask(client)));
+            registry.register(Skill.of(new BookingTask(launcher::clientFor)));
         }
 
         if (!existing.contains("homework_list")) {

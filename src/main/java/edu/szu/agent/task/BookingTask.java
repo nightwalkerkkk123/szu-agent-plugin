@@ -42,21 +42,28 @@ import java.util.function.Function;
  */
 public class BookingTask implements CampusTask<BookingResult> {
 
-    private final VenueBookingClient client;
+    private final Function<Account, VenueBookingClient> clientFactory;
     private final Function<String, Account> accountResolver;
 
     /**
      * Production constructor — uses {@link AccountResolver#resolve(String)}.
+     *
+     * <p>The {@code clientFactory} builds a session-aware client per resolved
+     * account (e.g. {@code BookingFlowLauncher::clientFor}) so a single manual
+     * MFA pass is reused on later headless runs — the same path the CLI uses.
+     *
+     * @param clientFactory builds a {@link VenueBookingClient} for a resolved account
      */
-    public BookingTask(VenueBookingClient client) {
-        this(client, AccountResolver::resolve);
+    public BookingTask(Function<Account, VenueBookingClient> clientFactory) {
+        this(clientFactory, AccountResolver::resolve);
     }
 
     /**
-     * Test constructor — inject a custom account resolver.
+     * Test constructor — inject a custom client factory and account resolver.
      */
-    BookingTask(VenueBookingClient client, Function<String, Account> accountResolver) {
-        this.client = client;
+    BookingTask(Function<Account, VenueBookingClient> clientFactory,
+                Function<String, Account> accountResolver) {
+        this.clientFactory = clientFactory;
         this.accountResolver = accountResolver;
     }
 
@@ -149,6 +156,7 @@ public class BookingTask implements CampusTask<BookingResult> {
             .preferredVenueIndex(preferredVenue)
             .build();
 
-        return client.book(request, accountResolver.apply(username));
+        Account account = accountResolver.apply(username);
+        return clientFactory.apply(account).book(request, account);
     }
 }

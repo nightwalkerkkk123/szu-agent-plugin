@@ -133,6 +133,7 @@ class BookingTaskTest {
             }
         };
         VenueBookingClient client = new VenueBookingClient(mockBrowser, noRetry);
-        return new BookingTask(client, username -> new Account(username, "test-pw", "test"));
+        // Validation tests fail before the client is used, so a constant factory suffices.
+        return new BookingTask(account -> client, username -> new Account(username, "test-pw", "test"));
     }
 }
