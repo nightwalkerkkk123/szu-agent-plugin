@@ -1,13 +1,14 @@
 package edu.szu.agent.task;
 
 import edu.szu.agent.account.Account;
+import edu.szu.agent.account.AccountResolver;
 import edu.szu.agent.client.ChaoxingHomeworkClient;
 import edu.szu.agent.domain.HomeworkListResult;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * {@code homework_list} CampusTask — queries the LMS todo list for homework.
@@ -28,12 +29,27 @@ import java.util.Objects;
  */
 public class HomeworkTask implements CampusTask<HomeworkListResult> {
 
-    private final ChaoxingHomeworkClient client;
-    private final Account account;
+    private final Function<Account, ChaoxingHomeworkClient> clientFactory;
+    private final Function<String, Account> accountResolver;
 
-    public HomeworkTask(ChaoxingHomeworkClient client, Account account) {
-        this.client = Objects.requireNonNull(client, "client");
-        this.account = Objects.requireNonNull(account, "account");
+    /**
+     * Production constructor — resolves the account per request via
+     * {@link AccountResolver#resolve(String)} and builds a session-aware
+     * client for it, mirroring {@link BookingTask}. This lets the daemon /
+     * MCP path reuse a persisted login keyed by the real student ID instead
+     * of failing under a placeholder account.
+     *
+     * @param clientFactory builds a {@link ChaoxingHomeworkClient} for a resolved account
+     */
+    public HomeworkTask(Function<Account, ChaoxingHomeworkClient> clientFactory) {
+        this(clientFactory, AccountResolver::resolve);
+    }
+
+    /** Test constructor — inject a custom client factory and account resolver. */
+    HomeworkTask(Function<Account, ChaoxingHomeworkClient> clientFactory,
+                 Function<String, Account> accountResolver) {
+        this.clientFactory = clientFactory;
+        this.accountResolver = accountResolver;
     }
 
     @Override
@@ -64,7 +80,8 @@ public class HomeworkTask implements CampusTask<HomeworkListResult> {
 
     @Override
     public HomeworkListResult execute(TaskInput input) {
-        input.require("username");
-        return client.list();
+        String username = input.require("username");
+        Account account = accountResolver.apply(username);
+        return clientFactory.apply(account).list();
     }
 }

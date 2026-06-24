@@ -1,6 +1,7 @@
 package edu.szu.agent.task;
 
 import edu.szu.agent.account.Account;
+import edu.szu.agent.account.AccountResolver;
 import edu.szu.agent.client.ChaoxingAttachmentDownloadClient;
 import edu.szu.agent.domain.HomeworkDownloadRequest;
 import edu.szu.agent.domain.HomeworkDownloadResult;
@@ -9,7 +10,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * {@code homework_download} CampusTask — downloads all attachments of a
@@ -34,13 +35,26 @@ import java.util.Objects;
  */
 public class HomeworkDownloadTask implements CampusTask<HomeworkDownloadResult> {
 
-    private final ChaoxingAttachmentDownloadClient client;
-    private final Account account;
+    private final Function<Account, ChaoxingAttachmentDownloadClient> clientFactory;
+    private final Function<String, Account> accountResolver;
 
-    public HomeworkDownloadTask(ChaoxingAttachmentDownloadClient client,
-                                Account account) {
-        this.client = Objects.requireNonNull(client, "client");
-        this.account = Objects.requireNonNull(account, "account");
+    /**
+     * Production constructor — resolves the account per request via
+     * {@link AccountResolver#resolve(String)} and builds a session-aware
+     * client for it, mirroring {@link BookingTask}. Keeps the daemon / MCP
+     * path keyed to the real student ID so a persisted LMS session is reused.
+     *
+     * @param clientFactory builds a {@link ChaoxingAttachmentDownloadClient} for a resolved account
+     */
+    public HomeworkDownloadTask(Function<Account, ChaoxingAttachmentDownloadClient> clientFactory) {
+        this(clientFactory, AccountResolver::resolve);
+    }
+
+    /** Test constructor — inject a custom client factory and account resolver. */
+    HomeworkDownloadTask(Function<Account, ChaoxingAttachmentDownloadClient> clientFactory,
+                         Function<String, Account> accountResolver) {
+        this.clientFactory = clientFactory;
+        this.accountResolver = accountResolver;
     }
 
     @Override
@@ -94,7 +108,7 @@ public class HomeworkDownloadTask implements CampusTask<HomeworkDownloadResult> 
 
     @Override
     public HomeworkDownloadResult execute(TaskInput input) {
-        input.require("username");
+        String username = input.require("username");
         input.require("homeworkId");
         input.require("outputDir");
         HomeworkDownloadRequest req = HomeworkDownloadRequest.builder()
@@ -103,6 +117,7 @@ public class HomeworkDownloadTask implements CampusTask<HomeworkDownloadResult> 
             .maxRetries(input.getInt("maxRetries",
                 HomeworkDownloadRequest.DEFAULT_MAX_RETRIES))
             .build();
-        return client.download(req);
+        Account account = accountResolver.apply(username);
+        return clientFactory.apply(account).download(req);
     }
 }

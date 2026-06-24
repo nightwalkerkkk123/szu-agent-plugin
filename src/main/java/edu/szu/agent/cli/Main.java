@@ -1,6 +1,5 @@
 package edu.szu.agent.cli;
 
-import edu.szu.agent.account.Account;
 import edu.szu.agent.client.ChaoxingAttachmentDownloadClient;
 import edu.szu.agent.client.ChaoxingHomeworkClient;
 import edu.szu.agent.client.EhallScheduleClient;
@@ -92,7 +91,6 @@ public class Main implements Callable<Integer> {
             .collect(Collectors.toSet());
 
         ConfigManager.getInstance().load();
-        Account placeholder = new Account("placeholder", "placeholder", "P1-stub");
 
         if (!existing.contains("booking_venue")) {
             // Per-user session reuse: BookingFlowLauncher builds a SessionStore
@@ -104,28 +102,33 @@ public class Main implements Callable<Integer> {
             registry.register(Skill.of(new BookingTask(launcher::clientFor)));
         }
 
+        // Per-user session reuse (mirrors booking): resolve the real account
+        // per request and key the SessionStore by student ID, so a manual
+        // headed MFA pass on the LMS domain is reused on later headless calls.
         if (!existing.contains("homework_list")) {
-            ChaoxingHomeworkClient client = new ChaoxingHomeworkClient(
-                placeholder,
-                ConfigManager.getInstance().browser(),
-                RetryPolicies.defaultBooking());
-            registry.register(Skill.of(new HomeworkTask(client, placeholder)));
+            registry.register(Skill.of(new HomeworkTask(account ->
+                new ChaoxingHomeworkClient(
+                    account,
+                    ConfigManager.getInstance().browser(),
+                    RetryPolicies.defaultBooking(),
+                    new SessionStore(
+                        Path.of(System.getProperty("user.home")), account.studentId()),
+                    new SessionProbe(
+                        "https://lms.szu.edu.cn/user/index", ".todo-list-container"),
+                    Duration.ofDays(30)))));
         }
 
         if (!existing.contains("homework_download")) {
-            SessionStore store = new SessionStore(
-                Path.of(System.getProperty("user.home")),
-                placeholder.studentId());
-            SessionProbe probe = new SessionProbe(
-                "https://lms.szu.edu.cn/user/index", ".todo-list-container");
-            ChaoxingAttachmentDownloadClient client = new ChaoxingAttachmentDownloadClient(
-                placeholder,
-                ConfigManager.getInstance().browser(),
-                RetryPolicies.defaultBooking(),
-                store,
-                probe,
-                Duration.ofDays(30));
-            registry.register(Skill.of(new HomeworkDownloadTask(client, placeholder)));
+            registry.register(Skill.of(new HomeworkDownloadTask(account ->
+                new ChaoxingAttachmentDownloadClient(
+                    account,
+                    ConfigManager.getInstance().browser(),
+                    RetryPolicies.defaultBooking(),
+                    new SessionStore(
+                        Path.of(System.getProperty("user.home")), account.studentId()),
+                    new SessionProbe(
+                        "https://lms.szu.edu.cn/user/index", ".todo-list-container"),
+                    Duration.ofDays(30)))));
         }
 
         if (!existing.contains("schedule_list")) {

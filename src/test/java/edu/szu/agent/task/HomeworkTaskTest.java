@@ -29,14 +29,14 @@ class HomeworkTaskTest {
     @Test
     @DisplayName("name() returns homework_list")
     void nameReturnsHomeworkList() {
-        HomeworkTask task = new HomeworkTask(client, account);
+        HomeworkTask task = new HomeworkTask(acct -> client, user -> account);
         assertThat(task.name()).isEqualTo("homework_list");
     }
 
     @Test
     @DisplayName("description() returns Chinese description")
     void descriptionReturnsChinese() {
-        HomeworkTask task = new HomeworkTask(client, account);
+        HomeworkTask task = new HomeworkTask(acct -> client, user -> account);
         assertThat(task.description()).isEqualTo("查询畅课作业列表");
     }
 
@@ -45,7 +45,7 @@ class HomeworkTaskTest {
     void executeDelegatesToClient() {
         Homework expected = new Homework("1", "OS", "lab", "2026.06.24 23:59", "待提交");
         when(client.list()).thenReturn(new HomeworkListResult.Success(List.of(expected)));
-        HomeworkTask task = new HomeworkTask(client, account);
+        HomeworkTask task = new HomeworkTask(acct -> client, user -> account);
         TaskInput input = new TaskInput(Map.of("username", "2023150090"));
 
         HomeworkListResult result = task.execute(input);
@@ -57,7 +57,7 @@ class HomeworkTaskTest {
     @Test
     @DisplayName("execute() throws IllegalArgumentException when username is missing")
     void executeRequiresUsername() {
-        HomeworkTask task = new HomeworkTask(client, account);
+        HomeworkTask task = new HomeworkTask(acct -> client, user -> account);
         TaskInput input = new TaskInput(Map.of());
 
         assertThatThrownBy(() -> task.execute(input))
