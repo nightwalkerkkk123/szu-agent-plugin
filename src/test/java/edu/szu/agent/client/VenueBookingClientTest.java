@@ -2,6 +2,8 @@ package edu.szu.agent.client;
 
 import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
+import edu.szu.agent.client.session.SessionProbe;
+import edu.szu.agent.client.session.SessionStore;
 import edu.szu.agent.client.step.BookingContext;
 import edu.szu.agent.client.step.BookingStep;
 import edu.szu.agent.client.step.StepOutcome;
@@ -23,6 +25,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.nio.file.Path;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -204,6 +208,46 @@ class VenueBookingClientTest {
         assertThat(ran).isTrue();
         verify(browser).open();
         verify(browser).close();
+    }
+
+    // ---------- session-aware pipeline composition ----------
+
+    @Test
+    @DisplayName("会话感知构造器: RESTORE_SESSION 在首, PERSIST_SESSION 紧跟 SELECT_CAMPUS")
+    void sessionAwareConstructorInsertsSessionSteps() {
+        VenueBookingClient client = new VenueBookingClient(
+            browser, RetryPolicies.quickFix(),
+            new SessionStore(Path.of("/tmp"), "2023150090"),
+            new SessionProbe("https://ehall.szu.edu.cn/probe", ".bh-btn"),
+            Duration.ofDays(30));
+
+        assertThat(client.stepNames()).containsExactly(
+            "RESTORE_SESSION",
+            "CAS_LOGIN",
+            "NAVIGATE_TO_BOOKING",
+            "SELECT_CAMPUS",
+            "PERSIST_SESSION",
+            "SELECT_SPORT",
+            "SELECT_DATE",
+            "SELECT_TIME_SLOT",
+            "SELECT_VENUE",
+            "CONFIRM_BOOKING");
+    }
+
+    @Test
+    @DisplayName("无会话构造器: 8 步原样, 无 RESTORE/PERSIST")
+    void plainConstructorHasNoSessionSteps() {
+        VenueBookingClient client = new VenueBookingClient(browser, RetryPolicies.quickFix());
+
+        assertThat(client.stepNames()).containsExactly(
+            "CAS_LOGIN",
+            "NAVIGATE_TO_BOOKING",
+            "SELECT_CAMPUS",
+            "SELECT_SPORT",
+            "SELECT_DATE",
+            "SELECT_TIME_SLOT",
+            "SELECT_VENUE",
+            "CONFIRM_BOOKING");
     }
 
     // ---------- helpers ----------

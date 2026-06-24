@@ -2,6 +2,8 @@ package edu.szu.agent.client;
 
 import edu.szu.agent.account.Account;
 import edu.szu.agent.browser.BrowserLifecycle;
+import edu.szu.agent.client.session.SessionProbe;
+import edu.szu.agent.client.session.SessionStore;
 import edu.szu.agent.client.step.*;
 import edu.szu.agent.domain.BookingRequest;
 import edu.szu.agent.domain.BookingResult;
@@ -13,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -67,6 +70,47 @@ public class VenueBookingClient {
     }
 
     /**
+     * Session-aware constructor — same pipeline as the default one, plus
+     * {@link RestoreSessionStep} at the front and {@link PersistSessionStep}
+     * right after {@code SELECT_CAMPUS}.
+     *
+     * <p>Placement rationale: {@code CAS_LOGIN} cannot confirm success at submit
+     * time (MFA is completed later), so {@code SELECT_CAMPUS} is the first step
+     * that proves authentication. Persisting immediately after it captures the
+     * session even when a later step fails (e.g. slot full at
+     * {@code SELECT_TIME_SLOT}) — the pipeline stops on the first failure, so a
+     * tail-placed persist would never run in that case.
+     *
+     * @param browser     the browser adapter
+     * @param retryPolicy retry policy for the booking flow
+     * @param store       session storage (keyed by username)
+     * @param probe       alive-check probe for a restored session
+     * @param ttl         maximum age allowed for a persisted session
+     * @since 0.3.0
+     * @author 王子豪
+     */
+    public VenueBookingClient(BrowserLifecycle browser,
+                              RetryPolicy retryPolicy,
+                              SessionStore store,
+                              SessionProbe probe,
+                              Duration ttl) {
+        this(browser, retryPolicy, List.of(
+            new RestoreSessionStep(store, probe, ttl),
+            new CasLoginStep(),
+            new NavigateToBookingStep(),
+            new SelectCampusStep(),
+            // Persist here: SELECT_CAMPUS proves auth; later failures must not
+            // lose the freshly-authenticated session. Unconditional (ctx->true).
+            new PersistSessionStep(store, ctx -> true),
+            new SelectSportStep(),
+            new SelectDateStep(),
+            new SelectTimeSlotStep(),
+            new SelectVenueStep(),
+            new ConfirmBookingStep()
+        ));
+    }
+
+    /**
      * Full DI constructor — for testing with custom step lists.
      *
      * @param browser      the browser adapter
@@ -79,6 +123,13 @@ public class VenueBookingClient {
         this.browser = Objects.requireNonNull(browser, "browser");
         this.retryPolicy = Objects.requireNonNull(retryPolicy, "retryPolicy");
         this.steps = List.copyOf(steps);
+    }
+
+    /**
+     * @return the ordered step names of this pipeline (for tests / diagnostics)
+     */
+    List<String> stepNames() {
+        return steps.stream().map(BookingStep::name).toList();
     }
 
     /**
@@ -97,6 +148,7 @@ public class VenueBookingClient {
         Objects.requireNonNull(request, "BookingRequest must not be null");
         Objects.requireNonNull(account, "Account must not be null; resolve credentials with AccountResolver first");
         BookingContext ctx = new BookingContext(request, account);
+        ctx.username(account.studentId()); // for session-store keying + persist logs
         try {
             browser.open();
             return retryPolicy.execute(() -> executePipeline(ctx));
