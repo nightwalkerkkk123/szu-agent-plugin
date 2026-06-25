@@ -25,6 +25,7 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
 
 # Claude Code
 .claude/worktrees/
