@@ -74,4 +74,32 @@ public interface CampusTask<T> {
             "type", "object",
             "additionalProperties", true);
     }
+
+    /**
+     * Returns structured metadata that augments {@link #description()} and
+     * {@link #inputSchema()} for richer LLM-facing schemas and human-facing
+     * documentation.
+     *
+     * <p>Two distinct consumers, per the MCP tool-documentation plan:
+     * <ul>
+     *   <li>{@link edu.szu.agent.mcp.ToolSchema} promotes
+     *       {@link ToolAnnotations#examples()} into the MCP
+     *       {@code tools/list} top-level {@code examples} array.</li>
+     *   <li>{@link ToolDocsGenerator} renders
+     *       {@link ToolAnnotations#resultShape()} and
+     *       {@link ToolAnnotations#commonErrors()} into
+     *       {@code docs/tools/<tool>.md}.</li>
+     * </ul>
+     *
+     * <p>The default implementation returns {@link ToolAnnotations#empty()},
+     * which is the right answer for tasks that genuinely have no examples,
+     * no return-shape notes, and no common errors worth documenting.
+     *
+     * @return the annotations; never {@code null}
+     * @since 0.5.0
+     * @author 王子豪
+     */
+    default ToolAnnotations annotations() {
+        return ToolAnnotations.empty();
+    }
 }

@@ -19,7 +19,9 @@ class CalendarTaskTest {
     void nameAndDescriptionAreCorrect() {
         CalendarTask task = new CalendarTask();
         assertThat(task.name()).isEqualTo("calendar_get");
-        assertThat(task.description()).isEqualTo("查询深大校历(静态 MVP)");
+        assertThat(task.description())
+            .startsWith("查询深圳大学校历")
+            .contains("静态 MVP", "2025-2026", "academicYear", "SEMESTER_START");
     }
 
     @Test

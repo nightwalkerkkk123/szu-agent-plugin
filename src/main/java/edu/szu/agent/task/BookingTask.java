@@ -97,48 +97,116 @@ public class BookingTask implements CampusTask<BookingResult> {
 
         Map<String, Object> properties = new LinkedHashMap<>();
 
-        Map<String, Object> username = new LinkedHashMap<>();
-        username.put("type", "string");
-        username.put("description", "学号,例如 2023150090。若未提供,默认使用环境变量 SZU_USERNAME 配置的账号");
+        Map<String, Object> username = TaskInputSchema.property("string",
+            "学号,例如 2023150090。若未提供,默认使用环境变量 SZU_USERNAME 配置的账号。",
+            Map.of("pattern", "^20\\d{9}$", "examples", List.of("2023150090")));
         properties.put("username", username);
 
-        Map<String, Object> campus = new LinkedHashMap<>();
-        campus.put("type", "string");
-        campus.put("enum", List.of("YUEHAI", "LIHU"));
-        campus.put("description", "校区枚举名:YUEHAI(粤海)或 LIHU(丽湖)");
+        Map<String, Object> campus = TaskInputSchema.enumProperty(
+            "校区枚举名:YUEHAI(粤海)或 LIHU(丽湖)。",
+            List.of("YUEHAI", "LIHU"),
+            Map.of("examples", List.of("YUEHAI", "LIHU")));
         properties.put("campus", campus);
 
-        Map<String, Object> sport = new LinkedHashMap<>();
-        sport.put("type", "string");
-        sport.put("enum", List.of(
-            "BADMINTON", "FOOTBALL", "VOLLEYBALL", "TENNIS", "BASKETBALL", "SQUASH",
-            "GYM_HEAVY", "GYM_AEROBIC", "SWIMMING", "TABLE_TENNIS", "DANCE", "POOL",
-            "CYCLING", "MAGIC_MIRROR", "BOARD_GAME", "GYM", "YOGA", "PICKLEBALL", "SHUTTLECOCK"
-        ));
-        sport.put("description", "运动项目枚举名。必须与 campus 匹配:粤海校区用 GYM_HEAVY(一楼健身房)/GYM_AEROBIC(二楼健身房),不要用 GYM;丽湖校区用 GYM(健身房)。详见 description 中的完整映射。");
+        Map<String, Object> sport = TaskInputSchema.enumProperty(
+            "运动项目枚举名。必须与 campus 匹配:粤海校区用 GYM_HEAVY/GYM_AEROBIC,丽湖校区用 GYM。详见 description 中的完整映射。",
+            List.of(
+                "BADMINTON", "FOOTBALL", "VOLLEYBALL", "TENNIS", "BASKETBALL", "SQUASH",
+                "GYM_HEAVY", "GYM_AEROBIC", "SWIMMING", "TABLE_TENNIS", "DANCE", "POOL",
+                "CYCLING", "MAGIC_MIRROR", "BOARD_GAME", "GYM", "YOGA", "PICKLEBALL", "SHUTTLECOCK"
+            ),
+            Map.of("examples", List.of("TENNIS", "GYM_HEAVY", "GYM")));
         properties.put("sport", sport);
 
-        Map<String, Object> date = new LinkedHashMap<>();
-        date.put("type", "string");
-        date.put("format", "date");
-        date.put("description", "ISO 8601 日期,例如 2026-06-24");
+        Map<String, Object> date = TaskInputSchema.property("string",
+            "ISO 8601 日期,例如 2026-06-24。",
+            Map.of("format", "date", "examples", List.of("2026-06-24")));
         properties.put("date", date);
 
-        Map<String, Object> timeSlot = new LinkedHashMap<>();
-        timeSlot.put("type", "string");
-        timeSlot.put("pattern", "^([01]?[0-9]|2[0-3]):00-([01]?[0-9]|2[0-3]):00$");
-        timeSlot.put("description", "预约时段,HH:mm-HH:mm 格式,只支持整点 1 小时时段(08:00-22:00),例如 16:00-17:00。禁止传对象。");
+        Map<String, Object> timeSlot = TaskInputSchema.property("string",
+            "预约时段,HH:mm-HH:mm 格式,只支持整点 1 小时时段(08:00-22:00),例如 16:00-17:00。禁止传对象。",
+            Map.of(
+                "pattern", "^([01]?[0-9]|2[0-3]):00-([01]?[0-9]|2[0-3]):00$",
+                "examples", List.of("16:00-17:00", "19:00-20:00")
+            ));
         properties.put("timeSlot", timeSlot);
 
-        Map<String, Object> preferredVenue = new LinkedHashMap<>();
-        preferredVenue.put("type", "integer");
-        preferredVenue.put("description", "1-based 偏好序号,默认 1。对球场类项目指第几个可预约球场;对健身房类容量项目指第几个可用容量时段/区域");
-        preferredVenue.put("default", 1);
+        Map<String, Object> preferredVenue = TaskInputSchema.property("integer",
+            "1-based 偏好序号,默认 1。对球场类项目指第几个可预约球场;对健身房类容量项目指第几个可用容量时段/区域。",
+            Map.of("default", 1, "minimum", 1, "examples", List.of(1, 2)));
         properties.put("preferredVenue", preferredVenue);
 
         schema.put("properties", properties);
         schema.put("required", List.of("campus", "sport", "date", "timeSlot"));
         return schema;
+    }
+
+    @Override
+    public ToolAnnotations annotations() {
+        Map<String, Object> ex1 = new LinkedHashMap<>();
+        ex1.put("username", "2023150090");
+        ex1.put("campus", "YUEHAI");
+        ex1.put("sport", "TENNIS");
+        ex1.put("date", "2026-06-24");
+        ex1.put("timeSlot", "19:00-20:00");
+        ex1.put("preferredVenue", 1);
+
+        Map<String, Object> ex2 = new LinkedHashMap<>();
+        ex2.put("campus", "YUEHAI");
+        ex2.put("sport", "GYM_HEAVY");
+        ex2.put("date", "2026-06-24");
+        ex2.put("timeSlot", "16:00-17:00");
+
+        Map<String, Object> ex3 = new LinkedHashMap<>();
+        ex3.put("campus", "LIHU");
+        ex3.put("sport", "GYM");
+        ex3.put("date", "2026-06-25");
+        ex3.put("timeSlot", "20:00-21:00");
+
+        Map<String, Object> ex4 = new LinkedHashMap<>();
+        ex4.put("username", "2023150090");
+        ex4.put("campus", "YUEHAI");
+        ex4.put("sport", "BADMINTON");
+        ex4.put("date", "2026-06-27");
+        ex4.put("timeSlot", "14:00-15:00");
+        ex4.put("preferredVenue", 2);
+
+        Map<String, Object> ex5 = new LinkedHashMap<>();
+        ex5.put("campus", "LIHU");
+        ex5.put("sport", "BASKETBALL");
+        ex5.put("date", "2026-06-28");
+        ex5.put("timeSlot", "18:00-19:00");
+
+        Map<String, Object> ex6 = new LinkedHashMap<>();
+        ex6.put("campus", "YUEHAI");
+        ex6.put("sport", "SWIMMING");
+        ex6.put("date", "2026-06-29");
+        ex6.put("timeSlot", "09:00-10:00");
+
+        Map<String, Object> ex7 = new LinkedHashMap<>();
+        ex7.put("campus", "LIHU");
+        ex7.put("sport", "YOGA");
+        ex7.put("date", "2026-06-30");
+        ex7.put("timeSlot", "07:00-08:00");
+
+        return ToolAnnotations.builder()
+            .example(ex1)
+            .example(ex2)
+            .example(ex3)
+            .example(ex4)
+            .example(ex5)
+            .example(ex6)
+            .example(ex7)
+            .resultShape("""
+                BookingResult (sealed):
+                - Success { request: BookingRequest, venueName: String, confirmationNo: String, message: String }
+                - Failure { code: ErrorCode, message: String }
+                BookingRequest 字段: username, campus, sport, date, timeSlot, preferredVenueIndex。
+                注意:调用成功会真实占用预约名额,调用前必须获得用户明确确认。""")
+            .commonError("sport 与 campus 不匹配(如 LIHU + GYM_HEAVY)→ INVALID_REQUEST;按 description 的校区映射修正")
+            .commonError("timeSlot 传对象或口语 \"4-5点\" → INVALID_REQUEST;必须转为 \"16:00-17:00\"")
+            .commonError("未注入账号凭证/会话过期 → ACCOUNT_RESOLUTION_FAILED 或 SESSION_EXPIRED;需 env/--env-file 或 headed 登录刷新")
+            .build();
     }
 
     private String resolveUsername(TaskInput input) {

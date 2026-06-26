@@ -48,7 +48,9 @@ class ExamListTaskTest {
     void nameAndDescriptionAreCorrect() {
         ExamListTask task = new ExamListTask();
         assertThat(task.name()).isEqualTo("exam_list");
-        assertThat(task.description()).isEqualTo("查询深大考试安排列表(静态 MVP)");
+        assertThat(task.description())
+            .startsWith("查询深圳大学考试安排列表")
+            .contains("待开始考试", "已结束", "ExamSchedule");
     }
 
     @Test

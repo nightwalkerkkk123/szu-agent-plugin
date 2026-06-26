@@ -37,7 +37,9 @@ class HomeworkTaskTest {
     @DisplayName("description() returns Chinese description")
     void descriptionReturnsChinese() {
         HomeworkTask task = new HomeworkTask(client, account);
-        assertThat(task.description()).isEqualTo("查询畅课作业列表");
+        assertThat(task.description())
+            .startsWith("查询深圳大学畅课")
+            .contains("AccountResolver", "homework_download", "HomeworkListResult");
     }
 
     @Test
