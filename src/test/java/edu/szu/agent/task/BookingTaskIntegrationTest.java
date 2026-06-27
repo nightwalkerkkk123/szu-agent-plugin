@@ -34,7 +34,11 @@ class BookingTaskIntegrationTest {
         Account account = new Account("2023150090", "fake-pw", "test");
         RetryPolicy noRetry = noRetry();
         VenueBookingClient client = new VenueBookingClient(browser, noRetry);
-        BookingTask task = new BookingTask(acct -> client, username -> account);
+        BookingTask task = new BookingTask(
+            acct -> client,
+            (b, u) -> { throw new IllegalStateException("headed fallback not wired"); },
+            uname -> account,
+            () -> { throw new IllegalStateException("headed fallback not wired"); });
 
         TaskInput input = new TaskInput(Map.of(
             "username", "2023150090",
@@ -59,7 +63,11 @@ class BookingTaskIntegrationTest {
         Account account = new Account("2023150090", "fake-pw", "test");
         RetryPolicy noRetry = noRetry();
         VenueBookingClient client = new VenueBookingClient(browser, noRetry);
-        BookingTask task = new BookingTask(acct -> client, username -> account);
+        BookingTask task = new BookingTask(
+            acct -> client,
+            (b, u) -> { throw new IllegalStateException("headed fallback not wired"); },
+            uname -> account,
+            () -> { throw new IllegalStateException("headed fallback not wired"); });
 
         TaskInput input = new TaskInput(Map.of(
             "username", "2023150090",
@@ -83,7 +91,11 @@ class BookingTaskIntegrationTest {
         Account account = new Account("2023150090", "fake-pw", "test");
         RetryPolicy noRetry = noRetry();
         VenueBookingClient client = new VenueBookingClient(browser, noRetry);
-        BookingTask task = new BookingTask(acct -> client, username -> account);
+        BookingTask task = new BookingTask(
+            acct -> client,
+            (b, u) -> { throw new IllegalStateException("headed fallback not wired"); },
+            uname -> account,
+            () -> { throw new IllegalStateException("headed fallback not wired"); });
 
         TaskInput input = new TaskInput(Map.of(
             "username", "2023150090",
@@ -107,7 +119,11 @@ class BookingTaskIntegrationTest {
         Account account = new Account("2023150090", "fake-pw", "test");
         RetryPolicy noRetry = noRetry();
         VenueBookingClient client = new VenueBookingClient(browser, noRetry);
-        BookingTask task = new BookingTask(acct -> client, username -> account);
+        BookingTask task = new BookingTask(
+            acct -> client,
+            (b, u) -> { throw new IllegalStateException("headed fallback not wired"); },
+            uname -> account,
+            () -> { throw new IllegalStateException("headed fallback not wired"); });
 
         TaskInput input = new TaskInput(Map.of(
             "campus", "YUEHAI",
@@ -130,7 +146,11 @@ class BookingTaskIntegrationTest {
         Account account = new Account("2023150090", "fake-pw", "test");
         RetryPolicy noRetry = noRetry();
         VenueBookingClient client = new VenueBookingClient(browser, noRetry);
-        BookingTask task = new BookingTask(acct -> client, username -> account);
+        BookingTask task = new BookingTask(
+            acct -> client,
+            (b, u) -> { throw new IllegalStateException("headed fallback not wired"); },
+            uname -> account,
+            () -> { throw new IllegalStateException("headed fallback not wired"); });
 
         TaskInput input = new TaskInput(Map.of(
             "username", "2023150090",

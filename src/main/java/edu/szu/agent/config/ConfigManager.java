@@ -324,11 +324,44 @@ public final class ConfigManager {
      *         (FakeBrowser is a Phase 4+ deliverable, not Phase 3)
      */
     public BrowserLifecycle browser() {
+        return buildBrowser(false);
+    }
+
+    /**
+     * Constructs the configured {@link BrowserLifecycle} with an explicit
+     * headless override, bypassing the {@code SZU_HEADLESS} env / system
+     * property resolution. Used by the headed-fallback path in
+     * {@link edu.szu.agent.task.BookingTask}: when no credential is
+     * available the user must be shown a real browser to log in manually,
+     * regardless of any headless default the user might have configured.
+     *
+     * @param headless {@code false} to show a browser window; {@code true}
+     *                 to keep the default behavior
+     * @return a fresh {@link BrowserLifecycle} (caller owns the lifecycle)
+     * @throws IllegalStateException        if {@code browser.kind} is unset or unknown
+     * @throws UnsupportedOperationException if {@code browser.kind = FAKE}
+     * @since 0.5.0
+     * @author 王子豪
+     */
+    public BrowserLifecycle browser(boolean headless) {
+        return buildBrowser(headless);
+    }
+
+    /**
+     * Internal factory: single source of truth for the kind→adapter switch.
+     * Future {@link BrowserKind} values (e.g. a real {@code FAKE} adapter)
+     * only need to be wired here, in one place.
+     *
+     * <p>The {@code headlessOverride} is currently always honored — there is
+     * no upstream caller that wants the env var to win over an explicit
+     * override. If such a caller ever appears, gate it here.
+     */
+    private BrowserLifecycle buildBrowser(boolean headlessOverride) {
         BrowserKind kind = BrowserKind.parse(browserKind());
         return switch (kind) {
             case PLAYWRIGHT -> {
                 Playwright pw = Playwright.create();
-                yield new PlaywrightBrowserAdapter(pw);
+                yield new PlaywrightBrowserAdapter(pw, headlessOverride);
             }
             case FAKE -> throw new UnsupportedOperationException(
                 "FakeBrowser is not yet implemented (Phase 4+ deliverable, see system-map.md §1)");

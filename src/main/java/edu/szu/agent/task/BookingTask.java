@@ -1,7 +1,9 @@
 package edu.szu.agent.task;
 
 import edu.szu.agent.account.Account;
+import edu.szu.agent.account.AccountResolutionException;
 import edu.szu.agent.account.AccountResolver;
+import edu.szu.agent.browser.BrowserLifecycle;
 import edu.szu.agent.client.VenueBookingClient;
 import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.domain.BookingRequest;
@@ -9,13 +11,17 @@ import edu.szu.agent.domain.BookingResult;
 import edu.szu.agent.domain.Campus;
 import edu.szu.agent.domain.Sport;
 import edu.szu.agent.domain.TimeSlot;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * {@code booking_venue} CampusTask — the P0 realized implementation
@@ -43,29 +49,53 @@ import java.util.function.Function;
  */
 public class BookingTask implements CampusTask<BookingResult> {
 
+    private static final Logger log = LoggerFactory.getLogger(BookingTask.class);
+
     private final Function<Account, VenueBookingClient> clientFactory;
+    private final BiFunction<BrowserLifecycle, String, VenueBookingClient> headedClientFactory;
     private final Function<String, Account> accountResolver;
+    private final Supplier<BrowserLifecycle> headedBrowserFactory;
 
     /**
-     * Production constructor — uses {@link AccountResolver#resolve(String)}.
+     * Production constructor — uses {@link AccountResolver#resolve(String)}
+     * and {@link ConfigManager#getInstance()} for the headed fallback.
      *
-     * <p>The {@code clientFactory} builds a session-aware client per resolved
-     * account (e.g. {@code BookingFlowLauncher::clientFor}) so a single manual
-     * MFA pass is reused on later headless runs — the same path the CLI uses.
+     * <p>Both factories are required because the headed-fallback path
+     * builds a client bound to a different (headed) browser than the
+     * normal path. The normal-path factory takes a resolved
+     * {@link Account}; the headed-fallback factory takes a fresh
+     * {@link BrowserLifecycle} and is expected to build a session-aware
+     * client keyed to the same student (the username is passed through
+     * {@link VenueBookingClient#book(BookingRequest, Account)} via
+     * {@code request.username()} when {@code account} is null).
      *
-     * @param clientFactory builds a {@link VenueBookingClient} for a resolved account
+     * @param clientFactory       builds a client for a resolved account
+     * @param headedClientFactory builds a client bound to a headed browser
+     *                            (called only on
+     *                            {@link AccountResolutionException}, with
+     *                            the fresh headed browser and the
+     *                            requesting username)
+     * @since 0.5.0
+     * @author 王子豪
      */
-    public BookingTask(Function<Account, VenueBookingClient> clientFactory) {
-        this(clientFactory, AccountResolver::resolve);
+    public BookingTask(Function<Account, VenueBookingClient> clientFactory,
+                       BiFunction<BrowserLifecycle, String, VenueBookingClient> headedClientFactory) {
+        this(clientFactory, headedClientFactory, AccountResolver::resolve,
+            () -> ConfigManager.getInstance().browser(false));
     }
 
     /**
-     * Test constructor — inject a custom client factory and account resolver.
+     * Full test constructor — inject every seam independently so the
+     * headed-fallback path can be exercised without a real browser.
      */
     BookingTask(Function<Account, VenueBookingClient> clientFactory,
-                Function<String, Account> accountResolver) {
+                BiFunction<BrowserLifecycle, String, VenueBookingClient> headedClientFactory,
+                Function<String, Account> accountResolver,
+                Supplier<BrowserLifecycle> headedBrowserFactory) {
         this.clientFactory = clientFactory;
+        this.headedClientFactory = headedClientFactory;
         this.accountResolver = accountResolver;
+        this.headedBrowserFactory = headedBrowserFactory;
     }
 
     @Override
@@ -246,7 +276,32 @@ public class BookingTask implements CampusTask<BookingResult> {
             .preferredVenueIndex(preferredVenue)
             .build();
 
-        Account account = accountResolver.apply(username);
-        return clientFactory.apply(account).book(request, account);
+        try {
+            Account account = accountResolver.apply(username);
+            return clientFactory.apply(account).book(request, account);
+        } catch (AccountResolutionException e) {
+            // Headed fallback: all three credential layers (env / env-file /
+            // Skill injection) missed. Switch to a headed browser so the user
+            // can log in manually; PersistSessionStep will then store the
+            // resulting session for 30 days, after which headless runs reuse
+            // the persisted cookies via RestoreSessionStep (ADR-0008).
+            log.info("All credential layers failed for {}; switching to headed browser for manual login",
+                username);
+            BrowserLifecycle headed = headedBrowserFactory.get();
+            try {
+                return headedClientFactory.apply(headed, username).book(request, null);
+            } catch (RuntimeException headedEx) {
+                // Ensure the headed browser is closed even on pipeline failure
+                // (VenueBookingClient.book already closes it, but defensive
+                // close catches any failure before book is entered).
+                try {
+                    headed.close();
+                } catch (Exception closeEx) {
+                    log.warn("Failed to close headed fallback browser: {}",
+                        closeEx.getMessage());
+                }
+                throw headedEx;
+            }
+        }
     }
 }

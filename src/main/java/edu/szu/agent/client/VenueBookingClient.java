@@ -140,15 +140,29 @@ public class VenueBookingClient {
      * {@link BrowserLifecycle#close()} is called in a finally block.
      *
      * @param request the booking request (non-null, fully populated)
-     * @param account resolved credentials (from AccountResolver)
+     * @param account resolved credentials (from AccountResolver); may be
+     *                {@code null} only when the caller has set
+     *                {@code ctx.headedFallbackRequested(true)} — in that
+     *                case {@link CasLoginStep} will await a manual user
+     *                login in the visible browser
      * @return {@link BookingResult.Success} on confirmation,
      *         {@link BookingResult.Failure} on business failure
      */
     public BookingResult book(BookingRequest request, Account account) {
         Objects.requireNonNull(request, "BookingRequest must not be null");
-        Objects.requireNonNull(account, "Account must not be null; resolve credentials with AccountResolver first");
         BookingContext ctx = new BookingContext(request, account);
-        ctx.username(account.studentId()); // for session-store keying + persist logs
+        // Headed-fallback signal: a null account means BookingTask could not
+        // resolve any credential and rebuilt a headed browser for manual
+        // login. CasLoginStep reads this flag to skip its evaluate-script
+        // branch and wait for the user to complete the login in the visible
+        // browser window. Default false; we set true here so the contract
+        // is held by the client rather than scattered through callers.
+        if (account == null) {
+            ctx.headedFallbackRequested(true);
+        }
+        // request.username() is always set by BookingTask; falls back to
+        // account.studentId() for symmetry with the original contract
+        ctx.username(account != null ? account.studentId() : request.username());
         try {
             browser.open();
             return retryPolicy.execute(() -> executePipeline(ctx));

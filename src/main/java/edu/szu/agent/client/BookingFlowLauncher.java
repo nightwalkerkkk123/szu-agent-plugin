@@ -72,8 +72,9 @@ public class BookingFlowLauncher {
 
     /**
      * Builds a session-aware {@link VenueBookingClient} keyed to the given
-     * account. Single source of truth for the per-user session wiring, reused
-     * by both the CLI ({@link #launch}) and the MCP/daemon path
+     * account, bound to this launcher's default {@link #browser}. Single
+     * source of truth for the per-user session wiring, reused by both the
+     * CLI ({@link #launch}) and the MCP/daemon path
      * ({@link edu.szu.agent.task.BookingTask}).
      *
      * <p>The session store is keyed by student ID so one manual MFA pass
@@ -87,8 +88,28 @@ public class BookingFlowLauncher {
      * @author 王子豪
      */
     public VenueBookingClient clientFor(Account account) {
+        return clientFor(account.studentId(), this.browser);
+    }
+
+    /**
+     * Builds a session-aware {@link VenueBookingClient} bound to a specific
+     * browser. Used by the headed-fallback path in
+     * {@link edu.szu.agent.task.BookingTask}: when no credential can be
+     * resolved, a fresh headed browser is built and a new client is created
+     * against it, with the same session/probe wiring so the user can log in
+     * manually and have the resulting session persisted.
+     *
+     * @param username the student ID key for the session store
+     * @param browser  the browser to bind the client to (typically headed)
+     * @return a session-aware booking client bound to {@code browser}
+     * @since 0.5.0
+     * @author 王子豪
+     */
+    public VenueBookingClient clientFor(String username, BrowserLifecycle browser) {
+        Objects.requireNonNull(username, "username");
+        Objects.requireNonNull(browser, "browser");
         SessionStore store = new SessionStore(
-            Path.of(System.getProperty("user.home")), account.studentId());
+            Path.of(System.getProperty("user.home")), username);
         SessionProbe probe = new SessionProbe(CasLoginStep.EHALL_VENUE_URL, SEL_LOGGED_IN);
         return new VenueBookingClient(browser, retryPolicy, store, probe, SESSION_TTL);
     }

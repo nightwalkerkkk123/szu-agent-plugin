@@ -2,6 +2,7 @@ package edu.szu.agent.browser;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.microsoft.playwright.Page;
 
 /**
  * Test double for {@link BrowserLifecycle} — fakes a successful
@@ -192,4 +193,17 @@ public class FakeBrowser implements BrowserLifecycle {
     public boolean isSaved() { return saved; }
     public java.nio.file.Path loadedPath() { return loadedPath; }
     public java.nio.file.Path savedPath() { return savedPath; }
+
+    @Override
+    public Page newPage() {
+        throw new UnsupportedOperationException("FakeBrowser does not support newPage()");
+    }
+
+    @Override
+    public String content() {
+        // Booking-flow tests don't need real page HTML; tests that exercise
+        // HTML-parsing paths should use a Playwright-backed fake or mock
+        // the BrowserLifecycle instead.
+        return "<html><body>fake</body></html>";
+    }
 }
