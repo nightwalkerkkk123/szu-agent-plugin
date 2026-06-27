@@ -129,4 +129,57 @@ class ExamListTaskTest {
         assertThat(exams).hasSize(1);
         assertThat(exams.get(0).courseName()).isEqualTo("高等数学");
     }
+
+    @Test
+    @DisplayName("real supplier 抛异常时,自动回退到静态(走 ResilientExamListClient)")
+    void realSupplierThrowsFallsBackToStatic() {
+        ExamListTask task = new ExamListTask(
+            () -> { throw new RuntimeException("simulated network error"); },
+            () -> new ExamListClient(SNAPSHOT, 2026).list(),
+            false);
+
+        List<ExamSchedule> exams = task.execute(new TaskInput(Map.of(
+            "username", "2023150090")));
+
+        assertThat(exams).hasSize(2);
+        assertThat(exams).anyMatch(e -> "操作系统".equals(e.courseName()));
+    }
+
+    @Test
+    @DisplayName("real supplier 返回空时,自动回退到静态")
+    void realSupplierEmptyFallsBackToStatic() {
+        ExamListTask task = new ExamListTask(
+            java.util.List::of,
+            () -> new ExamListClient(SNAPSHOT, 2026).list(),
+            false);
+
+        List<ExamSchedule> exams = task.execute(new TaskInput(Map.of(
+            "username", "2023150090")));
+
+        assertThat(exams).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("real supplier 返回非空时,使用真实结果")
+    void realSupplierNonEmptyUsesRealResult() {
+        ExamListTask task = new ExamListTask(
+            () -> List.of(new ExamSchedule(
+                "1月1日",
+                "星期三",
+                "真实课程",
+                "TEST123",
+                LocalDate.of(2026, 1, 1),
+                LocalTime.of(9, 0),
+                LocalTime.of(11, 0),
+                "测试楼",
+                "张老师")),
+            () -> new ExamListClient(SNAPSHOT, 2026).list(),
+            false);
+
+        List<ExamSchedule> exams = task.execute(new TaskInput(Map.of(
+            "username", "2023150090")));
+
+        assertThat(exams).hasSize(1);
+        assertThat(exams.get(0).courseName()).isEqualTo("真实课程");
+    }
 }

@@ -17,12 +17,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrorCodeTest {
 
     @Test
-    @DisplayName("has exactly 38 constants")
+    @DisplayName("has exactly 44 constants")
     void hasThirtyEightConstants() {
         // 14 original + 3 SESSION_* + 3 ATTACHMENT_* + 5 SCHEDULE_*
-        // + 3 CHAOXING_* + 2 EXAM_* + 2 KNOWLEDGE_* + 1 CALENDAR_*
-        // + 2 NOTICE_* + 3 EXTERNAL_SKILL_* = 38
-        assertThat(ErrorCode.values()).hasSize(38);
+        // + 3 CHAOXING_* + 4 EXAM_* (EXAM_NOT_FOUND, EXAM_LOCATION_CONFLICT + 2 FETCH/TIMEOUT)
+        // + 2 KNOWLEDGE_* + 1 CALENDAR_PARSE_FAILED
+        // + 2 CALENDAR_* (FETCH_FAILED, TIMEOUT — P1 阶段 3)
+        // + 4 NOTICE_* (LIST_EMPTY, CATEGORY_INVALID, FETCH_FAILED, TIMEOUT — P1 阶段 2)
+        // + 3 EXTERNAL_SKILL_* = 44
+        assertThat(ErrorCode.values()).hasSize(44);
     }
 
     @Test

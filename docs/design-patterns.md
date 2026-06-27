@@ -20,9 +20,15 @@
 2. [单例模式 (Singleton)](#2-单例模式-singleton) — `ConfigManager` / `Tracer`
 3. [策略模式 (Strategy)](#3-策略模式-strategy) — `BookingStep` / `VenueSelector` / `RetryPolicy`
 4. [适配器模式 (Adapter)](#4-适配器模式-adapter) — `PlaywrightBrowserAdapter`
+5. ~~[静态工厂模式 (Static Factory)](#5-静态工厂模式-static-factory-已删除adr-0007-d1)~~ — 已删除
+6. [动态回退包装器 (Decorator + Strategy)](#6-动态回退包装器-decorator--strategy-p1-阶段-1) — `ResilientScheduleClient` (P1 阶段 1)
 
 > 5 模式 → **4 模式**(ADR-0007 D1):`BrowserFactory` / Static Factory 删除,改 `ConfigManager` 配置注入
 > 详见 [§5 删除说明](#5-静态工厂模式-static-factory-已删除adr-0007-d1)
+>
+> **P1 阶段 1 补充**:为 `schedule_list` 真实抓取新增"动态回退包装器"组合
+> (`ResilientScheduleClient` = Decorator + Strategy),见
+> [§6 动态回退包装器 (Decorator + Strategy)](#6-动态回退包装器-decorator--strategy-p1-阶段-1)
 
 ---
 
@@ -138,13 +144,14 @@ public record BookingRequest(
 ```
 edu.szu.agent.config.ConfigManager
 edu.szu.agent.observability.Tracer
+edu.szu.agent.skill.Skills
 ```
 
 ### 模式角色
 
 | 角色 | 实现 |
 |---|---|
-| **单例** | `ConfigManager` / `Tracer` (双重检查锁,线程安全) |
+| **单例** | `ConfigManager` / `Tracer` / `Skills` (双重检查锁,线程安全;`registerDefaultSkills()` 幂等) |
 
 ### 类图
 
@@ -153,8 +160,9 @@ ConfigManager  ──────────────── «singleton»
   - instance: ConfigManager (volatile)
   - config: Config
   - getInstance(): ConfigManager
-  + load(path): void
+  + load(): void
   + get(key): String
+  + browser(): BrowserLifecycle          # ADR-0007 D1:按 browser.kind 配置注入
 
 Tracer  ─────────────────────── «singleton»
   - instance: Tracer (volatile)
@@ -162,6 +170,15 @@ Tracer  ─────────────────────── «
   - getInstance(): Tracer
   + generateTraceId(): String
   + currentTraceId(): String
+  + recordFailure(ErrorCode, String, Optional<Path>)  # ADR-0007 D4:不接 Throwable
+
+Skills  ─────────────────────── «singleton, @since 0.1.0 P1 落地,2026-06 升级»
+  - instance: Skills (volatile)
+  - registry: Map<String, Skill<?>>
+  - getInstance(): Skills
+  + register(Skill<?>): void
+  + all(): List<Skill<?>>
+  + findByName(String): Optional<Skill<?>>   # 2026-06 增,KBRouter 用
 ```
 
 ### 代码
@@ -199,6 +216,7 @@ public final class ConfigManager {
 
 - 全局唯一配置:多个业务执行共享同一份配置,无需每次传递
 - `Tracer` 贯穿一次执行的所有步骤,必须唯一才能保证 `trace_id` 不中断
+- `Skills` 是 Skill 注册中心,8 内部 Skill + N 外部 Skill 都要查它(由 `MCPToolCallHandler.call` / `ToolSchema.toolsList` 复用),单例避免重复注册
 - 延迟加载:第一次调用 `getInstance()` 时才创建,避免启动开销
 
 ### 局限性
@@ -520,12 +538,99 @@ BrowserLifecycle browser = ConfigManager.getInstance().browser();
 
 | 模式 | 类 | 编程技术 | 状态 |
 |---|---|---|---|
-| Builder | `BookingRequest.Builder` | 泛型/重载/record | ✅ |
+| Builder | `BookingRequest.Builder` / `HomeworkDownloadRequest.Builder` / `KnowledgeDocBuilder` | 泛型/重载/record | ✅ |
 | 单例 | `ConfigManager` / `Tracer` / `Skills` | 枚举/Lambda | ✅ |
-| 策略 | `BookingStep` (7 实现) / `VenueSelector` (2 实现) / `RetryPolicy` (3 实现) | 泛型/Lambda | ✅ |
-| 适配器 | `BrowserLifecycle` / `PlaywrightBrowserAdapter` / `BookingFlowLauncher` | 接口/Lambda | ✅ |
+| 策略 | `BookingStep` (15+ 实现) / `VenueSelector` (2) / `RetryPolicy` (3) / `MatchingStrategy` (3) | 泛型/Lambda | ✅ |
+| 适配器 | `BrowserLifecycle` / `PlaywrightBrowserAdapter` / `BookingFlowLauncher` / `McpHttpServer`(HTTP 适配 stdio dispatch) | 接口/Lambda | ✅ |
+| Decorator + Strategy | `ResilientScheduleClient`(P1 阶段 1) | 不可变组合 / Lambda / 密封类型 | ✅ |
+
+> **2026-06-23 增量**:
+> - `McpHttpServer` 是 `McpStdioServer.handle(String)` 的 HTTP transport 适配,`/mcp` 端点直接复用 stdio JSON-RPC dispatch,零行为漂移 — 是 GoF Adapter 模式的"transport 适配"落地
+> - `JsonMappers` 用静态工厂(`standard()`)统一 `ObjectMapper` 配置(JavaTimeModule + 关 `WRITE_DATES_AS_TIMESTAMPS`),避免 `LocalDate` 序列化为数字数组 — Factory Method 模式
+> - `Skill.of(CampusTask)` 静态工厂确保 description 与 task 同源(2026-06 加),消除"在注册点手写 description"导致的漂移 — Static Factory 模式,与删掉的 `BrowserFactory` 形成对比:`Skill.of` 在产品语义层(描述与任务同源),不是 seam 错位
 
 **报告交代话术**:"5 模式 → 4 模式 + 配置注入,理由是 seam 深度。Static Factory 模式适用于实现选择是业务决策的场景(数据库驱动、日志后端),而浏览器实现选择是部署决策,放配置层更自然。"
+
+> **2026-06-26 P1 阶段 1 增量**:
+> - `ResilientScheduleClient` 是 **Decorator + Strategy 组合**:Decorator 包装 `EhallScheduleClient`(真实抓取),添加"失败时回退到 `ScheduleListClient`(静态)"的横切逻辑;Strategy 是 `list()` 内部的 `if (real == null) → 静态 / if Success → 真实 / if Failure / 抛异常 → 静态` 动态路由决策。两者不可分割:没有 Decorator 就无法在不改 `EhallScheduleClient` 源码的前提下添加回退逻辑;没有 Strategy 就无法在运行时根据真实路径结果切换实现。
+> - 落地参照 `PLAN-p1-real-fetch.md` §4 阶段 1;E2E 见 `harness-records/traces/20260626-005538-p1-phase1-schedule-real-fetch.md`。
+>
+> **2026-06-27 P1 阶段 3 增量**:
+> - `ResilientCalendarClient` 复用完全相同的 Decorator + Strategy 模式:包装 `PlaywrightCalendarFetchProvider` 真实抓取,任何失败(网络、超时、空结果)自动回退到内置静态 2025-2026 春季快照。由于官网校历当前渲染为 PNG 图片,真实抓取总是返回空,因此总是回退静态——设计向前兼容,官网改为 HTML 文本后无需修改代码即可自动使用真实内容。
+> - 同样的模式也用于 `notice_list`(阶段 2)的 `ResilientNoticeClient`。
+
+> **2026-06-27 P1 阶段 4 增量**:
+> - `ResilientExamListClient` 复用完全相同的 Decorator + Strategy 模式:包装 `PlaywrightExamFetchProvider` 真实抓取 ehall 考试安排页面,任何失败(网络、超时、会话过期、选择器不匹配、空结果)自动回退到项目内置静态快照。
+> - 至此,**四个需要真实抓取的 Skill 全部完成改造**:`schedule_list` / `notice_list` / `calendar_get` / `exam_list` 全部采用一致的弹性架构。每个 Skill 都有自己的 Strategy 接口和 Decorator 包装器,架构对齐,便于维护。
+
+---
+
+## 6. 动态回退包装器 (Decorator + Strategy)(P1 阶段 1)
+
+### 位置
+
+```
+edu.szu.agent.client.schedule.ResilientScheduleClient  (包装器,Decorator + Strategy)
+edu.szu.agent.client.EhallScheduleClient               (被包装的真实抓取,Component)
+edu.szu.agent.client.schedule.ScheduleListClient       (静态回退,ConcreteComponent)
+edu.szu.agent.task.ScheduleListTask                    (Caller,持有 real + fallback)
+```
+
+```java
+// Design Pattern: Decorator + Strategy(动态选择实现)
+// 编程技术: 不可变组合 / Lambda / 密封类型模式匹配
+public class ResilientScheduleClient {
+
+    private final EhallScheduleClient real;
+    private final ScheduleListClient fallback;
+
+    public ResilientScheduleClient(EhallScheduleClient real, ScheduleListClient fallback) {
+        this.real = real;
+        this.fallback = Objects.requireNonNull(fallback, "fallback must not be null");
+    }
+
+    public ScheduleListResult list() {
+        if (real == null) {
+            log.info("No real-fetch client wired; using static fallback directly");
+            return fallback.list();
+        }
+        try {
+            ScheduleListResult result = real.list();
+            if (result instanceof ScheduleListResult.Success s) {
+                log.info("Real fetch succeeded ({} courses); using it", s.courses().size());
+                return s;
+            }
+            if (result instanceof ScheduleListResult.Failure f) {
+                log.warn("Real fetch returned failure [{}:{}]; falling back to static",
+                    f.code(), f.message());
+                return fallback.list();
+            }
+            log.warn("Real fetch returned unknown result type {}; falling back to static",
+                result == null ? "null" : result.getClass().getSimpleName());
+            return fallback.list();
+        } catch (RuntimeException e) {
+            log.warn("Real fetch threw {}; falling back to static: {}",
+                e.getClass().getSimpleName(), e.getMessage());
+            return fallback.list();
+        }
+    }
+}
+```
+
+### 为什么选它
+
+- **Decorator 必要性**:`EhallScheduleClient` 的职责是"按账号真实抓取课表",不应当承担"抓不到怎么办"的责任。把回退逻辑放到包装器是单一职责的体现 —— 真实客户端只关心能否抓到,回退包装器只关心"真路径挂了之后兜底"。
+- **Strategy 必要性**:`list()` 内部根据 `real` 的返回(成功 / Failure / 抛异常 / 未知类型)走 4 条不同分支,是运行时策略选择,不是装饰器单一职责的延展。Decorator 只解决"加新行为"问题,Strategy 解决"运行时挑实现"问题,两者必须叠加。
+- **不可变组合**:`final EhallScheduleClient real` + `final ScheduleListClient fallback` — 包装器一旦构造,行为就锁定,无并发竞态。
+- **密封类型模式匹配**:`ScheduleListResult` 是 sealed(`Success` / `Failure` 两个 record),`instanceof Success s / Failure f` 让编译器能验证穷尽性,新增 `Result` 子类型时包装器会编译失败,提醒更新策略。
+- **不抛异常原则**:`list()` 永不返回 `null`、永不抛未捕获异常 —— 调用方(MCP / Skill / CLI)拿到的总是 `ScheduleListResult`,不需要 `try / catch`,简化了所有上层。
+- **共享 fallback 工厂**:`ScheduleListCommand.defaultTask()` 是 CLI 与 Skill/MCP 注册共享的"真实 + 静态"组合工厂,避免在 `Main` 与 `ScheduleListCommand` ctor 中分别构造真实客户端(防止两处配置走偏)。
+
+### 局限性
+
+- 当前 `ResilientScheduleClient` 只服务 `schedule_list`;P1 阶段 2-4 真实化 `notice_list` / `calendar_get` / `exam_list` 时,需要为每个 Skill 单独建包装器(因为失败回退的目标不同,各自持有不同的静态 fallback);如果包装器代码大量重复,可能提取通用 `ResilientClient<T>` 泛型抽象(后续阶段再决定)。
+- 包装器当前只"日志 + 回退",没有"重试"或"熔断"——真实路径失败时立即降级到静态,不试图二次抓取。如果用户场景"宁愿慢也要真实",需要加一个 `RetryThenFallback` 变体。
+- `ScheduleListTask(ScheduleListClient)` 旧 ctor 入参被静默忽略(已 `@Deprecated` 标记),但运行期仍接受该签名,直到下次 minor 删除。
 
 > **历史变更**(2026-06-11 ADR-0001 D9 + ADR-0007 D1):
 > - 原 `ClientFactory` 静态工厂 → 删除(只 1 个 Skill,无业务价值)

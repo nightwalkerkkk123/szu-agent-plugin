@@ -84,10 +84,10 @@ grep -rn "Design Pattern:" src/
 
 | 模式 | 类 |
 |---|---|
-| Builder | `BookingRequest.Builder` |
+| Builder | `BookingRequest.Builder`、`HomeworkDownloadRequest.Builder`、`KnowledgeDocBuilder` |
 | 单例 | `ConfigManager`、`Tracer`、`Skills` |
-| 策略 | `BookingStep`、`VenueSelector`、`RetryPolicy` |
-| 适配器 | `BrowserLifecycle`、`PlaywrightBrowserAdapter`、`BookingFlowLauncher` |
+| 策略 | `BookingStep` (15+ 实现)、`VenueSelector`、`RetryPolicy`、`MatchingStrategy` (3) |
+| 适配器 | `BrowserLifecycle`、`PlaywrightBrowserAdapter`、`BookingFlowLauncher`、`McpHttpServer` |
 
 > ADR-0007 D1:删 Static Factory / `BrowserFactory`,改 `ConfigManager` 配置注入,5 模式 → 4 模式
 
@@ -146,17 +146,31 @@ grep -rn "Design Pattern:" src/
 
 ## 当前实现状态
 
-本项目 Phase 0 骨架和 Phase 1 核心域已完成（2026-06-12），Phase 2 浏览器抽象进行中。
-38 个源码文件，20 个测试文件，`mvn test`全部通过。
+**所有 Phase 完成**;`4f06045` 同步后状态(2026-06-25):
 
-设计模式已按 ADR 重选（4 种）：
-- `docs/adr/0001-project-direction-recalibration.md` — 方向校准（Accepted）
-- `docs/adr/0002-browser-lifecycle-and-playwright-adapter.md` — BrowserLifecycle 10 方法（Accepted）
-- `docs/adr/0005-credential-and-logging-enforcement.md` — 凭证流转（Accepted）
-- `docs/adr/0006-phase1-domain-error-retry-matcher.md` — Phase 1 子决定（Accepted）
-- `docs/adr/0007-architecture-deepening.md` —架构深化（Accepted）
-- `docs/PRD.md` — 产品需求（含 ADR 校准声明）
-- `docs/design-patterns.md` — 4 模式落点（已同步）
-- `docs/system-map.md` — 系统架构 + 局限性分析（已同步）
+| 维度 | 数值 |
+|---|---|
+| Java 源文件(main) | 93 |
+| Java 源文件(test) | 53 |
+| 业务 Skill | 8(`booking_venue` / `homework_list` / `homework_download` / `schedule_list` / `calendar_get` / `notice_list` / `exam_list` / `kb_query`) |
+| Java 包 | 14 |
+| 设计模式 | 4(Builder / Singleton / Strategy / Adapter) |
+| 编程技术 | 6(泛型 / 枚举 / 注解 / 重载 / 抽象类 / Lambda-Stream) |
+| ADR Accepted | 7(0001/0002/0005/0006/0007/0008/0009) |
+| Story packet | 5(US-006/007/008/009/010) |
+
+调用面:**CLI** + **常驻 HTTP daemon**(`scripts/serve.sh --background`)+ **MCP stdio/HTTP** + **外部 Skill loader**(`SZU_SKILL_PATH` 扫描)。
+
+设计模式已按 ADR 重选(4 种):
+- `docs/adr/0001-project-direction-recalibration.md` — 方向校准(Accepted)
+- `docs/adr/0002-browser-lifecycle-and-playwright-adapter.md` — BrowserLifecycle 12 方法(Accepted)
+- `docs/adr/0005-credential-and-logging-enforcement.md` — 凭证流转(Accepted)
+- `docs/adr/0006-phase1-domain-error-retry-matcher.md` — Phase 1 子决定(Accepted)
+- `docs/adr/0007-architecture-deepening.md` — 架构深化(Accepted)
+- `docs/adr/0008-session-persistence.md` — 登录态持久化(Accepted)
+- `docs/adr/0009-schedule-module-design.md` — 课表模块(Accepted)
+- `docs/PRD.md` — 产品需求(含 ADR 校准声明)
+- `docs/design-patterns.md` — 4 模式落点(已同步)
+- `docs/system-map.md` — 系统架构 + 局限性分析(已同步)
 
 > ⚠️ `AgentToolPlatform` Facade / `ClientFactory` / `ErrorClassifier` / `NoticeQueryClient` / `ChaoxingCourseClient` / `GrowthPlanClient` / `CloakBrowserAdapter` 已删除/重命名，**评分 grep 不应再找到这些类名**。

@@ -31,3 +31,10 @@ SZU Agent Plugin — 面向对象高级编程大作业项目。面向深圳大�
 - 至少 **4 种设计模式**(按 ADR-0001 D9 + ADR-0007 D1):Builder / Singleton / Strategy / Adapter (**5 模式 → 4 模式,Static Factory 改 ConfigManager 注入**)
 - 局限性分析与改进建议(报告必含,含 CAS 验证码场景,见 ADR-0001 D7)
 - 独立完成,无抄袭
+
+## 当前规模(`4f06045`)
+
+- **8 个业务 Skill** + 4 设计模式 + 6 编程技术
+- **14 个 Java 包** · 93 个 main + 53 个 test 源文件
+- **7 份 ADR** + 5 份 Story + 8 工具
+- 调用面:CLI + 常驻 HTTP daemon + MCP stdio/HTTP + 外部 Skill loader

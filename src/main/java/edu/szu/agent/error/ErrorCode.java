@@ -1,7 +1,7 @@
 package edu.szu.agent.error;
 
 /**
- * Error code enum — 34 values with 5 metadata fields.
+ * Error code enum — 36 values with 5 metadata fields.
  *
  * <p>Per ADR-0006 §二.2: replaces Python's {@code ERROR_MAP} by hanging
  * metadata directly on the enum. Each constant carries:
@@ -103,6 +103,10 @@ public enum ErrorCode {
     EXAM_NOT_FOUND           (Severity.MEDIUM, true,  false, true,  "考试安排未发布或已结束"),
     /** 考试时间地点冲突,请联系教务. */
     EXAM_LOCATION_CONFLICT   (Severity.HIGH,   false, false, false, "考试时间地点冲突,请联系教务"),
+    /** 考试安排真实抓取失败(网络/超时/selector 错),已回退到静态快照. */
+    EXAM_FETCH_FAILED        (Severity.HIGH,   true,  false, true,  "考试安排真实抓取失败,已回退到静态快照"),
+    /** 考试安排真实抓取超时. */
+    EXAM_TIMEOUT             (Severity.MEDIUM, true,  false, false, "考试安排真实抓取超时,已回退到静态快照"),
 
     // ----- 知识库(kb_query) -----
     /** 知识库索引已过期,基于旧版本回答. */
@@ -113,12 +117,20 @@ public enum ErrorCode {
     // ----- 校历查询(US-010) -----
     /** 校历 HTML 表格解析失败(降级告警). */
     CALENDAR_PARSE_FAILED    (Severity.LOW,    false, false, false, "校历解析失败，返回已解析部分"),
+    /** 校历真实抓取失败(网络/超时/selector 错),已回退到静态快照. */
+    CALENDAR_FETCH_FAILED    (Severity.HIGH,   true,  false, true,  "校历真实抓取失败,已回退到静态快照"),
+    /** 校历真实抓取超时. */
+    CALENDAR_TIMEOUT         (Severity.MEDIUM, true,  false, false, "校历真实抓取超时,已回退到静态快照"),
 
     // ----- 公文通查询(US-011) -----
     /** 公文通列表为空. */
     NOTICE_LIST_EMPTY        (Severity.LOW,    false, false, false, "公文通列表为空"),
     /** 公文通分类无效. */
     NOTICE_CATEGORY_INVALID  (Severity.LOW,    false, false, false, "公文通分类无效"),
+    /** 公文通真实抓取失败(无 HAR / selector 错 / 网络). */
+    NOTICE_FETCH_FAILED      (Severity.HIGH,   true,  false, true,  "公文通真实抓取失败,已回退到静态快照"),
+    /** 公文通真实抓取超时. */
+    NOTICE_TIMEOUT           (Severity.MEDIUM, true,  false, false, "公文通真实抓取超时,已回退到静态快照"),
 
     // ----- 外部独立 Skill -----
     /** 外部 Skill 入口脚本缺失. */

@@ -56,6 +56,8 @@ public interface BrowserLifecycle {
 ```
 
 > **历史变更**(ADR-0007 D1):原 `BrowserFactory` / Static Factory 已删除,改 `ConfigManager` 配置注入。5 模式 → 4 模式。
+>
+> **2026-06 增量**:`Skill.of(CampusTask)` 静态工厂落地(避免 description 漂移);`McpHttpServer` 作为 transport 适配器;`JsonMappers.standard()` 集中 ObjectMapper 工厂。**这些**不计入"独立设计模式",分别是 Adapter 与 Factory Method 的产品语义层落地。
 
 报告验收时执行：`grep -rn "Design Pattern:" src/`
 

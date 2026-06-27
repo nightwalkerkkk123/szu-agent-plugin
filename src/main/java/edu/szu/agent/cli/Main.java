@@ -1,33 +1,24 @@
 package edu.szu.agent.cli;
 
-import edu.szu.agent.account.Account;
 import edu.szu.agent.client.ChaoxingAttachmentDownloadClient;
 import edu.szu.agent.client.ChaoxingHomeworkClient;
-import edu.szu.agent.client.EhallScheduleClient;
 import edu.szu.agent.client.BookingFlowLauncher;
 import edu.szu.agent.client.VenueBookingClient;
-import edu.szu.agent.client.session.SessionProbe;
-import edu.szu.agent.client.session.SessionStore;
 import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.retry.RetryPolicies;
 import edu.szu.agent.skill.Skill;
 import edu.szu.agent.skill.Skills;
 import edu.szu.agent.skill.external.ExternalSkillLoader;
 import edu.szu.agent.task.BookingTask;
-import edu.szu.agent.task.CalendarTask;
 import edu.szu.agent.task.ExamListTask;
 import edu.szu.agent.task.HomeworkDownloadTask;
 import edu.szu.agent.task.HomeworkTask;
 import edu.szu.agent.task.KnowledgeTask;
-import edu.szu.agent.task.NoticeTask;
-import edu.szu.agent.task.ScheduleListTask;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.nio.file.Path;
-import java.time.Duration;
 import java.util.stream.Collectors;
 
 /**
@@ -92,16 +83,18 @@ public class Main implements Callable<Integer> {
             .collect(Collectors.toSet());
 
         ConfigManager.getInstance().load();
-        Account placeholder = new Account("placeholder", "placeholder", "P1-stub");
-
         if (!existing.contains("booking_venue")) {
             // Per-user session reuse: BookingFlowLauncher builds a SessionStore
             // keyed by the resolved account at launch time, so a manual MFA pass
-            // (headed) is reused on later headless MCP/daemon calls.
+            // (headed) is reused on later headless MCP/daemon calls. The
+            // headed-fallback path reuses the same launcher with a freshly
+            // built headed browser — see BookingTask.execute().
             BookingFlowLauncher launcher = new BookingFlowLauncher(
                 ConfigManager.getInstance().browser(),
                 RetryPolicies.defaultBooking());
-            registry.register(Skill.of(new BookingTask(launcher::clientFor)));
+            registry.register(Skill.of(new BookingTask(
+                launcher::clientFor,
+                (browser, username) -> launcher.clientFor(username, browser))));
         }
 
         if (!existing.contains("homework_list")) {
@@ -113,15 +106,27 @@ public class Main implements Callable<Integer> {
         }
 
         if (!existing.contains("schedule_list")) {
-            registry.register(Skill.of(new ScheduleListTask()));
+            // Dynamic route per PLAN-p1-real-fetch.md §4 阶段 1: try real
+            // (Playwright + 30d session reuse), fall back to embedded static
+            // course list on any failure (no session / CAS expired / page
+            // change / network). See ResilientScheduleClient.
+            registry.register(Skill.of(ScheduleListCommand.defaultTask()));
         }
 
         if (!existing.contains("calendar_get")) {
-            registry.register(Skill.of(new CalendarTask()));
+            // Dynamic route per PLAN-p1-real-fetch.md §5 阶段 3: try real
+            // (Playwright on https://www.szu.edu.cn/xxgk/xl.htm), fall back
+            // to embedded 2025-2026 spring snapshot on any failure or empty
+            // parse result. See ResilientCalendarClient.
+            registry.register(Skill.of(CalendarCommand.defaultTask()));
         }
 
         if (!existing.contains("notice_list")) {
-            registry.register(Skill.of(new NoticeTask()));
+            // Dynamic route per PLAN-p1-real-fetch.md §5 阶段 2: try real
+            // (Playwright on https://www1.szu.edu.cn/board/), fall back
+            // to embedded static snapshot on any failure. See
+            // ResilientNoticeClient.
+            registry.register(Skill.of(NoticeCommand.defaultTask()));
         }
 
         if (!existing.contains("exam_list")) {

@@ -18,77 +18,128 @@
 ```
 edu.szu.agent
 │
-├── task/                          # P1 扩展点(代码层只 book,P1 阶段实现)
+├── task/                          # 8 个业务实现,经 CampusTask<T> 注册
 │   ├── CampusTask<T>              # 任务抽象接口
-│   ├── TaskResult<T>              # 任务返回结果(record)
-│   ├── TaskStatus                 # 任务状态枚举
-│   └── TaskExecutor               # 任务执行器(重试/超时/状态记录)
+│   ├── TaskInput                  # 字符串契约 + require()/getInt() 辅助
+│   ├── TaskInputSchema            # 工厂:requiredSingle / schemaWithOptional / optionalOnly
+│   ├── BookingTask                # booking_venue(真跑 Playwright)
+│   ├── HomeworkTask               # homework_list(畅课 + 会话复用)
+│   ├── HomeworkDownloadTask       # homework_download(批量下载 + 30d TTL)
+│   ├── ScheduleListTask           # schedule_list(默认真实抓取 + 静态回退,见 ResilientScheduleClient)
+│   ├── CalendarTask               # calendar_get(2025-2026 校历)
+│   ├── NoticeTask                 # notice_list(分类 + daysBack)
+│   ├── ExamListTask               # exam_list(status 过滤)
+│   └── KnowledgeTask              # kb_query(本地 KB + 3 匹配策略)
 │
-├── domain/                         # 值对象(不可变 record)
-│   ├── Campus                      # 校区枚举(粤海/丽湖)
-│   ├── Sport                       # 项目枚举(网球/羽毛球/...)
-│   ├── TimeSlot                    # 时间段
-│   ├── Venue                       # 场地
-│   └── BookingRequest              # 预约请求(Builder 构造)
+├── domain/                         # 不可变 record
+│   ├── Campus / Sport / TimeSlot / BookingRequest(Builder) / BookingResult
+│   ├── Homework / HomeworkAttachment / HomeworkDownloadRequest(Builder) / HomeworkListResult
+│   ├── CourseEntry / Period / Weekday / WeekRange / LihuSport / YuehaiSport
+│   ├── calendar/ AcademicEvent / AcademicEventType
+│   ├── exam/     ExamSchedule
+│   └── notice/   Notice / NoticeCategory
 │
 ├── client/                         # 校园服务客户端
 │   ├── VenueBookingClient          # 体育场馆预约(P0 核心实现)
+│   ├── BookingFlowLauncher         # // Design Pattern: Adapter(seam,per-user session)
 │   ├── ChaoxingHomeworkClient      # 畅课作业列表查询(US-006)
-│   ├── session/                    # US-007 登录态持久化
+│   ├── ChaoxingAttachmentDownloadClient # 畅课附件下载(US-008)
+│   ├── EhallScheduleClient         # 课表抓取(US-009,带 session)
+│   ├── session/                    # US-007 登录态持久化(ADR-0008)
 │   │   ├── SessionStore            # 路径解析 + POSIX 600 + TTL 30d + username 白名单
 │   │   ├── SessionProbe            # // Design Pattern: Strategy(navigate + isVisible 探针)
 │   │   └── SessionResult           # sealed Fresh() / Stale(String reason)
-│   └── step/                       # BookingStep 管线(// Design Pattern: Strategy)
-│       ├── RestoreSessionStep      # US-007 前置:试 import + 探针验证
-│       └── PersistSessionStep      # US-007 后置:业务成功后 export storageState
+│   ├── step/                       # BookingStep 管线(// Design Pattern: Strategy,15+ 实现)
+│   │   ├── BookingStep / BookingContext / StepOutcome(sealed) / VenueSelector(Strategy,2 实现)
+│   │   ├── CacheLookupStep / CacheWriteStep / CachePipelineBuilder
+│   │   ├── CasLoginStep / NavigateToBookingStep
+│   │   ├── SelectCampusStep / SelectSportStep / SelectDateStep / SelectTimeSlotStep / SelectVenueStep
+│   │   ├── CapacityVenueSelector / CourtListSelector / ConfirmBookingStep
+│   │   ├── RestoreSessionStep / PersistSessionStep(US-007)
+│   │   ├── NavigateToHomeworkStep / NavigateToHomeworkDetailStep
+│   │   ├── NavigateToScheduleStep / ParseHomeworkListStep / ParseAttachmentsStep
+│   │   ├── ParseScheduleStep / DownloadFilesStep
+│   ├── cache/                      # CacheEnvelope / CacheKey / CacheStore(分层缓存)
+│   ├── exam/      ExamListClient / ExamListParser
+│   │         ExamFetchProvider (Strategy) / PlaywrightExamFetchProvider / ResilientExamListClient (Decorator+Strategy)
+│   ├── notice/    NoticeListClient / NoticeListParser
+│   │         NoticeFetchProvider (Strategy) / PlaywrightNoticeFetchProvider / ResilientNoticeListClient (Decorator+Strategy)
+│   ├── schedule/  ScheduleListClient / Extractor / PeriodMapping / WeekRangeParser
+│   │         ScheduleFetchProvider (Strategy) / PlaywrightScheduleFetchProvider / ResilientScheduleListClient (Decorator+Strategy)
+│   ├── calendar/  CalendarFetchProvider (Strategy) / ResilientCalendarClient (Decorator+Strategy) / CalendarPageParser / PlaywrightCalendarFetchProvider
+│   └── homework/  HomeworkListExtractor / AttachmentListExtractor + attachment/FilenameSanitizer
 │
 ├── browser/                        # 浏览器抽象层(Adapter + ConfigManager 注入)
 │   ├── BrowserLifecycle            # Design Pattern: Adapter 目标接口(12 方法,见 ADR-0002 D1 + ADR-0008)
-│   │ // open / close / navigateTo / click / fill /
-│   │                                 // isVisible / textOf / allTextOf / currentUrl / screenshot
-│   │                                 // importStorageState / exportStorageState (US-007)
+│   │ # open / close / navigateTo / click / fill /
+│   │ # isVisible / textOf / allTextOf / currentUrl / screenshot /
+│   │ # importStorageState / exportStorageState(US-007)
 │   ├── PlaywrightBrowserAdapter    # Design Pattern: Adapter,真演示唯一入口
+│   │   # open() 改用 BrowserContext.newPage() 拿 storageState
 │   └── FakeBrowser                 # 单元测试夹具,不出现在课堂演示
 │   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager.browser() 注入
 │
 ├── config/
 │   └── ConfigManager               # Design Pattern: Singleton
 │
-├── account/                        # 凭证层(ADR-0005 D1,单立包,替代 P1 的 AccountManager)
+├── account/                        # 凭证层(ADR-0005 D1)
 │   ├── Account                     # record(学号 + 密码 + 显示名)
 │   ├── AccountResolver             # 三层凭证查找(进程 env → --env-file → Skill 注入)
-│   └── EnvVarName                  # 工厂 enum(forStudentId 返回 SZU_PASSWORD_XXXX)
+│   └── AccountResolutionException  # 三层查找失败时抛
 │
 ├── retry/                          # Design Pattern: Strategy(FunctionalInterface + orElse default)
 │   ├── RetryPolicy                 # 策略接口(@FunctionalInterface)
-│   ├── FixedDelay                  # 固定间隔
-│   ├── ExponentialBackoff          # 指数退避
-│   ├── NoRetry                     # 不重试(单例 INSTANCE)
+│   ├── FixedDelay / ExponentialBackoff / NoRetry(Singleton INSTANCE)
 │   └── RetryPolicies               # 工厂(defaultBooking/login/quickFix)
 │
 ├── error/
-│   ├── ErrorCode                   # 错误码枚举(12 值,自带元数据:severity/retryable/switchAccount/screenshot/hint)
+│   ├── ErrorCode                   # 错误码枚举(20+ 值,自带元数据:severity/retryable/switchAccount/screenshot/hint)
 │   ├── Severity                    # LOW/MEDIUM/HIGH/CRITICAL
-│   ├── BookingException            # 统一异常(extends RuntimeException,见 ADR-0001 D9 + ADR-0006 error 子决定)
-│   └── LogMasker                   # 静态脱敏工具(9 字段名正则 + 2 值正则,见 ADR-0005 D2)
+│   ├── BookingException            # 统一异常(extends RuntimeException)
+│   └── LogMasker                   # 静态脱敏工具(见 ADR-0005 D2)
 │
 ├── observability/
 │   ├── Tracer                      # Design Pattern: Singleton(trace_id 管理 + 步骤记录)
-│   │   # 接口纯数据:recordFailure(ErrorCode, String, Optional<Path>)
-│   │   # 不接 Throwable / BookingException(ADR-0007 D4,observability ↔ error seam 干净)
-│   └── RunRecord                   # run 结束落盘 JSON(替代 Python runs.db,SQLite 不引)
+│   │   # recordFailure(ErrorCode, String, Optional<Path>),不接 Throwable(ADR-0007 D4)
+│   └── RunRecord                   # run 结束落盘 JSON
 │
-├── skill/                          # P1 薄壳 wrapper(ADR-0001 D5)
-│   ├── Skill                       # Skill 接口
-│   ├── SkillManager                # Skill 注册/加载/执行
-│   └── @AgentTool                  # 注解:标记可暴露给 Agent 的方法
+├── knowledge/                      # 本地 KB(2026-06 新增)
+│   ├── KnowledgeRepository         # Deep Module:加载 + 校验 + 索引 + 检索
+│   ├── KnowledgeCategory / KnowledgeResult / KnowledgeDoc(Builder)
+│   └── MatchingStrategy            # // Design Pattern: Strategy(3 实现)
+│       ├── ContainsMatchingStrategy
+│       ├── ExactMatchingStrategy
+│       └── RegexMatchingStrategy
 │
-├── mcp/                            # P1 薄壳 wrapper(ADR-0001 D5)
-│   └── MCPToolProvider             # MCP tools/list 导出
+├── json/                           # 集中 ObjectMapper 工厂(2026-06 新增)
+│   └── JsonMappers                 # // Design Pattern: Factory Method
+│                                   # 统一 JavaTimeModule + 关 WRITE_DATES_AS_TIMESTAMPS
+│
+├── skill/                          # Skill 注册中心
+│   ├── Skill<T>                    # record(name, description, CampusTask<T>)
+│   ├── Skills                      # Design Pattern: Singleton 注册中心
+│   │   + Skill.of(CampusTask) 静态工厂(2026-06 加,description 与 task 同源)
+│   └── external/                   # 外部 Skill 加载器(2026-06 新增)
+│       ├── ExternalSkillLoader     # 扫描 SZU_SKILL_PATH 加载独立 Skill
+│       ├── ExternalSkill           # 实现 CampusTask<Map<String,Object>>,调用 entry 脚本
+│       └── ExternalSkillManifest   # record(skill.yaml 解析结果)
+│
+├── mcp/                            # MCP 协议层(2026-06 升级:stdio + HTTP 双 transport)
+│   ├── McpStdioServer              # JSON-RPC 2.0 over stdio,handle() 单方法可复用
+│   ├── McpHttpServer               # 常驻 HTTP daemon,4 端点(/health /tools /call /mcp)
+│   │                               # // Design Pattern: Adapter(HTTP 适配 stdio dispatch)
+│   ├── MCPToolCallHandler          # tools/call 核心
+│   └── ToolSchema                  # tools/list(SCHEMA_VERSION="1.2",委托 task.inputSchema())
 │
 └── cli/                            # 第一性工作单元(ADR-0001 D1)
-    ├── Main                        # picocli 入口
-    └── BookingCommand              # booking 子命令(P0 唯一业务)
+    ├── Main                        # picocli 入口 + registerDefaultSkills()(8 内部 + N 外部)
+    ├── BookingCommand / VenueCommand      # booking 子命令
+    ├── HomeworkCommand / HomeworkListCommand / HomeworkDownloadCommand
+    ├── ScheduleCommand / ScheduleListCommand
+    ├── CalendarCommand / NoticeCommand / ExamCommand / KnowledgeCommand
+    ├── SkillCommand                       # skill list / call
+    ├── MCPCommand                         # mcp list / call / serve(--http 可选)
+    └── CommandOutput / DateOffsetConverter
 ```
 
 ### 包依赖关系
@@ -96,18 +147,37 @@ edu.szu.agent
 ```
 (无 Facade 入口;CLI 直接路由,ADR-0001 D9 删 AgentToolPlatform;ADR-0007 D1 删 BrowserFactory)
 cli.Main
-  └──► cli.BookingCommand / cli.VenueCommand
-        ├──► domain.BookingRequest (Builder)
-        ├──► config.ConfigManager.browser() (Singleton,按 browser.kind 配置注入)
-        │     └──► browser.PlaywrightBrowserAdapter
-        │           └──► browser.BrowserLifecycle
-        ├──► client.BookingFlowLauncher (seam)
-        │     └──► client.VenueBookingClient
-        │           ├──► client.step.BookingStep (Strategy)
-        │           └──► retry.RetryPolicy (Strategy,详见 ADR-0006 retry 子决定)
-        ├──► config.ConfigManager (Singleton)
-        ├──► observability.Tracer (Singleton)
-        └──► domain / error.ErrorCode
+  ├──► cli.BookingCommand / HomeworkCommand / ScheduleCommand / CalendarCommand
+  │     / NoticeCommand / ExamCommand / KnowledgeCommand
+  ├──► cli.SkillCommand     → mcp.MCPToolCallHandler → skill.Skills
+  ├──► cli.MCPCommand       → mcp.McpStdioServer / McpHttpServer
+  │                            + mcp.MCPToolCallHandler
+  │                            + mcp.ToolSchema
+  └──► cli 各 Command → task.*Task (CampusTask<T>)
+                          ├──► domain.*(值对象,record)
+                          ├──► account.AccountResolver (3 层凭证,ADR-0005 D1)
+                          ├──► config.ConfigManager.browser() (Singleton,按 browser.kind 配置注入)
+                          │     └──► browser.PlaywrightBrowserAdapter
+                          │           └──► browser.BrowserLifecycle
+                          ├──► client.*Client (业务编排)
+                          │     ├──► client.step.BookingStep (Strategy,15+ 实现)
+                          │     ├──► client.session.SessionStore + SessionProbe (US-007)
+                          │     └──► retry.RetryPolicy (Strategy,3 实现)
+                          ├──► config.ConfigManager (Singleton)
+                          ├──► observability.Tracer (Singleton)
+                          ├──► knowledge.KnowledgeRepository (kb_query 走这里)
+                          ├──► json.JsonMappers (统一 ObjectMapper)
+                          └──► domain / error.ErrorCode
+
+mcp.McpHttpServer (HTTP daemon,2026-06 新增)
+  ├──► 复用 mcp.McpStdioServer.handle(String) 做 JSON-RPC 分发
+  │     // Design Pattern: Adapter
+  ├──► mcp.MCPToolCallHandler.call(name, arguments) 做 /call 端点
+  └──► mcp.ToolSchema.toolsList(skills) 做 /tools 端点
+
+skill.Skills (单例注册中心)
+  ├── 8 内部 Skill: registerDefaultSkills() 注册
+  └── N 外部 Skill: skill.external.ExternalSkillLoader 扫描 SZU_SKILL_PATH
 ```
 
 ---
@@ -229,23 +299,39 @@ public enum ErrorCode {
 ### 子命令路由
 
 ```
-szu-agent <skill> <action> [OPTIONS]
+szu-agent <command> [subcommand] [OPTIONS]
 
-skills:
-  booking venue   体育场馆预约(P0 核心)
-  notice list     公文通查询(P1 示例)
-  chaoxing tasks  畅课任务(P1 设计)
-  skill list      列出所有 Skill(P0)
+顶层 commands:
+  booking   venue 体育场馆预约(P0 核心,真跑 Playwright)
+  homework  list   畅课作业列表
+            download 畅课作业附件下载
+  schedule  list   课表查询
+  calendar  get    校历查询
+  notice    list   公文通通知
+  exam      list   考试安排
+  knowledge query  深大知识库
+  skill     list/call  Skill 注册中心
+  mcp       list/call/serve   MCP 协议(serve 可选 --http 常驻)
 
-options:
-  --username  学号
-  --campus    校区(粤海/丽湖)
-  --sport     项目(网球/羽毛球/...)
-  --date      日期索引(0=今天)
-  --time-slot 时间段(如 19:00-20:00)
-  --format    输出格式(json/human,默认 human)
-  --dry-run   干跑模式(仅单元测试夹具,见 ADR-0001 D4;真演示默认走 Playwright)
-  --help      显示帮助
+通用 options:
+  --username   学号
+  --format     输出格式(json/human,默认 human)
+  --help       显示帮助
+  --version    显示版本(0.1.0+)
+
+业务特定 options(随 command 变化):
+  --campus / --sport / --date / --time-slot / --preferred-venue  (booking venue)
+  --query / --limit / --category                                  (knowledge query / notice list)
+  --daysBack                                                       (notice list)
+  --status                                                         (exam list)
+  --homework-id / --output-dir / --throttle-ms / --max-retries    (homework download)
+  --args k=v ... (skill call / mcp call)                          (扁平化参数)
+  --http / --port 8765                                            (mcp serve)
+
+凭证加载(3 层查找,ADR-0005 D1):
+  1. 进程环境变量 SZU_PASSWORD_<学号>
+  2. --env-file 指向的 .env
+  3. Skill wrapper 注入
 ```
 
 ### JSON 输出 Schema
@@ -536,16 +622,15 @@ BrowserLifecycle browser = ConfigManager.getInstance().browser();
 
 ## 7. 关键设计决策 (ADR 索引)
 
-| ADR | 决策 | 文档 |
-|---|---|---|
-| ADR-0001 | 项目方向校准(Grill 共识) | `docs/adr/0001-project-direction-recalibration.md` |
-| ADR-0002 | `BrowserLifecycle` 接口设计与 Playwright 适配细节 | `docs/adr/0002-browser-lifecycle-and-playwright-adapter.md` |
-| ADR-0003 | `CampusTask<T>` 接口与扩展模式(P1 写) | `docs/adr/0003-*.md` |
-| ADR-0004 | Skill/MCP wrapper 协议契约(Phase 4 写,含 OQ1 凭证注入细节) | `docs/adr/0004-*.md` |
-| ADR-0005 | 凭证流转 + archunit 强制(Phase 0 收尾) | `docs/adr/0005-credential-and-logging-enforcement.md` |
-| ADR-0006 | Phase 1 子决定(domain + error + retry + matcher) | `docs/adr/0006-phase1-domain-error-retry-matcher.md` |
-| ADR-0007 | 架构深度审视(improve-codebase-architecture) | `docs/adr/0007-architecture-deepening.md` |
-| ADR-0008 | 登录态持久化(storageState + 30d TTL + 探针) | `docs/adr/0008-session-persistence.md` |
+| ADR | 决策 | 文档 | 状态 |
+|---|---|---|---|
+| ADR-0001 | 项目方向校准(Grill 共识) | `docs/adr/0001-project-direction-recalibration.md` | Accepted |
+| ADR-0002 | `BrowserLifecycle` 接口设计与 Playwright 适配细节 | `docs/adr/0002-browser-lifecycle-and-playwright-adapter.md` | Accepted |
+| ADR-0005 | 凭证流转 + archunit 强制 | `docs/adr/0005-credential-and-logging-enforcement.md` | Accepted |
+| ADR-0006 | Phase 1 子决定(domain + error + retry + matcher) | `docs/adr/0006-phase1-domain-error-retry-matcher.md` | Accepted |
+| ADR-0007 | 架构深度审视(improve-codebase-architecture) | `docs/adr/0007-architecture-deepening.md` | Accepted |
+| ADR-0008 | 登录态持久化(storageState + 30d TTL + 探针) | `docs/adr/0008-session-persistence.md` | Accepted |
+| ADR-0009 | 课表模块设计 | `docs/adr/0009-schedule-module-design.md` | Accepted |
 
 > 实际 ADR 文档在 `docs/adr/` 目录下,采用 `{NNNN}-{kebab-case-slug}.md` 命名。
-> 上表第 2-5 行是**预留槽位**,对应 ADR 在 Phase 启动时创建。
+> ADR-0003 / 0004 槽位未占(扩展点放在 P1 后续 ADR 描述,见 `CampusTask<T>` 与 `ExternalSkill` 设计)。
