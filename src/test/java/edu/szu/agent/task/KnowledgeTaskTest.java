@@ -78,6 +78,8 @@ class KnowledgeTaskTest {
     void nameAndDescriptionAreCorrect() {
         KnowledgeTask task = new KnowledgeTask();
         assertThat(task.name()).isEqualTo("kb_query");
-        assertThat(task.description()).isEqualTo("深大知识库查询");
+        assertThat(task.description())
+            .startsWith("查询深大校园知识库")
+            .contains("CAMPUS_BASICS", "LIBRARY", "limit");
     }
 }

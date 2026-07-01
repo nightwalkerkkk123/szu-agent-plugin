@@ -34,22 +34,19 @@
 
 ## 项目状态
 
-**当前阶段：Phase 2 完成，Phase 3 进行中（ADR-0001/0002/0005/0006/0007 Accepted）**
+**当前阶段:全部 Phase 完成,稳定迭代中(ADR-0001/0002/0005/0006/0007/0008/0009 Accepted;US-006/007/008/009/010 已落库)**
 
-项目已完成 Phase 0骨架（pom.xml + 13 packages + Logback）和 Phase 1 核心域（domain/ + error/ + retry/ + step/），Phase 2 浏览器抽象（BrowserLifecycle 10 方法 + PlaywrightBrowserAdapter）已完成。
+8 个 Skill + 4 模式(Builder/Singleton/Strategy/Adapter)+ 6 编程技术 已稳定交付。
+最新提交 `4f06045`(`feat: external Skill loader + standalone MCP server` + `feat: architecture deepening + exam-list feature + review fixes`)新增了:
 
-**实施路径**（5 天）：
+- **常驻 HTTP daemon**(`McpHttpServer` + `scripts/serve.sh` / `serve.bat`)— 一个热 JVM 同时服务 Skill `curl` 与 MCP 宿主
+- **外部 Skill loader**(`ExternalSkillLoader` 扫描 `SZU_SKILL_PATH`)— 不用改 Java 代码就能加 Skill
+- **独立 Node MCP server**(`external/mcp-server/`)— 不想跑 Java daemon 时的备选
+- **JSON mapper 集中化**(`JsonMappers.standard()`)— `java.time` 字段统一 ISO-8601 字符串
+- **会话复用**(ADR-0008)— `~/.szu-agent/sessions/<username>.json` 30 天 TTL + 探针
+- **5 个新业务 Skill**: `calendar_get` / `schedule_list` / `notice_list` / `exam_list` / `kb_query`(MVP)/ `homework_list` / `homework_download`
 
-| Phase | 时长 | 内容 | 状态 |
-|---|---|---|---|
-| P0 | 0.5d | 骨架（pom.xml + 包结构 + Logback + dotenv-java） | ✅ 完成 |
-| P1 | 1.0d | 无依赖基础（domain/ + error/ + retry/ + step/） | ✅ 完成 |
-| P2 | 1.0d | 浏览器抽象（browser/ + BrowserLifecycle 10 方法） | ✅ 完成 |
-| P3 | 1.0d | 业务编排（client/ + config/ + observability/ + account/） | 🔄 进行中 |
-| P4 | 1.0d | CLI + Wrapper（cli/ + skill/ + mcp/） | 待开始 |
-| P5 | 0.5d | 收尾（测试 80% + 报告 + 演示脚本） | 待开始 |
-
-每阶段过 `mvn test` 才进下一阶段。
+**实施路径**(5 天):全部完成,见 [`WORKING-CONTEXT.md`](WORKING-CONTEXT.md)。
 
 ## 范围
 
@@ -221,37 +218,60 @@ Windows:前台模式按 `Ctrl-C`;`--new-window` 模式关闭那个标题为 `SZU
 
 ```
 edu.szu.agent
-├── Main.java                          # picocli 入口
-├── cli/           Main / BookingCommand(第一性工作单元,ADR-0001 D1)
-├── domain/        Campus / Sport / TimeSlot / BookingRequest(Builder) / BookingResult
-├── browser/       BrowserLifecycle(10 方法,见 ADR-0002 D1) + PlaywrightBrowserAdapter
+├── Main.java                          # picocli 入口 + registerDefaultSkills()
+├── cli/           Main / Booking / Homework / Schedule / Calendar / Notice / Exam /
+│                  Knowledge / Skill / MCP / Venue / CommandOutput / DateOffsetConverter
+├── domain/        Campus / Sport / TimeSlot / BookingRequest(Builder) / BookingResult /
+│                  Homework / HomeworkAttachment / HomeworkDownloadRequest / ScheduleListResult /
+│                  CourseEntry / Period / Weekday / WeekRange / LihuSport / YuehaiSport
+│   ├── calendar/ AcademicEvent / AcademicEventType
+│   ├── exam/     ExamSchedule
+│   └── notice/   Notice / NoticeCategory
+├── browser/       BrowserLifecycle(12 方法,见 ADR-0002 D1 + ADR-0008 D1) + PlaywrightBrowserAdapter
 │   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager 配 browser.kind 注入
-├── client/        VenueBookingClient(P0 唯一业务) + BookingFlowLauncher(seam) + step/
-│   └── step/      BookingStep(Strategy,7 实现) + VenueSelector(Strategy,2 实现)
-├── retry/         RetryPolicy(Strategy,3 实现:FixedDelay/ExponentialBackoff/NoRetry,见 ADR-0007 D2) + RetryPolicies
-├── error/         ErrorCode(枚举,12 值 5 元数据) + Severity + BookingException + LogMasker
-├── config/        ConfigManager(单例,Singleton)
-├── observability/ Tracer(单例,Singleton) + RunRecord(JSON 落盘)
-├── account/       Account + AccountResolver(3 层凭证,ADR-0005 D1) + EnvVarName
-├── task/          CampusTask<T>(P1 扩展点,代码层保留)
-├── skill/         Skill + SkillManager(P1 薄壳 wrapper)
-└── mcp/           MCPToolProvider(P1 薄壳 wrapper,ADR-0001 D5)
+├── client/        VenueBookingClient + BookingFlowLauncher(seam) + ChaoxingHomeworkClient +
+│                  ChaoxingAttachmentDownloadClient + EhallScheduleClient
+│   ├── step/      BookingStep(Strategy,15+ 实现) + VenueSelector(Strategy,2 实现) +
+│   │              RestoreSessionStep + PersistSessionStep(ADR-0008)
+│   ├── session/   SessionStore(路径+POSIX 600) / SessionProbe(探针) / SessionResult(sealed)
+│   ├── cache/     CacheEnvelope / CacheKey / CacheStore
+│   ├── schedule/  ScheduleListClient / Extractor / PeriodMapping / WeekRangeParser
+│   ├── exam/      ExamListClient / Parser
+│   ├── notice/    NoticeListClient / Parser
+│   └── homework/  HomeworkListExtractor / AttachmentListExtractor + attachment/FilenameSanitizer
+├── retry/         RetryPolicy(Strategy,3 实现:FixedDelay/ExponentialBackoff/NoRetry,ADR-0007 D2)
+│                  + RetryPolicies 工厂
+├── error/         ErrorCode(枚举,20+ 值 5 元数据) + Severity + BookingException + LogMasker
+├── config/        ConfigManager(单例,Singleton)+ application.yml
+├── observability/ Tracer(单例,Singleton)+ RunRecord(JSON 落盘)
+├── account/       Account + AccountResolver(3 层凭证,ADR-0005 D1)+ AccountResolutionException
+├── task/          CampusTask<T> + TaskInput + TaskInputSchema + 8 实现
+│                  (Booking / Homework / HomeworkDownload / Schedule / Calendar / Notice / Exam / Knowledge)
+├── knowledge/     KnowledgeRepository + KnowledgeCategory + KnowledgeResult +
+│                  KnowledgeDoc(Builder) + MatchingStrategy(Strategy,3 实现)
+├── json/          JsonMappers(集中 ObjectMapper 工厂,JavaTimeModule + 关 WRITE_DATES_AS_TIMESTAMPS)
+├── skill/         Skill(record,@since 0.1.0;Skill.of(CampusTask) 静态工厂) + Skills(单例)
+│   └── external/  ExternalSkillLoader(SZU_SKILL_PATH 扫描) + ExternalSkill + ExternalSkillManifest
+└── mcp/           McpStdioServer(JSON-RPC stdio) + McpHttpServer(常驻 HTTP daemon,4 端点)
+                   + MCPToolCallHandler + ToolSchema(SCHEMA_VERSION="1.2")
 ```
 
 > **历史变更**(ADR-0001 D9, 2026-06-11):删除 `platform/AgentToolPlatform` Facade、
 > `client/ClientFactory`、`error/ErrorClassifier`、`client/NoticeQueryClient` /
 > `ChaoxingCourseClient` / `GrowthPlanClient`。
 > `CloakBrowserAdapter` 改名为 `PlaywrightBrowserAdapter`。
-> `CampusTask<T>` 保留为 P1 扩展点(不算第 6 个模式)。
+> `CampusTask<T>` 不再是 P1 扩展点 — 8 个业务已全部实装。
+> **2026-06-23 增量**:`McpHttpServer` 落地,`McpStdioServer.handle()` 被 HTTP 复用;
+> `ExternalSkillLoader` 落地,8 工具 + N 外部 Skill 同一 `Skills` 单例;`JsonMappers` 集中化。
 
 ## 设计模式（4 种，ADR-0001 D9 + ADR-0007 D1）
 
 | 模式 | 落点 | 作用 |
 |---|---|---|
-| **Builder** | `BookingRequest.Builder` | 拼装 6 参数预约请求（校区/项目/日期/时段/场地号/备注） |
-| **单例** | `ConfigManager` / `Tracer` | 全局唯一，保证配置/追踪上下文一致 |
-| **策略** | `BookingStep` (7 实现) / `VenueSelector` (2 实现) / `RetryPolicy` (3 实现) | 步骤/选择器/重试策略可替换，新增策略不改调用方 |
-| **适配器** | `PlaywrightBrowserAdapter` 适配 `BrowserLifecycle` | 把 Playwright 封装为统一接口，业务不感知具体浏览器 |
+| **Builder** | `BookingRequest.Builder` / `HomeworkDownloadRequest.Builder` / `KnowledgeDocBuilder` | 拼装多参数对象（预约/下载/KB 文档） |
+| **单例** | `ConfigManager` / `Tracer` / `Skills` | 全局唯一，保证配置/追踪/Skill 注册中心一致 |
+| **策略** | `BookingStep` (15+ 实现) / `VenueSelector` (2) / `RetryPolicy` (3) / `MatchingStrategy` (3) | 步骤/选择器/重试/匹配策略可替换,新增策略不改调用方 |
+| **适配器** | `PlaywrightBrowserAdapter` 适配 `BrowserLifecycle` / `McpHttpServer` 适配 `McpStdioServer.handle()` | 业务不感知 Playwright;HTTP transport 复用 stdio dispatch |
 
 > **5 → 4 模式变更**(ADR-0007 D1):`BrowserFactory` / Static Factory 删除,改 `ConfigManager` 配置 `browser.kind` 注入;seam 深度提升,调用方零决策。详见 [docs/design-patterns.md](docs/design-patterns.md) §5。
 
@@ -328,7 +348,8 @@ szu-agent-plugin/
 ├── CLAUDE.md                项目入口配置（含 Harness 上下文）
 ├── README.md                本文件
 ├── FILETREE.md              文件地图
-├── MCP.md                   MCP 协议接口文档
+├── MCP.md                   MCP 协议接口文档（8 工具 + stdio/HTTP）
+├── SERVICE.md               常驻 HTTP daemon 部署与调用面指南
 ├── SECURITY.md              安全策略
 ├── SOUL.md                  项目灵魂
 ├── RULES.md                 项目规则汇总
@@ -337,6 +358,7 @@ szu-agent-plugin/
 ├── pom.xml                  Maven 构建配置
 ├── dependency-reduced-pom.xml
 ├── .env.example             环境变量模板
+├── .mcp.json                Claude Code 项目级 MCP server 注册
 ├── logs/                    运行时日志
 ├── docs/
 │   ├── PRD.md               产品需求文档
@@ -346,33 +368,47 @@ szu-agent-plugin/
 │   ├── CONTEXT_RULES.md     上下文阶段规则
 │   ├── TRACE_SPEC.md        Trace 记录规范
 │   ├── HARNESS_BACKLOG.md   Harness 改进 backlog
+│   ├── HANDOFF.md           跨 PR 交接文档
 │   ├── plans/               功能规划说明
 │   ├── templates/           Story packet 模板
-│   └── adr/                 Architecture Decision Records
-│       ├── 0001-project-direction-recalibration.md
-│       ├── 0002-browser-lifecycle-and-playwright-adapter.md
-│       ├── 0005-credential-and-logging-enforcement.md
-│       ├── 0006-phase1-domain-error-retry-matcher.md
-│       └── 0007-architecture-deepening.md
-├── harness-records/         持久化记录（类比 repository-harness SQLite）
+│   ├── stories/             5 个 story packet(US-006/007/008/009/010)
+│   ├── superpowers/         spec/plan/research
+│   ├── tools/               工具操作文档(booking-venue 等)
+│   ├── architecture/        架构细化
+│   └── adr/                 Architecture Decision Records(7 份)
+├── external/                独立可分发组件
+│   ├── mcp-server/          独立 Node.js MCP server
+│   └── skills/              外部 Skill 规范 + 示例(szu-campus/example-greet/template)
+├── design/                  课程提案文档
+├── sdd/                     spec-driven development 进度
+├── scripts/                 serve.sh / serve.bat / demo.sh / grep-runs.sh / filetree.py
+├── harness-records/         持久化记录(类比 repository-harness SQLite)
 │   ├── traces/              每次任务的 trace 记录
 │   └── friction/            摩擦记录
 ├── src/
-│   ├── main/java/edu/szu/agent/   (38 source files, 13 packages)
-│   ├── main/resources/
-│   └── test/java/edu/szu/agent/   (20 test files)
+│   ├── main/java/edu/szu/agent/   (93 source files, 14 packages)
+│   ├── main/resources/            (application.yml + knowledge/*.md)
+│   └── test/java/edu/szu/agent/   (53 test classes)
 └── .claude/                 Claude Code subagent 基建
+    ├── skills/szu-agent/    仓库内置 szu-agent skill(自动探活 daemon + 调 8 工具)
+    ├── agents/              8 个 agent 定义
+    ├── rules/ecc/           ECC 规则(common/java/zh)
+    └── skills/              ECC + engineering + personal 等 100+ skills
+```
 
 ## 依赖
 
 - Java 21
 - Maven 3.9+
 - picocli（CLI 框架）
-- Jackson（YAML / JSON）
+- Jackson（YAML / JSON，含 `jackson-datatype-jsr310`）
 - Logback
 - JUnit 5 + AssertJ（测试）
+- ArchUnit（架构静态守卫）
+- JaCoCo（覆盖率 ≥ 80%）
 - Playwright Java（在 `PlaywrightBrowserAdapter` 适配）
-- dotenv-java（凭证 .env 注入，ADR-0001 D6）
+- dotenv-java（凭证 .env 注入,ADR-0005 D1）
+- Node.js 18+（仅独立 MCP server `external/mcp-server/` 所需,可选）
 
 ## 致谢
 

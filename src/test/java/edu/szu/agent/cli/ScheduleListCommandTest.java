@@ -8,9 +8,13 @@ import edu.szu.agent.domain.ScheduleListResult;
 import edu.szu.agent.domain.WeekRange;
 import edu.szu.agent.domain.Weekday;
 import edu.szu.agent.error.ErrorCode;
+import edu.szu.agent.task.CampusTask;
+import edu.szu.agent.task.TaskInput;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import picocli.CommandLine;
 
+import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.Instant;
@@ -22,6 +26,67 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ScheduleListCommandTest {
 
     private static final ObjectMapper JSON = new ObjectMapper();
+
+    @Test
+    @DisplayName("schedule list delegates to task with username")
+    void scheduleListDelegatesToTaskWithUsername() throws Exception {
+        CourseEntry c = new CourseEntry(
+            "真实路径课程", "01", "某老师", "致理楼L1-101",
+            Weekday.MONDAY, PeriodMapping.lookup(1, 2),
+            WeekRange.parse("1-4周"), false);
+        RecordingTask task = new RecordingTask(new ScheduleListResult.Success(
+            List.of(c), Instant.parse("2026-06-25T00:00:00Z")));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        int exit = new CommandLine(new ScheduleListCommand(task))
+            .setOut(new PrintWriter(out, true))
+            .execute("--username", "2023150090", "--format", "json");
+
+        assertThat(exit).isEqualTo(0);
+        assertThat(task.called).isEqualTo(1);
+        assertThat(task.input.get("username")).isEqualTo("2023150090");
+        JsonNode root = JSON.readTree(out.toString().trim());
+        assertThat(root.get("success").asBoolean()).isTrue();
+        assertThat(root.get("data").get("count").asInt()).isEqualTo(1);
+        assertThat(root.get("data").get("courses").get(0).get("courseName").asText())
+            .isEqualTo("真实路径课程");
+    }
+
+    @Test
+    @DisplayName("schedule list task failure uses shared exit mapping")
+    void scheduleListTaskFailureUsesSharedExitMapping() throws Exception {
+        RecordingTask task = new RecordingTask(new ScheduleListResult.Failure(
+            ErrorCode.SCHEDULE_PAGE_LOAD_FAILED, "safe failure"));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        int exit = new CommandLine(new ScheduleListCommand(task))
+            .setOut(new PrintWriter(out, true))
+            .execute("--username", "2023150090", "--format", "json");
+
+        assertThat(exit).isEqualTo(CommandOutput.exitCodeFor(ErrorCode.SCHEDULE_PAGE_LOAD_FAILED));
+        JsonNode root = JSON.readTree(out.toString().trim());
+        assertThat(root.get("success").asBoolean()).isFalse();
+        assertThat(root.get("errorCode").asText()).isEqualTo("SCHEDULE_PAGE_LOAD_FAILED");
+        assertThat(root.get("errorMessage").asText()).isEqualTo("safe failure");
+    }
+
+    @Test
+    @DisplayName("missing username does not execute task")
+    void missingUsernameDoesNotExecuteTask() throws Exception {
+        RecordingTask task = new RecordingTask(new ScheduleListResult.Failure(
+            ErrorCode.UNKNOWN, "should not be called"));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        int exit = new CommandLine(new ScheduleListCommand(task))
+            .setOut(new PrintWriter(out, true))
+            .execute("--format", "json");
+
+        assertThat(exit).isEqualTo(2);
+        assertThat(task.called).isZero();
+        JsonNode root = JSON.readTree(out.toString().trim());
+        assertThat(root.get("success").asBoolean()).isFalse();
+        assertThat(root.get("errorCode").asText()).isEqualTo("INVALID_REQUEST");
+    }
 
     @Test
     @DisplayName("buildSuccessData 输出 snapshotAt / count / courses")
@@ -117,13 +182,32 @@ class ScheduleListCommandTest {
         assertThat(out).contains("count: 1");
     }
 
-    @Test
-    @DisplayName("PrintWriter 不会爆栈")
-    void printWriterRoundTrip() {
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
-        pw.println("hello");
-        pw.flush();
-        assertThat(sw.toString()).contains("hello");
+
+    private static final class RecordingTask implements CampusTask<ScheduleListResult> {
+
+        private final ScheduleListResult result;
+        private int called;
+        private TaskInput input;
+
+        private RecordingTask(ScheduleListResult result) {
+            this.result = result;
+        }
+
+        @Override
+        public String name() {
+            return "schedule_list";
+        }
+
+        @Override
+        public String description() {
+            return "test schedule task";
+        }
+
+        @Override
+        public ScheduleListResult execute(TaskInput input) {
+            this.called++;
+            this.input = input;
+            return result;
+        }
     }
 }

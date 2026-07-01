@@ -3,8 +3,13 @@ package edu.szu.agent.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import edu.szu.agent.browser.BrowserLifecycle;
+import edu.szu.agent.client.exam.ExamListClient;
+import edu.szu.agent.client.exam.PlaywrightExamFetchProvider;
+import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.domain.exam.ExamSchedule;
 import edu.szu.agent.observability.Tracer;
+import edu.szu.agent.task.CampusTask;
 import edu.szu.agent.task.ExamListTask;
 import edu.szu.agent.task.TaskInput;
 import picocli.CommandLine.Command;
@@ -162,5 +167,23 @@ public class ExamCommand implements Callable<Integer> {
             sb.append("Elapsed: ").append(elapsedMs).append("ms");
             return sb.toString();
         }
+    }
+
+    /**
+     * Factory method to create a fully-wired {@link ExamListTask} with real-fetch
+     * and static fallback for use by CLI / Skill / MCP registration.
+     *
+     * <p>// Design Pattern: Factory Method
+     *
+     * @return configured task instance
+     */
+    public static CampusTask<List<ExamSchedule>> defaultTask() {
+        ConfigManager config = ConfigManager.getInstance();
+        config.load();
+        BrowserLifecycle browser = config.browser();
+        PlaywrightExamFetchProvider provider = new PlaywrightExamFetchProvider(browser);
+        return new ExamListTask(
+            provider::fetchAndParse,
+            () -> new ExamListClient().list());
     }
 }

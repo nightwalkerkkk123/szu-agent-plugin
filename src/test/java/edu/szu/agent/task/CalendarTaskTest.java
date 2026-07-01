@@ -2,6 +2,7 @@ package edu.szu.agent.task;
 
 import edu.szu.agent.domain.calendar.AcademicEvent;
 import edu.szu.agent.domain.calendar.AcademicEventType;
+import edu.szu.agent.domain.calendar.CalendarListResult;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -14,12 +15,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("CalendarTask")
 class CalendarTaskTest {
 
+    /** Helper — unwraps the sealed Success variant for assertions. */
+    private static List<AcademicEvent> unwrap(CalendarListResult result) {
+        assertThat(result).isInstanceOf(CalendarListResult.Success.class);
+        return ((CalendarListResult.Success) result).events();
+    }
+
     @Test
     @DisplayName("name = calendar_get")
     void nameAndDescriptionAreCorrect() {
         CalendarTask task = new CalendarTask();
         assertThat(task.name()).isEqualTo("calendar_get");
-        assertThat(task.description()).isEqualTo("查询深大校历(静态 MVP)");
+        assertThat(task.description())
+            .startsWith("查询深圳大学校历")
+            .contains("静态 MVP", "2025-2026", "academicYear", "SEMESTER_START");
     }
 
     @Test
@@ -27,8 +36,8 @@ class CalendarTaskTest {
     void returnsStaticSpring2026Calendar() {
         CalendarTask task = new CalendarTask();
 
-        List<AcademicEvent> events = task.execute(
-            new TaskInput(Map.of("academicYear", "2025-2026")));
+        List<AcademicEvent> events = unwrap(task.execute(
+            new TaskInput(Map.of("academicYear", "2025-2026"))));
 
         assertThat(events).isNotEmpty();
         assertThat(events).allMatch(e -> "2025-2026-SPRING".equals(e.semester()));
@@ -51,8 +60,8 @@ class CalendarTaskTest {
     void unsupportedYearReturnsEmptyList() {
         CalendarTask task = new CalendarTask();
 
-        List<AcademicEvent> events = task.execute(
-            new TaskInput(Map.of("academicYear", "2099-2100")));
+        List<AcademicEvent> events = unwrap(task.execute(
+            new TaskInput(Map.of("academicYear", "2099-2100"))));
 
         assertThat(events).isEmpty();
     }
@@ -63,5 +72,53 @@ class CalendarTaskTest {
         // 当前日期在 2026-06-22，属于第二学期(春季)，默认应为 2025-2026
         String year = CalendarTask.defaultAcademicYear();
         assertThat(year).isEqualTo("2025-2026");
+    }
+
+    @Test
+    @DisplayName("real supplier 抛异常时,自动回退到静态(走 ResilientCalendarClient)")
+    void realSupplierThrowsFallsBackToStatic() {
+        CalendarTask task = new CalendarTask(
+            () -> { throw new RuntimeException("simulated network"); },
+            CalendarTask::spring2026Events,
+            false);  // not staticOnly — exercise the resilient path
+
+        List<AcademicEvent> events = unwrap(task.execute(
+            new TaskInput(Map.of("academicYear", "2025-2026"))));
+
+        assertThat(events).isNotEmpty();
+        assertThat(events).allMatch(e -> "2025-2026-SPRING".equals(e.semester()));
+    }
+
+    @Test
+    @DisplayName("real supplier 返回空时,自动回退到静态")
+    void realSupplierEmptyFallsBackToStatic() {
+        CalendarTask task = new CalendarTask(
+            java.util.List::of,
+            CalendarTask::spring2026Events,
+            false);
+
+        List<AcademicEvent> events = unwrap(task.execute(
+            new TaskInput(Map.of("academicYear", "2025-2026"))));
+
+        assertThat(events).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("real supplier 返回非空时,使用真实结果")
+    void realSupplierNonEmptyUsesRealResult() {
+        CalendarTask task = new CalendarTask(
+            () -> java.util.List.of(AcademicEvent.of(
+                java.time.LocalDate.of(2030, 1, 1),
+                AcademicEventType.HOLIDAY,
+                "real event",
+                "OFFICIAL")),
+            CalendarTask::spring2026Events,
+            false);
+
+        List<AcademicEvent> events = unwrap(task.execute(
+            new TaskInput(Map.of("academicYear", "2025-2026"))));
+
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).semester()).isEqualTo("OFFICIAL");
     }
 }

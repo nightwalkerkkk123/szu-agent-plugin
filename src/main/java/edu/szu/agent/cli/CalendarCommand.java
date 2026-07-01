@@ -3,9 +3,14 @@ package edu.szu.agent.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import edu.szu.agent.client.calendar.CalendarFetchProvider;
+import edu.szu.agent.client.calendar.PlaywrightCalendarFetchProvider;
+import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.domain.calendar.AcademicEvent;
+import edu.szu.agent.domain.calendar.CalendarListResult;
 import edu.szu.agent.observability.Tracer;
 import edu.szu.agent.task.CalendarTask;
+import edu.szu.agent.task.CampusTask;
 import edu.szu.agent.task.TaskInput;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
@@ -16,6 +21,7 @@ import java.io.PrintWriter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 
 /**
@@ -27,17 +33,19 @@ import java.util.concurrent.Callable;
  * szu-agent calendar get --academic-year 2025-2026 --format json
  * }</pre>
  *
- * <p>This is the static MVP for PRD §3.2.4 {@code calendar_get}.  No
- * browser is launched; the 2025-2026 spring semester data is embedded.
+ * <p>P1 阶段 3: 默认真实抓取 {@code https://www.szu.edu.cn/xxgk/xl.htm}
+ * (Playwright + 公开页),任何阶段失败或解析为空(当前页面渲染为 PNG 图像,无可
+ * 解析文本)时自动回退到 2025-2026 春季学期静态 MVP。CLI / Skill / MCP 三条分发
+ * 路径共用 {@link #defaultTask()} 工厂,行为一致。
  *
- * // 编程技术: 注解 / Lambda
+ * <p>// 编程技术: 注解 / Lambda / record / 工厂方法
  *
  * @since 0.3.0
  * @author 王子豪
  */
 @Command(
     name = "calendar",
-    description = "深大校历查询",
+    description = "深大校历查询(真实抓取 + 静态回退,P1 阶段 3)",
     mixinStandardHelpOptions = true,
     subcommands = {CalendarCommand.GetAction.class}
 )
@@ -48,13 +56,56 @@ public class CalendarCommand implements Callable<Integer> {
         return 0;
     }
 
+    /**
+     * Creates the shared production task used by both CLI and Skill/MCP
+     * registration. The real supplier binds a fresh
+     * {@link PlaywrightCalendarFetchProvider} per invocation; the static
+     * snapshot is the fallback.
+     *
+     * <p>// Design Pattern: Factory Method
+     * <p>// 编程技术: 泛型 / Lambda
+     *
+     * @return calendar-get task with real-fetch and static fallback routing
+     * @since 0.4.0
+     * @author 王子豪
+     */
+    public static CampusTask<CalendarListResult> defaultTask() {
+        ConfigManager config = ConfigManager.getInstance();
+        config.load();
+        CalendarFetchProvider provider = new PlaywrightCalendarFetchProvider(
+            config.browser(), null);
+        return new CalendarTask(
+            () -> provider.fetchAndParse(),
+            CalendarTask::spring2026Events);
+    }
+
     @Command(
         name = "get",
-        description = "Get the static SZU academic calendar"
+        description = "Get the SZU academic calendar (real fetch with static fallback, P1 阶段 3)"
     )
     public static class GetAction implements Callable<Integer> {
 
         private static final ObjectMapper JSON = new ObjectMapper();
+
+        private final CampusTask<CalendarListResult> task;
+
+        /**
+         * Production constructor — wires the shared real-fetch task.
+         */
+        public GetAction() {
+            this(CalendarCommand.defaultTask());
+        }
+
+        /**
+         * Test seam — inject the task so CLI routing can be verified
+         * without starting Playwright.
+         *
+         * @param task backend task for {@code calendar_get}
+         * @since 0.4.0
+         */
+        GetAction(CampusTask<CalendarListResult> task) {
+            this.task = Objects.requireNonNull(task, "task");
+        }
 
         @Spec
         private CommandSpec spec;
@@ -79,17 +130,9 @@ public class CalendarCommand implements Callable<Integer> {
                     params.put("academicYear", academicYear);
                 }
 
-                List<AcademicEvent> events = new CalendarTask().execute(new TaskInput(params));
-
+                CalendarListResult result = task.execute(new TaskInput(params));
                 long elapsed = System.currentTimeMillis() - startMs;
-                if ("json".equalsIgnoreCase(format)) {
-                    ObjectNode data = buildJsonData(events);
-                    out.println(CommandOutput.formatResult(true, data, null, null,
-                        traceId, elapsed, format));
-                } else {
-                    out.println(formatHuman(events, traceId, elapsed));
-                }
-                return 0;
+                return formatAndOutput(out, result, traceId, elapsed, format);
             } catch (IllegalArgumentException e) {
                 long elapsed = System.currentTimeMillis() - startMs;
                 out.println(CommandOutput.formatResult(false, null,
@@ -101,6 +144,24 @@ public class CalendarCommand implements Callable<Integer> {
                     "UNKNOWN", e.getMessage(), traceId, elapsed, format));
                 return 1;
             }
+        }
+
+        int formatAndOutput(PrintWriter out, CalendarListResult result,
+                            String traceId, long elapsedMs, String fmt) {
+            if (result instanceof CalendarListResult.Success s) {
+                ObjectNode data = buildJsonData(s.events());
+                out.println(CommandOutput.formatResult(true, data, null, null,
+                    traceId, elapsedMs, fmt));
+                return 0;
+            }
+            if (result instanceof CalendarListResult.Failure f) {
+                out.println(CommandOutput.formatResult(false, null,
+                    f.code().name(), f.message(), traceId, elapsedMs, fmt));
+                return CommandOutput.exitCodeFor(f.code());
+            }
+            out.println(CommandOutput.formatResult(false, null, "UNKNOWN",
+                "unexpected result type", traceId, elapsedMs, fmt));
+            return 1;
         }
 
         private ObjectNode buildJsonData(List<AcademicEvent> events) {
@@ -119,21 +180,6 @@ public class CalendarCommand implements Callable<Integer> {
             }
             data.set("events", array);
             return data;
-        }
-
-        private String formatHuman(List<AcademicEvent> events,
-                                   String traceId, long elapsedMs) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Academic year: ").append(academicYearOrDefault()).append('\n');
-            sb.append("Events: ").append(events.size()).append('\n');
-            for (AcademicEvent e : events) {
-                sb.append("  ").append(e.date())
-                    .append(" [").append(e.type()).append("] ")
-                    .append(e.description()).append('\n');
-            }
-            sb.append("Trace: ").append(traceId).append('\n');
-            sb.append("Elapsed: ").append(elapsedMs).append("ms");
-            return sb.toString();
         }
 
         private String academicYearOrDefault() {

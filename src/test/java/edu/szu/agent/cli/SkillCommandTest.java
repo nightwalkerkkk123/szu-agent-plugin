@@ -2,6 +2,7 @@ package edu.szu.agent.cli;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.szu.agent.mcp.ToolSchema;
 import edu.szu.agent.skill.Skills;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -102,7 +103,7 @@ class SkillCommandTest {
         int exit = runCli("mcp", "list");
         assertThat(exit).isEqualTo(0);
         JsonNode root = MAPPER.readTree(out.toString().trim());
-        assertThat(root.get("schemaVersion").asText()).isEqualTo("1.2");
+        assertThat(root.get("schemaVersion").asText()).isEqualTo(ToolSchema.SCHEMA_VERSION);
         JsonNode tools = root.get("tools");
         assertThat(tools.isArray()).isTrue();
         JsonNode booking = null;
@@ -120,8 +121,9 @@ class SkillCommandTest {
             .startsWith("深圳大学体育场馆定时预约")
             .contains("真实预约会占用实际名额", "YUEHAI", "GYM_HEAVY(一楼重量型健身/一楼健身房)", "16:00-17:00");
         assertThat(booking.get("inputSchema").get("type").asText()).isEqualTo("object");
-        assertThat(kb).isNotNull();
-        assertThat(kb.get("description").asText()).isEqualTo("深大知识库查询");
+        assertThat(kb.get("description").asText())
+            .startsWith("查询深大校园知识库")
+            .contains("query", "category", "CAMPUS_BASICS", "LIBRARY", "limit");
     }
 
     @Test

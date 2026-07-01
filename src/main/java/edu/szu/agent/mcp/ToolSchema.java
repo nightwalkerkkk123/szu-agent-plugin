@@ -1,6 +1,7 @@
 package edu.szu.agent.mcp;
 
 import edu.szu.agent.skill.Skill;
+import edu.szu.agent.task.ToolAnnotations;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,8 +31,19 @@ public final class ToolSchema {
     private ToolSchema() {
     }
 
-    /** Schema version. Bump when inputSchema changes. */
-    public static final String SCHEMA_VERSION = "1.2";
+    /** Schema version. Bump when the tool envelope shape changes.
+     *
+     * <p>History:
+     * <ul>
+     *   <li>1.0 — initial {@code {name, description, inputSchema}}</li>
+     *   <li>1.1 — inputSchema requires/optional split</li>
+     *   <li>1.2 — schema declared on each {@link edu.szu.agent.task.CampusTask} (delegation)</li>
+     *   <li>1.3 — top-level {@code examples} key added, sourced from
+     *       {@link ToolAnnotations#examples()}. Optional; tools with no
+     *       annotations emit no {@code examples} field.</li>
+     * </ul>
+     */
+    public static final String SCHEMA_VERSION = "1.3";
 
     /**
      * Returns the {@code tools/list} entry for a Skill.
@@ -41,9 +53,15 @@ public final class ToolSchema {
      * {
      *   "name": "booking_venue",
      *   "description": "体育场馆定时预约",
-     *   "inputSchema": { ... }
+     *   "inputSchema": { ... },
+     *   "examples": [ { "name": "...", "arguments": {...} }, ... ]
      * }
      * }</pre>
+     *
+     * <p>The {@code examples} key (added in schema 1.3) is sourced from
+     * {@link edu.szu.agent.task.CampusTask#annotations()} — tools with no
+     * declared examples emit no {@code examples} key at all, keeping the
+     * envelope minimal.
      *
      * @param skill the skill to describe
      * @return an ordered map mirroring the MCP schema shape
@@ -54,6 +72,18 @@ public final class ToolSchema {
         tool.put("name", skill.name());
         tool.put("description", skill.description());
         tool.put("inputSchema", schemaFor(skill));
+        ToolAnnotations annotations = skill.task().annotations();
+        if (!annotations.examples().isEmpty()) {
+            List<Map<String, Object>> examples = annotations.examples().stream()
+                .map(args -> {
+                    Map<String, Object> wrapper = new LinkedHashMap<>();
+                    wrapper.put("name", skill.name());
+                    wrapper.put("arguments", args);
+                    return wrapper;
+                })
+                .toList();
+            tool.put("examples", examples);
+        }
         return tool;
     }
 

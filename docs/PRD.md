@@ -98,65 +98,95 @@
 
 ### 3.2 P1 — 校园 6 业务 + 深大知识库(本作业路线图)
 
-> ⚠️ **ADR 校准声明**(2026-06-21):本节按 **docs/superpowers/specs/2026-06-20-final-report-design.md** §5 业务模板重写。原 5 项模糊 P1 列表(公文通/畅课/成长方案/企业微信/邮件草稿)全部移除;新 6 业务 + KB 取代,与 `docs/final-report.md` §3 P1 详细设计一致。代码实现按路线图分学期/课后推进,本作业仅交付 P0 `booking_venue`。
+> ⚠️ **ADR 校准声明**(2026-06-21):本节按 **docs/superpowers/specs/2026-06-20-final-report-design.md** §5 业务模板重写。原 5 项模糊 P1 列表(公文通/畅课/成长方案/企业微信/邮件草稿)全部移除;新 6 业务 + KB 取代,与 `docs/final-report.md` §3 P1 详细设计一致。
+> **2026-06-25 状态更新**:除 `booking_venue`(P0)外,以下 6 业务 + KB 已全部实装并注册到 `Skills` 单例,可通过 `skill list` / `mcp list` / HTTP daemon 的 8 工具矩阵调用。
 
 #### 通用前置(全部 P1 Skill 复用)
 
 - **P1.0** 复用 `BrowserLifecycle`(F3.1) + `PlaywrightBrowserAdapter`(F3.2);畅课/课表/考试另起独立 SSO Cookie 隔离容器
-- **P1.1** 实现 `CampusTask<T>` 接口(ADR-0001 D10),在 `Skills` 单例注册中心注册
+- **P1.1** 实现 `CampusTask<T>` 接口,`Skill.of(task)` 静态工厂注册到 `Skills` 单例
 - **P1.2** 通过 `AccountResolver` 三层凭证查找(ADR-0005 D1)获取凭证,密码永不进 CLI 参数
 - **P1.3** 错误码新增值挂入 `ErrorCode` 枚举的 5 元数据模式,`BookingException` 统一封装
 - **P1.4** `RetryPolicy` 默认 `ExponentialBackoff(3, 2s)`(ADR-0006 §3);只对未点击提交的状态重试,见 ADR-0001 OQ4
+- **P1.5** 所有业务对外能力:CLI 子命令 + `Skill.of(task)` + MCP 工具 + HTTP daemon 端点(`POST /call {name,arguments}`)
 
-#### 3.2.1 畅课(`chaoxing_tasks`)
+#### 3.2.1 畅课(`homework_list` / `homework_download`)
 
-- **业务范围**:学习通作业与课件清单查询;课程作业列表、按截止时间筛选、附件清单
-- **输入**:`username`(学号,必填) / `queryDaysAhead`(查询未来 N 天,默认 7) / `courseFilter`(可选)
-- **输出**:`List<ChaoxingAssignment>` record 数组(`title/course/dueAt/attachments/status`),`status` 为 `PENDING/SUBMITTED/OVERDUE` 枚举
-- **错误码扩展**:`CHAOXING_AUTH_EXPIRED`(登录态失效) / `CHAOXING_COURSE_NOT_FOUND`(课程不存在) / `CHAOXING_ANTI_BOT`(人机验证)
-- **验收**:GIVEN 登录成功 WHEN 调用 `chaoxing_tasks` THEN 7 天内作业清单返回,JSON `dueAt` 为 ISO 8601;GIVEN 课程不存在 WHEN 调用 THEN `CHAOXING_COURSE_NOT_FOUND` 退出码 1
+- **业务范围**:学习通作业列表(`homework_list`)、单作业全部附件下载(`homework_download`);30 天会话复用(ADR-0008)避免重复登录
+- **homework_list 输入**:`username`(可选,默认 `SZU_USERNAME`)
+- **homework_download 输入**:`username`(可选) / `homeworkId`(必填) / `outputDir`(必填) / `throttleMs`(默认 500) / `maxRetries`(默认 2)
+- **输出**:`HomeworkListResult` / `HomeworkDownloadResult` record;附件 URL 自动分类签名 URL(`media2.szu.edu.cn`)与 Cookie URL(`lms.szu.edu.cn`),统一入口
+- **错误码扩展**:`CHAOXING_AUTH_EXPIRED` / `CHAOXING_COURSE_NOT_FOUND` / `CHAOXING_ANTI_BOT` / `SESSION_NOT_FOUND` / `SESSION_READ_FAILED` / `SESSION_WRITE_FAILED`
+- **验收**:GIVEN 会话未失效 WHEN 调用 `homework_list` THEN 30 天内 0 重复登录;GIVEN 附件 URL 签名过期 WHEN `homework_download` THEN 自动用 Playwright `request().get()` 拿新 Cookie 重试,失败时 `EXTERNAL_SKILL_TIMEOUT` 类错误
 
 #### 3.2.2 公文通(`notice_list`)
 
-- **业务范围**:深大公文通列表/分类筛选/时间倒序;按校内组织架构分类聚合
+- **业务范围**:深大公文通列表/分类筛选/时间倒序
 - **输入**:`username`(必填) / `category`(可选,`ANNOUNCEMENT/LECTURE/COMPETITION/PUBLICITY`) / `daysBack`(默认 30)
 - **输出**:`List<Notice>` record(`id/title/category/publishedAt/url/hasAttachment`),按 `publishedAt` 倒序
-- **错误码扩展**:`NOTICE_LIST_EMPTY`(列表为空,仅告警) / `NOTICE_CATEGORY_INVALID`(分类无效,返回空列表)
-- **验收**:GIVEN CAS 登录态有效 WHEN 调用 `notice_list --category LECTURE` THEN 仅返回讲座类;GIVEN `category` 无效 WHEN 调用 THEN `NOTICE_CATEGORY_INVALID` 退出码 0(降级)
+- **错误码扩展**:`NOTICE_LIST_EMPTY` / `NOTICE_CATEGORY_INVALID`
+- **验收**:GIVEN `category=LECTURE` WHEN 调用 THEN 仅返回讲座类;GIVEN `category` 无效 WHEN 调用 THEN `NOTICE_CATEGORY_INVALID` 退出码 0(降级)
 
-#### 3.2.3 课表(`schedule_get`)
+#### 3.2.3 课表(`schedule_list`)
 
-- **业务范围**:个人学期课表抓取,周视图聚合;本地缓存 24h TTL
-- **输入**:`username`(必填) / `semester`(可选,`2025-FALL/2026-SPRING/2026-SUMMER`)
-- **输出**:`Schedule` record(`entries: List<ScheduleEntry>` + `semester/fetchedAt`),每条 `courseName/teacher/weekday/startTime/endTime/location/weeks`
-- **错误码扩展**:`SCHEDULE_NOT_FOUND`(学期切换空窗) / `SCHEDULE_CACHE_STALE`(缓存超 24h)
-- **验收**:GIVEN 学期切换窗口 WHEN 调用 THEN `SCHEDULE_NOT_FOUND` + 空 `entries` 退出码 0;GIVEN 缓存命中(< 24h) WHEN 调用 THEN 跳过 Playwright,响应 < 100ms
+- **业务范围**:个人学期课表抓取(US-009 落地),周视图聚合;P1 阶段 1 起走
+  `ResilientScheduleClient` 动态路由 —— 默认真实抓取(ehall + Playwright + 30 天
+  session 复用,见 ADR-0008),任何阶段失败(无 session / CAS 过期 / 页面改版 /
+  网络)自动回退到 8 条静态 MVP,Skill 永远可用。环境变量 `SZU_SCHEDULE_REAL=0`
+  可强制走静态路径(不发起浏览器请求)。
+- **输入**:`username`(必填)
+- **输出**:`ScheduleListResult` sealed(`Success(snapshotAt, count, courses)` / `Failure(reason)`),`CourseEntry` record 字段 `courseName/section/teacher/room/weekday/beginUnit/endUnit/weekRange/weeks/isAdjusted`
+- **错误码扩展**:`SCHEDULE_NOT_FOUND` / `SCHEDULE_PAGE_LOAD_FAILED` / `SESSION_EXPIRED`
+- **验收**:GIVEN 学期切换窗口 WHEN 调用 THEN `SCHEDULE_NOT_FOUND` + 空 `entries`
+  退出码 0;GIVEN 无 session / CAS 过期 WHEN 调用 THEN 真实路径失败 → 自动回退到
+  8 条静态数据,`success=true`(`elapsedMs` 偏大证明真实路径跑了);CLI / Skill / MCP
+  三条分发路径共用 `ScheduleListCommand.defaultTask()` 工厂,行为一致
+  (E2E 见 `harness-records/traces/20260626-005538-p1-phase1-schedule-real-fetch.md`)
 
 #### 3.2.4 校历(`calendar_get`)
 
-- **业务范围**:深大校历公开页抓取,开学/教学周/节假日调休/考试周;一次抓取覆盖整学期
-- **输入**:`academicYear`(如 `2025-2026`,默认当前)
-- **输出**:`List<AcademicEvent>` record(`date/type/description/semester/weekOfTerm`),`type` 为 `SEMESTER_START/HOLIDAY/EXAM_WEEK/BREAK` 枚举
-- **错误码扩展**:`CALENDAR_PARSE_FAILED`(HTML 表格解析失败,降级告警)
-- **验收**:GIVEN 公开页可访问 WHEN 调用 `calendar_get` THEN 返回全学期事件;GIVEN 表格格式变更 WHEN 调用 THEN `CALENDAR_PARSE_FAILED` 不中断,返回已解析部分;缓存命中响应 < 50ms
+- **业务范围**:深大校历公开数据;**当前为静态 MVP**(2025-2026 学年第二学期),`academicYear` 默认从系统日期推断
+- **输入**:`academicYear`(可选,如 `2025-2026`)
+- **输出**:`List<AcademicEvent>` record(`date/type/description/semester`),`type` 为 `SEMESTER_START/HOLIDAY/EXAM_WEEK/BREAK` 枚举;**日期字段为 ISO-8601 字符串**(由 `JsonMappers.standard()` 统一,避免 `[2026,3,4]` 数字数组)
+- **错误码扩展**:`CALENDAR_PARSE_FAILED`(未来动态抓取场景)
+- **验收**:GIVEN 当前学年 WHEN 调用 THEN 返回 20+ 关键事件(开学/考试周/放假);其他学年返回空列表(数据未嵌入)
 
 #### 3.2.5 考试安排(`exam_list`)
 
-- **业务范围**:学期末考试安排抓取,考场与座位号;与课表交叉聚合(`Map<LocalDate, List<ExamInfo>>`)
-- **输入**:`username`(必填) / `semester`(必填)
-- **输出**:`ExamSchedule` record(`exams: List<ExamInfo>` + `semester`),每条 `courseName/examDate/startTime/endTime/location/seatNumber/type`,`type` 为 `REGULAR/RESIT` 枚举
-- **错误码扩展**:`EXAM_NOT_FOUND`(指定课程无考试,仅告警) / `EXAM_LOCATION_CONFLICT`(教室冲突,触发人工复核)
-- **验收**:GIVEN 考前 2-4 周发布期 WHEN 调用 THEN 返回完整考场信息;GIVEN 教室冲突 WHEN 调用 THEN `EXAM_LOCATION_CONFLICT` 退出码 1(需人工介入)
+- **业务范围**:学期末考试安排,当前 MVP 用静态 snapshot
+- **输入**:`username`(必填) / `status`(可选,`待开始考试` / `已结束`)
+- **输出**:`List<ExamSchedule>` record(`courseName/examDate/startTime/endTime/location/seatNumber/type`)
+- **错误码扩展**:`EXAM_NOT_FOUND` / `EXAM_LOCATION_CONFLICT`(未来)
+- **验收**:GIVEN `status=待开始考试` WHEN 调用 THEN 仅返回 `examDate >= 今天` 的项;无状态过滤返回全部
 
 #### 3.2.6 深大知识库(`kb_query`)
 
-- **业务范围**:本地 Markdown + 定期更新脚本的异质模块,5 分类(校园基础/餐饮/图书馆/选课/FAQ);**无 BrowserLifecycle 关键路径**,cron 抓取为辅助
-- **输入**:`query`(关键词,必填) / `category`(可选,5 枚举之一)
-- **输出**:`KnowledgeResult` record(`snippet/sourcePath/relevanceScore`),前 200 字片段 + 文件路径 + 匹配分数
-- **错误码扩展**:`KNOWLEDGE_STALE`(超 7 天未更新,保留旧版) / `KNOWLEDGE_NOT_FOUND`(无匹配,空 snippet 而非异常)
-- **验收**:GIVEN 关键词命中 WHEN 调用 THEN snippet + `relevanceScore` ∈ [0.0, 1.0];GIVEN 无匹配 WHEN 调用 THEN `KNOWLEDGE_NOT_FOUND` 空 snippet 退出码 0;GIVEN `refresh-knowledge.sh` 抓取失败 WHEN cron 触发 THEN 保留旧版本 + `KNOWLEDGE_STALE` 告警
+- **业务范围**:本地 Markdown 知识库(5 分类 × 多条 FAQ),**无 BrowserLifecycle 关键路径**;`/knowledge/0[1-5]-*.md` 5 个 Markdown 作为数据源
+- **输入**:`query`(关键词,必填) / `limit`(默认 5) / `category`(可选,`CAMPUS_BASICS` / `DINING` / `LIBRARY` / `ACADEMICS` / `FAQ`)
+- **输出**:`List<KnowledgeResult>` record(`snippet/sourcePath/relevanceScore`),前 200 字片段 + 文件路径 + 匹配分数
+- **匹配策略**:`MatchingStrategy` Strategy 模式 3 实现 — `Contains` / `Exact` / `Regex`(可叠加)
+- **错误码扩展**:`KNOWLEDGE_NOT_FOUND`(空 snippet 而非异常)
+- **验收**:GIVEN 关键词命中 WHEN 调用 THEN snippet + `relevanceScore` ∈ [0.0, 1.0];GIVEN 无匹配 WHEN 调用 THEN `KNOWLEDGE_NOT_FOUND` 空 snippet 退出码 0
 
-> **架构约束**(贯穿 3.2.1-3.2.6):6 Skill 全部实现 `CampusTask<T>` 通过 `Skills` 单例注册;错误码不新增独立类,P1 错误码挂入 `ErrorCode` 已有 5 元数据模式;跨业务凭证隔离:畅课独立 Cookie 容器(§3.2.1),其余 5 业务共享 ehall/CAS 同源会话;与 P0 `booking_venue` 共用 `BrowserLifecycle` + `RetryPolicy` + `Tracer` + `LogMasker` 基础设施;与 `docs/final-report.md` §3 详细设计保持一致,每 Skill 的 Pipeline 步骤、错误码、复用面以本文为准。
+#### 3.2.7 常驻 HTTP daemon(McpHttpServer,2026-06-23 新增)
+
+- **业务范围**:不直接是业务 Skill,而是 8 个 Skill 的常驻 HTTP 入口,让 Skill `curl` 与 MCP 宿主共享一个热 JVM,毫秒级响应
+- **端点**:
+  - `GET  /health` — `{"status":"ok"}` 探活
+  - `GET  /tools`  — MCP `tools/list`(8 工具)
+  - `POST /call`   — `{name, arguments}` → 业务信封(curl / 脚本直接调)
+  - `POST /mcp`    — JSON-RPC 2.0(给 Claude Code / Desktop 用)
+- **启动**:`scripts/serve.sh --background`(macOS/Linux) / `scripts\serve.bat --new-window`(Windows),PID 写入 `logs/serve.pid`
+- **凭证**:`scripts/serve.sh` 自动 `source .env`(只加载,不显示内容)让 daemon 继承 `SZU_PASSWORD_<学号>`
+
+#### 3.2.8 外部 Skill 加载器(ExternalSkillLoader,2026-06 新增)
+
+- **业务范围**:扫描 `SZU_SKILL_PATH`(环境变量;或 `-Dszu.skill.path` 系统属性;多路径用 `path.separator`)下的子目录,若含 `skill.yaml` + `run` / `run.bat` 入口脚本则注册为 Skill
+- **优先级**:外部 Skill 同名时**覆盖**内部 Skill(打印 warning 日志)
+- **超时**:`SZU_SKILL_TIMEOUT` 环境变量可改(默认 60s)
+- **适配**:`ExternalSkill` 实现 `CampusTask<Map<String,Object>>`,走与内部 Skill 同一 `MCPToolCallHandler` / `McpHttpServer.call` 路径
+
+> **架构约束**(贯穿 3.2.1-3.2.8):8 Skill 全部实现 `CampusTask<T>` 通过 `Skills` 单例注册;错误码不新增独立类,新错误码挂入 `ErrorCode` 已有 5 元数据模式;跨业务凭证隔离:畅课独立 Cookie 容器(ADR-0008),其余业务共享 ehall/CAS 同源会话;与 P0 `booking_venue` 共用 `BrowserLifecycle` + `RetryPolicy` + `Tracer` + `LogMasker` + `JsonMappers` 基础设施;`Skill.of(task)` 静态工厂确保 description 与 task 同源,避免漂移;`McpHttpServer` 与 `McpStdioServer.handle()` 共享 JSON-RPC dispatch,HTTP 仅是 transport 适配。
 
 
 ### 3.3 P2 — 不做

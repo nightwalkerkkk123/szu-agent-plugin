@@ -11,15 +11,19 @@
 |---|---|
 | **Type** | 面向对象高级编程 — 个人大作业 |
 | **Author** | 学号 2023150090 / 姓名 王子豪 |
-| **Stack** | Java 21 · Maven · picocli · Jackson · Logback · JUnit 5 + AssertJ |
-| **Form factor** | CLI 工具 + Skill/MCP 插件,供外部 AI Agent 调用 |
+| **Stack** | Java 21 · Maven · picocli · Jackson · Logback · JUnit 5 + AssertJ · ArchUnit · JaCoCo |
+| **Form factor** | CLI 工具 + 常驻 HTTP daemon(可选) + Skill/MCP 插件,供外部 AI Agent 调用 |
+| **Current scale** | 8 个业务 Skill · 14 个 Java 包 · 93 个 main + 53 个 test 源文件 · 4 模式 · 6 编程技术 |
 | **Business reference** | `E:\CODE\szu-sports-booking\` (Python) |
 | **Rule source** | `E:\CODE\ECC\rules\` (已复制到 `.claude/rules/ecc/`,勿编辑上游) |
 
 ## What this is — and isn't
 
-- ✅ CLI 工具 + Skill 插件 + MCP 工具导出,供外部 Agent 调用
+- ✅ CLI 工具 + 常驻 HTTP daemon + Skill 插件 + MCP 工具导出(8 工具),供外部 Agent 调用
+- ✅ 一个常驻 JVM 可同时服务 Skill `curl` 与 MCP 宿主(`scripts/serve.sh --background`)
+- ✅ 外部 Skill 通过 `SZU_SKILL_PATH` 加载,无需改 Java 代码
 - ✅ 通过 `BrowserLifecycle` 适配器封装 Playwright
+- ✅ 30 天会话复用(ADR-0008)— `~/.szu-agent/sessions/<username>.json`
 - ❌ **不是** AI Agent — 无 NLU / 意图识别 / 对话管理
 - ❌ 不绕过验证码、不高频访问、不发送敏感邮件
 
@@ -29,9 +33,11 @@
 mvn -q -DskipTests package    # 构建
 mvn test                      # 跑测试
 java -jar target/szu-agent-plugin.jar booking venue \
-  --username 2023150090 --campus 粤海 --sport 网球 \
-  --date 0 --time-slot 19:00-20:00 --dry-run --format json
+  --username 2023150090 --campus YUEHAI --sport TENNIS \
+  --date 2026-06-24 --time-slot 19:00-20:00 --format json
 java -jar target/szu-agent-plugin.jar skill list --format json
+scripts/serve.sh --background          # 启动常驻 HTTP daemon(端口 8765)
+curl localhost:8765/health             # {"status":"ok"}
 ```
 
 > 平台相关：Windows 本机 Maven / JDK 路径见 [`docs/setup/windows-maven.md`](docs/setup/windows-maven.md)；
@@ -104,9 +110,11 @@ Normal/High-risk 任务完成后记录 trace 到 `harness-records/traces/YYYYMMD
 
 ## Available skills
 
+### 仓库内置 skill
 
+- `.claude/skills/szu-agent/` — **自动激活**,只要用户提到深大/SZU 的校历、课表、公文通、选课/食堂/图书馆等校园信息查询、订场馆/订球场、查作业,或提到 szu-agent 服务起没起、连不上 MCP,就触发该 skill。其内部会先探活 `localhost:8765/health`、必要时启动 daemon,再按 schema 调用 8 个工具。
 
-## Key skill usage for this project
+### 装载的工程 skills(自 `/Users/wangzihao/.claude/skills/`)
 
 - **代码开发阶段**: `/feature-dev-loop` 规划功能 → `/engineering-code-review` 审查
 - **PR 阶段**: `/engineering-change-descriptions` 写 PR 描述 → `/engineering-review-feedback` 处理评论

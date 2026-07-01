@@ -121,6 +121,30 @@ public final class CasLoginStep implements BookingStep {
 
         var account = ctx.account();
         if (account == null) {
+            // Headed fallback path: BookingTask rebuilt a headed browser
+            // because all credential layers (env / env-file / Skill
+            // injection) missed. The user must log in manually in the
+            // visible browser window — there is nothing for us to inject
+            // and no script that would help. Navigate to the CAS page,
+            // then wait for the post-login indicator to appear, which
+            // signals that the user has completed the manual login.
+            if (ctx.headedFallbackRequested()) {
+                log.info("Manual login required; headed browser open for user {}",
+                    ctx.username() != null ? ctx.username() : "unknown");
+                browser.navigateTo(casEntryUrl);
+                // Headed-fallback path: user must complete login manually in
+                // the visible browser. The non-headed path above relies on
+                // the script's startLogin() callback to redirect; here the
+                // redirect only happens after the user clicks through the
+                // CAS form. waitForVisible polls up to 5 min, which is
+                // generous for a manual interaction (cf. ADR-0008 30-day
+                // session reuse — users may walk away briefly).
+                long waitMs = 5L * 60L * 1000L;
+                boolean landed = browser.waitForVisible(SEL_LOGGED_IN_INDICATOR, waitMs);
+                log.info("Headed manual login completed for {} (landed on ehall: {})",
+                    ctx.username() != null ? ctx.username() : "unknown", landed);
+                return new StepOutcome.Continue(ctx);
+            }
             throw new IllegalStateException(
                 "CasLoginStep requires BookingContext.account, but it was null. "
                     + "Did you forget to call AccountResolver before constructing the context?");

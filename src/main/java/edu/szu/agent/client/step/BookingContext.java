@@ -82,6 +82,18 @@ public final class BookingContext {
     // ---------- cross-cutting ----------
     private boolean sessionOk;
     private String username;
+    /**
+     * Set to {@code true} by {@link edu.szu.agent.task.BookingTask} when
+     * the booking pipeline is retried with a headed browser because no
+     * credential could be resolved ({@link
+     * edu.szu.agent.account.AccountResolutionException}). Tells
+     * {@code CasLoginStep} to skip its {@code evaluate(buildLoginScript(...))}
+     * step and instead wait for the user to log in manually in the visible
+     * browser window. Default {@code false}.
+     *
+     * @since 0.5.0
+     */
+    private boolean headedFallbackRequested;
 
     // ---------- homework pipeline ----------
     private List<Homework> homeworks;
@@ -170,6 +182,31 @@ public final class BookingContext {
 
     public void username(String username) {
         this.username = username;
+    }
+
+    /**
+     * Whether the booking pipeline is running under a headed-browser
+     * fallback because no credential could be resolved.
+     *
+     * @return {@code true} if user must complete login manually
+     * @since 0.5.0
+     * @author 王子豪
+     */
+    public boolean headedFallbackRequested() {
+        return headedFallbackRequested;
+    }
+
+    /**
+     * Marks this context as running under the headed-browser fallback
+     * path. Set by {@link edu.szu.agent.task.BookingTask} when it
+     * rebuilds a headed browser after a credential resolution failure.
+     *
+     * @param headedFallbackRequested {@code true} to enable manual-login mode
+     * @since 0.5.0
+     * @author 王子豪
+     */
+    public void headedFallbackRequested(boolean headedFallbackRequested) {
+        this.headedFallbackRequested = headedFallbackRequested;
     }
 
     // ---------- homework pipeline accessors ----------

@@ -25,7 +25,9 @@ class ScheduleListTaskTest {
     void nameAndDescription() {
         ScheduleListTask task = new ScheduleListTask();
         assertThat(task.name()).isEqualTo("schedule_list");
-        assertThat(task.description()).isEqualTo("查询学生课表(静态 MVP)");
+        assertThat(task.description())
+            .startsWith("查询学生本学期课表")
+            .contains("SZU_SCHEDULE_REAL=0", "AccountResolver", "username");
     }
 
     @Test

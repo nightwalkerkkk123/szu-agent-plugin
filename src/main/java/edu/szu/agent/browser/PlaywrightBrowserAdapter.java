@@ -297,6 +297,14 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
     }
 
     @Override
+    public Page newPage() {
+        if (context == null) {
+            context = browser.newContext();
+        }
+        return context.newPage();
+    }
+
+    @Override
     public long downloadAttachment(String url, java.nio.file.Path target) {
         Objects.requireNonNull(url, "url");
         Objects.requireNonNull(target, "target");
@@ -342,6 +350,15 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
                 "download failed for " + url + ": " + e.getMessage(), e);
         } finally {
             try { response.dispose(); } catch (Exception ignored) {}
+        }
+    }
+
+    @Override
+    public String content() {
+        try {
+            return page.content();
+        } catch (Exception e) {
+            throw mapException(e);
         }
     }
 }

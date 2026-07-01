@@ -1,5 +1,6 @@
 package edu.szu.agent.browser;
 
+import com.microsoft.playwright.Page;
 import java.util.List;
 
 /**
@@ -165,6 +166,19 @@ public interface BrowserLifecycle {
     void exportStorageState(java.nio.file.Path storageStateFile);
 
     /**
+     * Opens a new page in the current browser context.
+     *
+     * <p>Used by fetchers that need to open a fresh page without leaving
+     * the old page open (e.g. notice list fetcher, homework attachment downloader).
+     *
+     * @return the new Page object (caller closes it when done)
+     * @throws edu.szu.agent.error.BookingException with BROWSER_CRASH on failure
+     * @since 0.4.0
+     * @author 王子豪
+     */
+    Page newPage();
+
+    /**
      * Downloads a single file from a CAS-protected URL using the current
      * browser context's cookies / signed URL, writing bytes to {@code target}
      * via a {@code .tmp} + atomic move.
@@ -184,6 +198,17 @@ public interface BrowserLifecycle {
      * @author 王子豪
      */
     long downloadAttachment(String url, java.nio.file.Path target);
+
+    /**
+     * Returns the full HTML content of the current page.
+     *
+     * @return the complete document HTML markup
+     * @throws edu.szu.agent.error.BookingException with BROWSER_CRASH
+     *         if evaluation fails
+     * @since 0.4.0
+     * @author 王子豪
+     */
+    String content();
 
     /**
      * Polls {@link #isVisible(String)} until the selector resolves to a
