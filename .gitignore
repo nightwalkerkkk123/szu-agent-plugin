@@ -25,7 +25,7 @@ Thumbs.db
 
 # Logs
 *.log
-
+logs/
 # Claude Code
 .claude/worktrees/
 # Skill-creator eval scratch (regenerated per run; not source)
