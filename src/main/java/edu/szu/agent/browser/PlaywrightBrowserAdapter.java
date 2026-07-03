@@ -10,6 +10,7 @@ import edu.szu.agent.error.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -110,7 +111,8 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
     public void open() {
         try {
             if (cdpUrl.isPresent()) {
-                ObscuraLauncher.ensureRunning();
+                URI versionUri = ObscuraLauncher.versionUriFromWsUrl(cdpUrl.get());
+                ObscuraLauncher.ensureRunning(versionUri);
                 browser = playwright.chromium().connectOverCDP(cdpUrl.get());
                 context = browser.contexts().isEmpty()
                     ? browser.newContext()
