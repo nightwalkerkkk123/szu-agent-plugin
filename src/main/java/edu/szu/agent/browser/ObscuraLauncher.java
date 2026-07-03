@@ -287,6 +287,7 @@ public final class ObscuraLauncher {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            log.warn("Shutdown hook interrupted; forcibly killed process pid={}", process.pid());
             process.destroyForcibly();
         }
     }
