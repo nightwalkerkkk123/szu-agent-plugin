@@ -108,6 +108,29 @@ class PlaywrightBrowserAdapterTest {
         verify(playwright, never()).chromium();
     }
 
+    @Test
+    @DisplayName("close() does not close the caller-owned Playwright (1-arg ctor)")
+    void closeDoesNotCloseCallerOwnedPlaywright() {
+        PlaywrightBrowserAdapter adapter = new PlaywrightBrowserAdapter(playwright);
+        // never call open() — the 1-arg ctor treats the Playwright as borrowed
+        adapter.close();
+
+        verify(playwright, never()).close();
+    }
+
+    @Test
+    @DisplayName("close() closes the adapter-owned Playwright (OBSCURA ctor)")
+    void closeClosesAdapterOwnedPlaywright() {
+        // OBSCURA ctor: Playwright is adapter-owned, so close() must shut it down
+        PlaywrightBrowserAdapter adapter = new PlaywrightBrowserAdapter(
+            playwright, "ws://127.0.0.1:9222");
+        // do not call open() — we are testing the close() side only, and open()
+        // would invoke ObscuraLauncher.ensureRunning which tries the real daemon
+        adapter.close();
+
+        verify(playwright).close();
+    }
+
     // ----- Cycle 2: navigateTo(url) -----
 
     @Test

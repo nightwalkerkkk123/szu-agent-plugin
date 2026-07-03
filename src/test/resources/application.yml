@@ -5,7 +5,9 @@
 # browser().kind is the dispatch key for BrowserLifecycle factory.
 
 browser:
-  kind: PLAYWRIGHT
+  kind: OBSCURA
+  obscura:
+    ws-url: ws://127.0.0.1:9222
 
 retry:
   default:

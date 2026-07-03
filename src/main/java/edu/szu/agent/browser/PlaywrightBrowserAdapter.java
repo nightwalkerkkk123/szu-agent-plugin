@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Playwright-backed implementation of {@link BrowserLifecycle}.
@@ -41,6 +42,8 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
 
     private final Playwright playwright;
     private final boolean headless;
+    private final boolean ownsPlaywright;
+    private final Optional<String> cdpUrl;
     private Browser browser;
     private BrowserContext context;
     private Page page;
@@ -49,7 +52,7 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
      * @param playwright the SDK entry point; must not be null
      */
     public PlaywrightBrowserAdapter(Playwright playwright) {
-        this(playwright, resolveHeadless());
+        this(playwright, resolveHeadless(), null);
     }
 
     /**
@@ -58,8 +61,32 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
      *                   manual debugging / captcha solving)
      */
     public PlaywrightBrowserAdapter(Playwright playwright, boolean headless) {
+        this(playwright, headless, null);
+    }
+
+    /**
+     * Creates an adapter that connects Playwright to an existing CDP endpoint,
+     * typically the auto-managed Obscura daemon.
+     *
+     * @param playwright the SDK entry point; must not be null
+     * @param cdpUrl     WebSocket CDP endpoint; must not be blank
+     * @since 0.6.0
+     * @author 王子豪
+     */
+    public PlaywrightBrowserAdapter(Playwright playwright, String cdpUrl) {
+        this(playwright, true, Objects.requireNonNull(cdpUrl, "cdpUrl"), true);
+    }
+
+    private PlaywrightBrowserAdapter(Playwright playwright, boolean headless, String cdpUrl) {
+        this(playwright, headless, cdpUrl, false);
+    }
+
+    private PlaywrightBrowserAdapter(Playwright playwright, boolean headless, String cdpUrl,
+                                     boolean ownsPlaywright) {
         this.playwright = Objects.requireNonNull(playwright, "playwright");
         this.headless = headless;
+        this.cdpUrl = Optional.ofNullable(cdpUrl).filter(v -> !v.isBlank());
+        this.ownsPlaywright = ownsPlaywright;
     }
 
     /**
@@ -82,10 +109,21 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
     @Override
     public void open() {
         try {
-            browser = playwright.chromium().launch(
-                new BrowserType.LaunchOptions().setHeadless(headless));
-            context = browser.newContext();
-            page = context.newPage();
+            if (cdpUrl.isPresent()) {
+                ObscuraLauncher.ensureRunning();
+                browser = playwright.chromium().connectOverCDP(cdpUrl.get());
+                context = browser.contexts().isEmpty()
+                    ? browser.newContext()
+                    : browser.contexts().get(0);
+                page = context.pages().isEmpty()
+                    ? context.newPage()
+                    : context.pages().get(0);
+            } else {
+                browser = playwright.chromium().launch(
+                    new BrowserType.LaunchOptions().setHeadless(headless));
+                context = browser.newContext();
+                page = context.newPage();
+            }
             // ehall pages are heavy (CAS redirect + Angular SPA + iframe); give
             // navigation a generous budget. 60s default unless overridden via
             // -Dszu.agent.nav-timeout-ms=NNN.
@@ -111,6 +149,12 @@ public final class PlaywrightBrowserAdapter implements BrowserLifecycle {
             if (browser != null) {
                 browser.close();
                 browser = null;
+            }
+            // Close the Playwright driver only when the adapter constructed it
+            // itself (OBSCURA ctor). The legacy 2-arg / 3-arg ctors receive a
+            // caller-owned Playwright and must not close it.
+            if (ownsPlaywright) {
+                playwright.close();
             }
         } catch (Exception e) {
             throw mapException(e);

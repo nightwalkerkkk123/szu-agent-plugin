@@ -72,7 +72,7 @@ class ConfigManagerTest {
     @DisplayName("browserKind() returns the configured browser.kind value")
     void browserKind_returnsConfigured() {
         ConfigManager.getInstance().load();
-        assertThat(ConfigManager.getInstance().browserKind()).isEqualTo("PLAYWRIGHT");
+        assertThat(ConfigManager.getInstance().browserKind()).isEqualTo("OBSCURA");
     }
 
     @Test

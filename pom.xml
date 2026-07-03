@@ -36,6 +36,15 @@
     <shade.plugin.version>3.5.3</shade.plugin.version>
     <enforcer.plugin.version>3.5.0</enforcer.plugin.version>
     <jacoco.plugin.version>0.8.13</jacoco.plugin.version>
+    <download.plugin.version>1.9.0</download.plugin.version>
+    <antrun.plugin.version>3.1.0</antrun.plugin.version>
+
+    <!-- Obscura release archive bundled into the executable jar. -->
+    <obscura.version>0.1.0</obscura.version>
+    <obscura.release.base-url>https://github.com/h4ckf0r0day/obscura/releases/download/v${obscura.version}</obscura.release.base-url>
+    <obscura.archive.name>obscura-x86_64-windows.zip</obscura.archive.name>
+    <obscura.exe.suffix>.exe</obscura.exe.suffix>
+    <obscura.skip.download>false</obscura.skip.download>
   </properties>
 
   <dependencies>
@@ -158,6 +167,31 @@
       </plugin>
 
       <plugin>
+        <groupId>com.googlecode.maven-download-plugin</groupId>
+        <artifactId>download-maven-plugin</artifactId>
+        <version>${download.plugin.version}</version>
+        <executions>
+          <execution>
+            <id>download-obscura</id>
+            <phase>prepare-package</phase>
+            <goals><goal>wget</goal></goals>
+            <configuration>
+              <url>${obscura.release.base-url}/${obscura.archive.name}</url>
+              <outputDirectory>${project.build.directory}/obscura-release</outputDirectory>
+              <outputFileName>${obscura.archive.name}</outputFileName>
+              <skip>${obscura.skip.download}</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>${antrun.plugin.version}</version>
+      </plugin>
+
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <version>${shade.plugin.version}</version>
@@ -254,4 +288,151 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>obscura-windows-x86_64</id>
+      <activation>
+        <os><family>Windows</family></os>
+      </activation>
+      <properties>
+        <obscura.archive.name>obscura-x86_64-windows.zip</obscura.archive.name>
+        <obscura.exe.suffix>.exe</obscura.exe.suffix>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>unpack-obscura-windows</id>
+                <phase>prepare-package</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <skip>${obscura.skip.download}</skip>
+                  <target>
+                    <mkdir dir="${project.build.outputDirectory}/bin"/>
+                    <unzip src="${project.build.directory}/obscura-release/${obscura.archive.name}" dest="${project.build.outputDirectory}/bin"/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>obscura-linux-x86_64</id>
+      <activation>
+        <os><family>unix</family><name>Linux</name></os>
+      </activation>
+      <properties>
+        <obscura.archive.name>obscura-x86_64-linux.tar.gz</obscura.archive.name>
+        <obscura.exe.suffix></obscura.exe.suffix>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>unpack-obscura-linux</id>
+                <phase>prepare-package</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <skip>${obscura.skip.download}</skip>
+                  <target>
+                    <mkdir dir="${project.build.outputDirectory}/bin"/>
+                    <untar src="${project.build.directory}/obscura-release/${obscura.archive.name}" dest="${project.build.outputDirectory}/bin" compression="gzip"/>
+                    <chmod file="${project.build.outputDirectory}/bin/obscura" perm="755"/>
+                    <chmod file="${project.build.outputDirectory}/bin/obscura-worker" perm="755"/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>obscura-macos-aarch64</id>
+      <activation>
+        <os><family>mac</family><arch>aarch64</arch></os>
+      </activation>
+      <properties>
+        <obscura.archive.name>obscura-aarch64-macos.tar.gz</obscura.archive.name>
+        <obscura.exe.suffix></obscura.exe.suffix>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>unpack-obscura-macos-aarch64</id>
+                <phase>prepare-package</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <skip>${obscura.skip.download}</skip>
+                  <target>
+                    <mkdir dir="${project.build.outputDirectory}/bin"/>
+                    <untar src="${project.build.directory}/obscura-release/${obscura.archive.name}" dest="${project.build.outputDirectory}/bin" compression="gzip"/>
+                    <chmod file="${project.build.outputDirectory}/bin/obscura" perm="755"/>
+                    <chmod file="${project.build.outputDirectory}/bin/obscura-worker" perm="755"/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>obscura-macos-x86_64</id>
+      <activation>
+        <os><family>mac</family><arch>x86_64</arch></os>
+      </activation>
+      <properties>
+        <obscura.archive.name>obscura-x86_64-macos.tar.gz</obscura.archive.name>
+        <obscura.exe.suffix></obscura.exe.suffix>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>unpack-obscura-macos-x86_64</id>
+                <phase>prepare-package</phase>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <skip>${obscura.skip.download}</skip>
+                  <target>
+                    <mkdir dir="${project.build.outputDirectory}/bin"/>
+                    <untar src="${project.build.directory}/obscura-release/${obscura.archive.name}" dest="${project.build.outputDirectory}/bin" compression="gzip"/>
+                    <chmod file="${project.build.outputDirectory}/bin/obscura" perm="755"/>
+                    <chmod file="${project.build.outputDirectory}/bin/obscura-worker" perm="755"/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>obscura-skip-download</id>
+      <properties>
+        <obscura.skip.download>true</obscura.skip.download>
+      </properties>
+    </profile>
+  </profiles>
 </project>
