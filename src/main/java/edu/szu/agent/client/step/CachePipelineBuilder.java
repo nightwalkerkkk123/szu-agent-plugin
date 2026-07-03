@@ -50,7 +50,7 @@ import java.util.function.Function;
  * <p>// Design Pattern: Builder + Strategy assembly
  * // 编程技术: Builder 模式 / 泛型捕获 / Lambda / 不可变中间状态
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class CachePipelineBuilder {
@@ -229,7 +229,7 @@ public final class CachePipelineBuilder {
      * @param populate assigns the deserialized courses to the context on a hit
      * @param extract  pulls the courses back out of the context on a miss
      * @return {@code [CacheLookupStep, CacheWriteStep]}
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static List<BookingStep> scheduleLookupAndWrite(

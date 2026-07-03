@@ -7,7 +7,7 @@ package edu.szu.agent.account;
  * {@code --env-file} &gt; Skill injection) exhausted all sources
  * without finding a password.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class AccountResolutionException extends RuntimeException {

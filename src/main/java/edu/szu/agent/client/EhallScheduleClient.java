@@ -40,7 +40,7 @@ import java.util.Optional;
  * // Design Pattern: Strategy (pipeline of BookingSteps) + Adapter
  * // 编程技术: 枚举 / Lambda / 不可变构造器注入
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class EhallScheduleClient {
@@ -59,7 +59,7 @@ public class EhallScheduleClient {
      * @param account     resolved credentials
      * @param browser     browser adapter injected by ConfigManager
      * @param retryPolicy retry policy for the flow
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public EhallScheduleClient(Account account,
                                 BrowserLifecycle browser,
@@ -73,7 +73,7 @@ public class EhallScheduleClient {
      * {@code RestoreSession → CasLogin (skipped if sessionOk) → NavigateToSchedule
      * → ParseSchedule → PersistSession}.
      *
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public EhallScheduleClient(Account account,
                                 BrowserLifecycle browser,
@@ -95,7 +95,7 @@ public class EhallScheduleClient {
      * {@code RestoreSession → CasLogin → CacheLookup (short-circuits on hit)
      * → NavigateToSchedule → ParseSchedule → CacheWrite → PersistSession}.
      *
-     * @since 0.3.0
+     * @since 0.6.0
      */
     public EhallScheduleClient(Account account,
                                 BrowserLifecycle browser,
@@ -159,7 +159,7 @@ public class EhallScheduleClient {
      *
      * @return {@link ScheduleListResult.Success} with the list of course entries,
      *         or {@link ScheduleListResult.Failure} on error
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public ScheduleListResult list() {
         BookingContext ctx = new BookingContext(null, account);

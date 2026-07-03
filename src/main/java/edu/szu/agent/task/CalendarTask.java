@@ -37,7 +37,7 @@ import java.util.function.Supplier;
  *
  * <p>// 编程技术: 泛型 / 枚举 / Lambda / 依赖注入 / 密封类型模式匹配
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class CalendarTask implements CampusTask<CalendarListResult> {

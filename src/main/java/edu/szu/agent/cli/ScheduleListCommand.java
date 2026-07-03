@@ -52,7 +52,7 @@ import java.util.function.Function;
  *
  * // 编程技术: 注解 / 枚举 / Lambda / record
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @Command(
@@ -71,7 +71,7 @@ public class ScheduleListCommand implements Callable<Integer> {
     /**
      * Constructs the production command with the schedule task as its backend.
      *
-     * @since 0.4.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public ScheduleListCommand() {
@@ -87,7 +87,7 @@ public class ScheduleListCommand implements Callable<Integer> {
      * // 编程技术: 泛型 / Lambda
      *
      * @return schedule-list task with real-fetch and static fallback routing
-     * @since 0.4.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static CampusTask<ScheduleListResult> defaultTask() {
@@ -112,7 +112,7 @@ public class ScheduleListCommand implements Callable<Integer> {
      * starting Playwright or reading real credentials.
      *
      * @param task backend task for {@code schedule_list}
-     * @since 0.4.0
+     * @since 0.6.0
      * @author 王子豪
      */
     ScheduleListCommand(CampusTask<ScheduleListResult> task) {

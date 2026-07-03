@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>This catches the bug where {@code logback.xml} keeps a relocated
  * package as an appender class name.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 // 编程技术: Lambda + Stream

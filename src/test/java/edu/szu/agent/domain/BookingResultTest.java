@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Per ADR-0006 §一.3: strictly 2-state (Success, Failure).
  * Timeouts are expressed as Failure + ErrorCode.NETWORK_TIMEOUT.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @DisplayName("BookingResult sealed type")

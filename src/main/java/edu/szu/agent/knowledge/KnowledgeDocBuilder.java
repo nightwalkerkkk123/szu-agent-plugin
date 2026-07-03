@@ -9,7 +9,7 @@ import java.util.Objects;
  *
  * // 设计模式: Builder
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class KnowledgeDocBuilder {

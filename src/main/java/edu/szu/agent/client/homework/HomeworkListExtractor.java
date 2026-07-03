@@ -23,7 +23,7 @@ import java.util.Objects;
  * // Design Pattern: Strategy (selectable extraction implementation)
  * // 编程技术: Lambda / 正则表达式 / Jackson 反序列化
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class HomeworkListExtractor {

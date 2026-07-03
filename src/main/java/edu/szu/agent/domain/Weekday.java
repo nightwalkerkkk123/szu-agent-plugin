@@ -19,7 +19,7 @@ package edu.szu.agent.domain;
  *
  * // 编程技术: 枚举
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public enum Weekday {
@@ -43,7 +43,7 @@ public enum Weekday {
      * Returns the ehall DOM {@code data-week} numeric code.
      *
      * @return 1-7, where 7 is Sunday
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public int code() {
         return code;
@@ -53,7 +53,7 @@ public enum Weekday {
      * Returns the Chinese display name used in the ehall DOM.
      *
      * @return e.g. {@code "星期三"}
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public String displayName() {
         return displayName;
@@ -65,7 +65,7 @@ public enum Weekday {
      * @param code 1-7 (7 = Sunday)
      * @return the matching weekday
      * @throws IllegalArgumentException if {@code code} is not in [1, 7]
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static Weekday of(int code) {
         for (Weekday w : values()) {

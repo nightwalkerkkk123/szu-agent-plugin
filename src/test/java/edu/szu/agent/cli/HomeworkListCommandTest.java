@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Mirrors {@link VenueCommandTest}: unit helpers + CLI paths that do not
  * need a real browser.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 class HomeworkListCommandTest {

@@ -19,7 +19,7 @@ import edu.szu.agent.error.BookingException;
  * <p>// Design Pattern: Strategy
  * <p>// 编程技术: sealed interface / 异常传递业务错误
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public sealed interface VenueSelector permits CourtListSelector, CapacityVenueSelector {

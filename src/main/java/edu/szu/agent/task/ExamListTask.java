@@ -38,7 +38,7 @@ import java.util.function.Supplier;
  *
  * <p>// 编程技术: 泛型 / 枚举 / Lambda / 依赖注入 / 不可变性
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class ExamListTask implements CampusTask<List<ExamSchedule>> {

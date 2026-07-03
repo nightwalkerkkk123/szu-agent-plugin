@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>// 编程技术: Lambda / @Nested
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 class SkillCommandTest {

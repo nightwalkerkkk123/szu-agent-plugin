@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  * // 设计模式: Strategy (delegates to MatchingStrategy implementations)
  * // 编程技术: Stream / Optional / 泛型
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class KnowledgeRepository {

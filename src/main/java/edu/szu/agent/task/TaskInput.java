@@ -20,7 +20,7 @@ import java.util.Objects;
  *
  * // 编程技术: record(Java 16+,值类型不可变)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record TaskInput(Map<String, String> params) {
@@ -41,7 +41,7 @@ public record TaskInput(Map<String, String> params) {
      *
      * @param key the parameter name
      * @return the value, or {@code null}
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public String get(String key) {
         return params.get(key);
@@ -53,7 +53,7 @@ public record TaskInput(Map<String, String> params) {
      * @param key the required parameter name
      * @return the value, never {@code null}
      * @throws IllegalArgumentException if the key is missing or blank
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public String require(String key) {
         String v = params.get(key);
@@ -67,7 +67,7 @@ public record TaskInput(Map<String, String> params) {
      * Returns the parameter value for {@code key} as an int, or
      * {@code defaultValue} if absent or unparseable.
      *
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public int getInt(String key, int defaultValue) {
         String v = params.get(key);

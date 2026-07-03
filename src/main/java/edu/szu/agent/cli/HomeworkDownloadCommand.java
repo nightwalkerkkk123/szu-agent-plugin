@@ -58,7 +58,7 @@ import java.util.concurrent.Callable;
  *
  * // 编程技术: 注解 / Builder / Lambda / sealed result
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @Command(

@@ -6,7 +6,7 @@
 
   <groupId>edu.szu.agent</groupId>
   <artifactId>szu-agent-plugin</artifactId>
-  <version>0.1.0</version>
+  <version>0.6.0</version>
   <packaging>jar</packaging>
 
   <name>SZU Agent Plugin</name>

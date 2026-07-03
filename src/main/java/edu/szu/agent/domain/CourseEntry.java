@@ -33,7 +33,7 @@ package edu.szu.agent.domain;
  * @param period     period (节次) with mapped clock times
  * @param weekRange  weeks in which this entry meets
  * @param isAdjusted {@code true} if the entry is marked as adjusted/cancelled
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record CourseEntry(

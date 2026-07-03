@@ -21,7 +21,7 @@ import edu.szu.agent.client.step.VenueSelector;
  * // displayName + ehallCode metadata).
  * // 编程技术: sealed interface (Java 17+) / 枚举 / 接口默认方法 / 模式匹配 (Java 21)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public sealed interface Sport permits YuehaiSport, LihuSport {

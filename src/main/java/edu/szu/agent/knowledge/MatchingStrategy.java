@@ -12,7 +12,7 @@ import java.util.List;
  * // 设计模式: Strategy
  * // 编程技术: 函数式接口 / Lambda
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @FunctionalInterface

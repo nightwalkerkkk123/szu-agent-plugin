@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>// 编程技术: record / Builder
  *
- * @since 0.5.0
+ * @since 0.6.0
  * @author 王子豪
  */
 class ToolAnnotationsTest {

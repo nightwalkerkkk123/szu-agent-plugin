@@ -39,7 +39,7 @@ import java.util.Optional;
  * // Design Pattern: Strategy (pipeline of BookingSteps) + Adapter
  * // 编程技术: 枚举 / Lambda / 不可变构造器注入 / try-with-resources 风格
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class VenueBookingClient {
@@ -86,7 +86,7 @@ public class VenueBookingClient {
      * @param store       session storage (keyed by username)
      * @param probe       alive-check probe for a restored session
      * @param ttl         maximum age allowed for a persisted session
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public VenueBookingClient(BrowserLifecycle browser,

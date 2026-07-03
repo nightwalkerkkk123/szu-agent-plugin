@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  * {@link VenueBookingClient} that has no fixed account — credentials
  * are resolved per-call inside the task using {@link edu.szu.agent.account.AccountResolver}.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @Command(
@@ -74,7 +74,7 @@ public class Main implements Callable<Integer> {
      * call multiple times (subsequent calls are no-ops if the same
      * name is already registered). Public for test setup.
      *
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static void registerDefaultSkills() {
         Skills registry = Skills.getInstance();
@@ -144,7 +144,7 @@ public class Main implements Callable<Integer> {
      * Main entry point.
      *
      * @param args command-line arguments
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static void main(String[] args) {
         registerDefaultSkills();

@@ -39,7 +39,7 @@ import java.util.Objects;
  *
  * // 编程技术: 泛型 / Lambda + Stream / IO
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class McpStdioServer {

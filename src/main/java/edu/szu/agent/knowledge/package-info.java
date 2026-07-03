@@ -8,7 +8,7 @@
  * // 设计模式: Strategy (MatchingStrategy) / Builder (KnowledgeDocBuilder)
  * // 编程技术: 枚举 / 泛型 / Lambda + Stream
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 package edu.szu.agent.knowledge;

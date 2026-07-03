@@ -37,7 +37,7 @@ import java.util.stream.Stream;
  *
  * // 编程技术: Stream API / Jackson YAML / 文件遍历
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class ExternalSkillLoader {
@@ -53,7 +53,7 @@ public final class ExternalSkillLoader {
      * 从默认来源加载外部 Skill 并注册到 {@link Skills} 单例。
      *
      * @return 成功注册的 Skill 数量
-     * @since 0.2.0
+     * @since 0.6.0
      */
     public static int loadFromEnvironment() {
         return load(pathsFromEnvironment());
@@ -64,7 +64,7 @@ public final class ExternalSkillLoader {
      *
      * @param paths 要扫描的目录列表
      * @return 成功注册的 Skill 数量
-     * @since 0.2.0
+     * @since 0.6.0
      */
     public static int load(List<Path> paths) {
         Skills registry = Skills.getInstance();

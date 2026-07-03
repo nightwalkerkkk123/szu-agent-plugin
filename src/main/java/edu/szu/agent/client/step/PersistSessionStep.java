@@ -22,7 +22,7 @@ import java.util.function.Predicate;
  * <p>// Design Pattern: Strategy (concrete step in pipeline)
  * // 编程技术: 泛型 / 函数式接口 Predicate / Lambda
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class PersistSessionStep implements BookingStep {
@@ -37,7 +37,7 @@ public final class PersistSessionStep implements BookingStep {
      * default condition for the homework flow.
      *
      * @param store session storage abstraction
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public PersistSessionStep(SessionStore store) {
@@ -50,7 +50,7 @@ public final class PersistSessionStep implements BookingStep {
      * @param store         session storage abstraction
      * @param shouldPersist predicate deciding whether the current context
      *                      warrants persisting the login state
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public PersistSessionStep(SessionStore store, Predicate<BookingContext> shouldPersist) {

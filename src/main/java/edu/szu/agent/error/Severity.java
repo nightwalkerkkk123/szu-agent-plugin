@@ -9,7 +9,7 @@ package edu.szu.agent.error;
  *
  * // 编程技术: 枚举(序数 = 严重度排序)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public enum Severity {

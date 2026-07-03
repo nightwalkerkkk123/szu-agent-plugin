@@ -27,7 +27,7 @@ import java.util.Objects;
  * // Design Pattern: Strategy (concrete step in homework-download pipeline)
  * // 编程技术: 接口 / 异常 / 字符串拼接(URL)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class NavigateToHomeworkDetailStep implements BookingStep {

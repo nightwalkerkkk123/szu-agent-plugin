@@ -23,7 +23,7 @@ import java.util.Map;
  *
  * // 编程技术: record(Java 16+)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class ToolSchema {
@@ -65,7 +65,7 @@ public final class ToolSchema {
      *
      * @param skill the skill to describe
      * @return an ordered map mirroring the MCP schema shape
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static Map<String, Object> forSkill(Skill<?> skill) {
         Map<String, Object> tool = new LinkedHashMap<>();
@@ -95,7 +95,7 @@ public final class ToolSchema {
      *
      * @param skills the skills to include
      * @return the {@code tools/list} response map
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static Map<String, Object> toolsList(List<Skill<?>> skills) {
         Map<String, Object> response = new LinkedHashMap<>();
@@ -108,7 +108,7 @@ public final class ToolSchema {
      * Delegates to the task's own {@code inputSchema()} method.
      * External skills override that method to return their manifest schema.
      *
-     * @since 0.1.0
+     * @since 0.6.0
      */
     private static Map<String, Object> schemaFor(Skill<?> skill) {
         return skill.task().inputSchema();

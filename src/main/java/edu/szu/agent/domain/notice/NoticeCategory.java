@@ -10,7 +10,7 @@ package edu.szu.agent.domain.notice;
  *
  * // 编程技术: 枚举
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public enum NoticeCategory {

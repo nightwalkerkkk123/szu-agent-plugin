@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
  *
  * // 编程技术: 泛型 / ProcessBuilder / Jackson
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class ExternalSkill implements CampusTask<Map<String, Object>> {
@@ -61,7 +61,7 @@ public final class ExternalSkill implements CampusTask<Map<String, Object>> {
      * Returns the manifest of this external skill.
      *
      * @return the manifest
-     * @since 0.2.0
+     * @since 0.6.0
      */
     public ExternalSkillManifest manifest() {
         return manifest;

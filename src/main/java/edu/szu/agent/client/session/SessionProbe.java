@@ -13,7 +13,7 @@ import java.util.Objects;
  *
  * <p>// Design Pattern: Strategy (concrete probe)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class SessionProbe {
@@ -36,7 +36,7 @@ public final class SessionProbe {
      *
      * @param probeUrl protected URL that requires authentication
      * @param aliveSelector CSS selector that is only visible when logged in
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public SessionProbe(String probeUrl, String aliveSelector) {
@@ -50,7 +50,7 @@ public final class SessionProbe {
      * @param browser browser lifecycle adapter
      * @return {@link SessionResult.Fresh} when the indicator is visible,
      *         {@link SessionResult.Stale} otherwise
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public SessionResult isAlive(BrowserLifecycle browser) {

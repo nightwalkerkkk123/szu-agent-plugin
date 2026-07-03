@@ -17,7 +17,7 @@ import java.time.LocalDate;
  * <p>// Design Pattern: Strategy
  * <p>// 编程技术: 日期格式化 / 不可变请求对象读取
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class SelectDateStep implements BookingStep {

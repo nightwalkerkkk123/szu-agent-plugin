@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
  * {@code Throwable} or {@code BookingException}, keeping the
  * observability &harr; error seam clean.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 class TracerTest {

@@ -18,7 +18,7 @@ package edu.szu.agent.domain;
  *
  * // 编程技术: 枚举 / 静态工厂方法 / Stream
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public enum TimeSlot {

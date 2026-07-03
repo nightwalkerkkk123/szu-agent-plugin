@@ -68,7 +68,7 @@ import java.util.List;
  *
  * <p>// 编程技术: 不可变字段 + 可变步骤状态(record 风格构造 + setter 风格写入)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class BookingContext {
@@ -91,7 +91,7 @@ public final class BookingContext {
      * step and instead wait for the user to log in manually in the visible
      * browser window. Default {@code false}.
      *
-     * @since 0.5.0
+     * @since 0.6.0
      */
     private boolean headedFallbackRequested;
 
@@ -189,7 +189,7 @@ public final class BookingContext {
      * fallback because no credential could be resolved.
      *
      * @return {@code true} if user must complete login manually
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public boolean headedFallbackRequested() {
@@ -202,7 +202,7 @@ public final class BookingContext {
      * rebuilds a headed browser after a credential resolution failure.
      *
      * @param headedFallbackRequested {@code true} to enable manual-login mode
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public void headedFallbackRequested(boolean headedFallbackRequested) {
@@ -283,7 +283,7 @@ public final class BookingContext {
      * Sets the cache hit flag.
      *
      * @param cacheHit {@code true} if cache was hit
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public void cacheHit(boolean cacheHit) {
@@ -301,7 +301,7 @@ public final class BookingContext {
      * Sets the cache fetched-at timestamp.
      *
      * @param cacheFetchedAt timestamp from the cache envelope
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public void cacheFetchedAt(Instant cacheFetchedAt) {

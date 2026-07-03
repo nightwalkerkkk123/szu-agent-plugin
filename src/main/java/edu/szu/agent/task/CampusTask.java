@@ -22,7 +22,7 @@ import java.util.Map;
  * // 编程技术: 泛型 / 函数式接口
  *
  * @param <T> the task's domain-specific result type
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public interface CampusTask<T> {
@@ -33,7 +33,7 @@ public interface CampusTask<T> {
      * (e.g. {@code "booking_venue"}, {@code "notice_list"}).
      *
      * @return the task name, never {@code null} or blank
-     * @since 0.1.0
+     * @since 0.6.0
      */
     String name();
 
@@ -42,7 +42,7 @@ public interface CampusTask<T> {
      * MCP {@code tools/list}. One sentence.
      *
      * @return the description, never {@code null}
-     * @since 0.1.0
+     * @since 0.6.0
      */
     String description();
 
@@ -54,7 +54,7 @@ public interface CampusTask<T> {
      * @param input task-specific input
      * @return the task result, never {@code null}
      * @throws edu.szu.agent.error.BookingException on failure
-     * @since 0.1.0
+     * @since 0.6.0
      */
     T execute(TaskInput input);
 
@@ -67,7 +67,7 @@ public interface CampusTask<T> {
      *
      * @return a JSON-Schema-shaped map with {@code type: "object"} and
      *         {@code properties} / {@code required} keys
-     * @since 0.4.0
+     * @since 0.6.0
      */
     default Map<String, Object> inputSchema() {
         return Map.of(
@@ -96,7 +96,7 @@ public interface CampusTask<T> {
      * no return-shape notes, and no common errors worth documenting.
      *
      * @return the annotations; never {@code null}
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     default ToolAnnotations annotations() {

@@ -17,7 +17,7 @@ import java.util.List;
  * with an HTTP fetch through {@code PlaywrightBrowserAdapter} after CAS
  * login.
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class ExamListClient {

@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>// 编程技术: JUnit 5 / AssertJ / 泛型
  *
- * @since 0.5.0
+ * @since 0.6.0
  * @author 王子豪
  */
 class ToolDocsGeneratorTest {

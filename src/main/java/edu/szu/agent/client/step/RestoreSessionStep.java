@@ -19,7 +19,7 @@ import java.util.Objects;
  *
  * <p>// Design Pattern: Strategy (concrete step in pipeline)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class RestoreSessionStep implements BookingStep {
@@ -36,7 +36,7 @@ public final class RestoreSessionStep implements BookingStep {
      * @param store session storage abstraction
      * @param probe alive-check probe
      * @param ttl   maximum age allowed for the persisted file
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public RestoreSessionStep(SessionStore store, SessionProbe probe, Duration ttl) {

@@ -37,7 +37,7 @@ import edu.szu.agent.error.ErrorCode;
  *
  * // 编程技术: 静态工具类 / Lambda
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class CommandOutput {
@@ -60,7 +60,7 @@ public final class CommandOutput {
      * @param elapsedMs    elapsed time in milliseconds
      * @param format       {@code "json"} or {@code "human"}
      * @return the formatted string (no trailing newline)
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static String formatResult(boolean success, JsonNode data,
                                       String errorCode, String errorMessage,
@@ -87,7 +87,7 @@ public final class CommandOutput {
      * Human-friendly format. Falls back to a key/value layout for {@code data}
      * — concrete commands may override by passing a richer payload.
      *
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static String formatHuman(boolean success, JsonNode data,
                                      String errorCode, String errorMessage,
@@ -119,7 +119,7 @@ public final class CommandOutput {
      *
      * @param code the error code
      * @return the exit code per PRD §5.3
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static int exitCodeFor(ErrorCode code) {
         return switch (code.severity()) {

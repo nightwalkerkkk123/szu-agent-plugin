@@ -11,7 +11,7 @@ import java.util.regex.PatternSyntaxException;
  * <p>Treats the query as a case-insensitive Java regular expression and
  * matches against title and content.
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class RegexMatchingStrategy implements MatchingStrategy {

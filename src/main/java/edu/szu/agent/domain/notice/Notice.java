@@ -19,7 +19,7 @@ import java.time.LocalDate;
  * @param publishedAt   publication date (year inferred from current year)
  * @param url           absolute detail URL
  * @param hasAttachment whether the notice likely has attachments
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record Notice(String id,

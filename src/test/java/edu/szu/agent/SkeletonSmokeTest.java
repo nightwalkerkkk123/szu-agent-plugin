@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Smoke test verifying skeleton setup: Main class loads, picocli works, version defined.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 class SkeletonSmokeTest {

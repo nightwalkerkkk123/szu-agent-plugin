@@ -38,7 +38,7 @@ import java.util.Optional;
  * // Design Pattern: Strategy (pipeline of BookingSteps) + Adapter
  * // 编程技术: 枚举 / Lambda / 不可变构造器注入
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class ChaoxingHomeworkClient {
@@ -57,7 +57,7 @@ public class ChaoxingHomeworkClient {
      * @param account     resolved credentials
      * @param browser     browser adapter injected by ConfigManager
      * @param retryPolicy retry policy for the flow
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public ChaoxingHomeworkClient(Account account,
@@ -77,7 +77,7 @@ public class ChaoxingHomeworkClient {
      * @param sessionStore on-disk store rooted at user home (must not be null)
      * @param sessionProbe alive probe for the LMS user index (must not be null)
      * @param sessionTtl   freshness window for persisted state (must not be null)
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public ChaoxingHomeworkClient(Account account,

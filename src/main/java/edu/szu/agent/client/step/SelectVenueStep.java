@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
  * <p>// Design Pattern: Strategy (delegated to Sport-bound VenueSelector)
  * <p>// 编程技术: 多态 / 异常转业务结果
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class SelectVenueStep implements BookingStep {

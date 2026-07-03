@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
  * // Design Pattern: Strategy
  * // 编程技术: 枚举
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class SelectSportStep implements BookingStep {

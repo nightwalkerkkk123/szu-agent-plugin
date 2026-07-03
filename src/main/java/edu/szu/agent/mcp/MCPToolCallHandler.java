@@ -46,7 +46,7 @@ import java.util.Map;
  *
  * // 编程技术: 泛型 / Lambda / 枚举
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class MCPToolCallHandler {
@@ -65,7 +65,7 @@ public final class MCPToolCallHandler {
      *                  ({@code "timeSlot.start" = "19:00"}).
      * @return response envelope (success=true with data, or
      *         success=false with errorCode)
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static Map<String, Object> call(String toolName, Map<String, Object> arguments) {
         long startMs = System.currentTimeMillis();
@@ -103,7 +103,7 @@ public final class MCPToolCallHandler {
      * to their {@code toString()}. Preserves insertion order via the
      * input map's iterator.
      *
-     * @since 0.1.0
+     * @since 0.6.0
      */
     @SuppressWarnings("unchecked")
     private static Map<String, String> flatten(Map<String, Object> input) {

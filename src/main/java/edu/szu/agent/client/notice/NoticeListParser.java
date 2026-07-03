@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  *
  * // 编程技术: 正则表达式 / Lambda / 枚举
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class NoticeListParser {

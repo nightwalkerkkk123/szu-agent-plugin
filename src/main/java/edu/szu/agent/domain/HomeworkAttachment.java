@@ -25,7 +25,7 @@ import java.time.Instant;
  * @param sizeBytes    file size in bytes, or {@code 0} if unknown
  * @param downloadedAt timestamp at which the download finished, or
  *                     {@code null} if not yet downloaded
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record HomeworkAttachment(String homeworkId, String fileName, String sourceUrl,

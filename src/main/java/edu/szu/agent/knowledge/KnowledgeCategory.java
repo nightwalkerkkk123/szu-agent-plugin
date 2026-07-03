@@ -4,7 +4,7 @@ package edu.szu.agent.knowledge;
  * Knowledge-base category — mirrors the five document classes described
  * in {@code docs/final-report.md} §3.6.
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public enum KnowledgeCategory {

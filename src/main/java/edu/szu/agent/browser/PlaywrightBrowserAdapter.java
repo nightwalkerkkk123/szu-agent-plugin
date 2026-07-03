@@ -34,7 +34,7 @@ import java.util.Optional;
  * // Design Pattern: Adapter (concrete)
  * // 编程技术: 不可变构造器注入 + 显式状态管理(browser / page 字段)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class PlaywrightBrowserAdapter implements BrowserLifecycle {

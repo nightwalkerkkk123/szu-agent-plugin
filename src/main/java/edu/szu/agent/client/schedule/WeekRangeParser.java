@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
  *
  * // 编程技术: 不可变 + 正则表达式 + 静态工具类
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class WeekRangeParser {
@@ -40,7 +40,7 @@ public final class WeekRangeParser {
      * @param raw ehall text such as {@code "1-17周"} or {@code "1-8,10-17周(单)"}
      * @return the parsed range
      * @throws IllegalArgumentException if the input is blank or cannot be parsed
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static WeekRange parse(String raw) {
         if (raw == null) {

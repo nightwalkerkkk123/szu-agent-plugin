@@ -16,7 +16,7 @@ import java.util.Objects;
  * @param path        classpath resource path of the source file
  * @param category    business category
  * @param lastUpdated last update timestamp parsed from frontmatter
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record KnowledgeDoc(

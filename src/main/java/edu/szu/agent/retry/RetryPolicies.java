@@ -10,7 +10,7 @@ import java.time.Duration;
  *
  * // 编程技术: 工厂模式(静态方法,非设计模式条目;仅做代码组织)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class RetryPolicies {

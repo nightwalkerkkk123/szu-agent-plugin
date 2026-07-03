@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
  *
  * // 编程技术: 不可变 record-like 状态 + NIO.2
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class SessionStore {
@@ -50,7 +50,7 @@ public final class SessionStore {
      *
      * @param home     home directory under which {@code .szu-agent/sessions/} lives
      * @param username SZU account username (must not be blank)
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public SessionStore(Path home, String username) {
@@ -70,7 +70,7 @@ public final class SessionStore {
      * Resolves the canonical session file path for this user.
      *
      * @return path of the form {@code <home>/.szu-agent/sessions/<username>.json}
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public Path defaultPath() {
@@ -81,7 +81,7 @@ public final class SessionStore {
      * Tests whether the session file currently exists on disk.
      *
      * @return {@code true} if the file exists
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public boolean exists() {
@@ -93,7 +93,7 @@ public final class SessionStore {
      *
      * @return the parent directory path
      * @throws IOException if directory creation fails
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public Path ensureParent() throws IOException {
@@ -107,7 +107,7 @@ public final class SessionStore {
      *
      * @param ttl maximum allowed age
      * @return {@code true} if file exists and age &lt; ttl, otherwise {@code false}
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public boolean isFresh(Duration ttl) {
@@ -132,7 +132,7 @@ public final class SessionStore {
      * @param json serialized session payload
      * @return the written file path
      * @throws IOException if the write fails
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public Path write(String json) throws IOException {
@@ -164,7 +164,7 @@ public final class SessionStore {
      * Deletes the session file if it exists.
      *
      * @throws IOException if deletion fails
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public void deleteIfExists() throws IOException {

@@ -67,7 +67,7 @@ public final class ObscuraLauncher {
      * {@code versionUri} is the default {@code http://127.0.0.1:9222/json/version}.
      *
      * @param versionUri the version-probe endpoint for the daemon
-     * @since 0.2.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static void ensureRunning(URI versionUri) {
@@ -185,7 +185,7 @@ public final class ObscuraLauncher {
      * @param wsUrl the WebSocket CDP endpoint (must start with {@code ws://})
      * @return the matching version URI
      * @throws IllegalArgumentException if input is null, blank, or not {@code ws://}
-     * @since 0.2.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static URI versionUriFromWsUrl(String wsUrl) {

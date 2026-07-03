@@ -22,7 +22,7 @@ import java.util.function.Function;
  * <p>// Design Pattern: Strategy
  * // 编程技术: 泛型 / Jackson TypeReference / Lambda
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class CacheWriteStep implements BookingStep {
@@ -42,7 +42,7 @@ public final class CacheWriteStep implements BookingStep {
      * @param cacheKey     cache key (scope/key/schemaVersion)
      * @param extract      function to extract the payload from the context
      * @param schemaVersion payload schema version
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public CacheWriteStep(CacheStore store,
