@@ -50,7 +50,7 @@ import java.util.Objects;
  * // Design Pattern: Adapter (HTTP transport adapts the shared MCP dispatch)
  * // 编程技术: Lambda / 泛型 / IO
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class McpHttpServer {
@@ -71,7 +71,7 @@ public final class McpHttpServer {
     /**
      * @param port TCP port to bind; {@code 0} selects an ephemeral free port
      *             (resolve the actual value with {@link #boundPort()})
-     * @since 0.3.0
+     * @since 0.6.0
      */
     public McpHttpServer(int port) {
         this.requestedPort = port;
@@ -81,7 +81,7 @@ public final class McpHttpServer {
      * Registers the default Skills once, binds the port, and starts serving.
      *
      * @throws IOException if the port cannot be bound
-     * @since 0.3.0
+     * @since 0.6.0
      */
     public void start() throws IOException {
         Main.registerDefaultSkills();
@@ -98,7 +98,7 @@ public final class McpHttpServer {
 
     /**
      * @return the port the server is actually bound to (meaningful after {@link #start()})
-     * @since 0.3.0
+     * @since 0.6.0
      */
     public int boundPort() {
         return Objects.requireNonNull(server, "server not started").getAddress().getPort();
@@ -107,7 +107,7 @@ public final class McpHttpServer {
     /**
      * Stops the server, allowing in-flight exchanges a brief grace period.
      *
-     * @since 0.3.0
+     * @since 0.6.0
      */
     public void stop() {
         if (server != null) {

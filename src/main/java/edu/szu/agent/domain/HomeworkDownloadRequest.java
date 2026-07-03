@@ -13,7 +13,7 @@ import java.util.Objects;
  * <p>// Design Pattern: Builder
  * // 编程技术: 不可变 + 链式构造
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record HomeworkDownloadRequest(String homeworkId, Path outputDir,

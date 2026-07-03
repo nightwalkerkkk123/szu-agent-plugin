@@ -17,7 +17,7 @@ import java.util.Objects;
  * // Design Pattern: Builder
  * // 编程技术: 不可变类(全部字段 final) + 静态内部 Builder
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class BookingRequest {
@@ -73,7 +73,7 @@ public final class BookingRequest {
     /**
      * Builder for {@link BookingRequest}. All setters return {@code this} for chaining.
      *
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static final class Builder {
 

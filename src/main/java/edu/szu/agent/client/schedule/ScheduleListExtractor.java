@@ -45,7 +45,7 @@ import java.util.regex.Pattern;
  * // Design Pattern: Strategy (selectable extraction implementation)
  * // 编程技术: Lambda / Jackson 反序列化 / 正则表达式
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class ScheduleListExtractor {
@@ -74,7 +74,7 @@ public final class ScheduleListExtractor {
      * @param browser the browser adapter, currently on the schedule page
      * @return a non-null, immutable list of course entries (may be empty)
      * @throws BookingException if extraction fails or returns invalid data
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static List<CourseEntry> extract(BrowserLifecycle browser) {
         Objects.requireNonNull(browser, "browser");

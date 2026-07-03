@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Tests for {@link CachePipelineBuilder}.
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @DisplayName("CachePipelineBuilder")

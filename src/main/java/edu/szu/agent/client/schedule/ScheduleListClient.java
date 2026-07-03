@@ -20,7 +20,7 @@ import java.util.List;
  * // 设计模式: Simple Factory (static data factory)
  * // 编程技术: Lambda
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class ScheduleListClient {

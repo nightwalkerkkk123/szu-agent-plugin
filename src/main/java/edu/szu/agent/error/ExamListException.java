@@ -5,7 +5,7 @@ package edu.szu.agent.error;
  *
  * <p>// 编程技术:  unchecked 异常 / 错误码携带
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class ExamListException extends RuntimeException {

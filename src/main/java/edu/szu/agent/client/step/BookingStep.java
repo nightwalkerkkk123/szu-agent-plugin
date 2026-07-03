@@ -22,7 +22,7 @@ import java.util.function.BiFunction;
  * // Design Pattern: Strategy
  * // 编程技术: 泛型 / 接口 / Lambda
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public interface BookingStep {

@@ -19,7 +19,7 @@ import java.util.Objects;
  * <p>// Design Pattern: Decorator + Strategy(动态选择实现)
  * // 编程技术: 不可变组合 / Lambda / 密封类型模式匹配
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class ResilientNoticeClient {

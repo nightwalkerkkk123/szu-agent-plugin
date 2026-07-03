@@ -21,7 +21,7 @@ import java.util.Map;
  *
  * // 编程技术: 泛型 / 枚举 / Lambda
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class KnowledgeTask implements CampusTask<List<KnowledgeResult>> {

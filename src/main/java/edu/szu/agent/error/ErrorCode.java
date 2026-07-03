@@ -19,7 +19,7 @@ package edu.szu.agent.error;
  *
  * // 编程技术: 枚举(每个常量挂 5 字段元数据;替代 Python ERROR_MAP 间接层)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public enum ErrorCode {

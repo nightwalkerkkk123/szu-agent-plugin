@@ -20,7 +20,7 @@ import java.util.Objects;
  * @param endUnit    1-based end unit (e.g. 2 for 1-2节)
  * @param startTime  clock time when the period begins
  * @param endTime    clock time when the period ends
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record Period(int beginUnit, int endUnit,
@@ -50,7 +50,7 @@ public record Period(int beginUnit, int endUnit,
      * @param endUnit   1-based end unit
      * @return the mapped period
      * @throws IllegalArgumentException if the unit pair is not in the mapping
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static Period of(int beginUnit, int endUnit) {
         return PeriodMapping.lookup(beginUnit, endUnit);

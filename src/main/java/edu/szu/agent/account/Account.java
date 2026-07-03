@@ -13,7 +13,7 @@ package edu.szu.agent.account;
  * @param studentId   student ID (e.g. "2023150090")
  * @param password    ehall/CAS password
  * @param displayName optional display name for logging (masked by LogMasker)
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record Account(String studentId, String password, String displayName) {

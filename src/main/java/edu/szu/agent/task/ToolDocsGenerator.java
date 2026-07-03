@@ -12,7 +12,7 @@ import java.util.StringJoiner;
  * <p>// Design Pattern: Static Renderer (no Builder; pure function)
  * // 编程技术: 泛型 / record / Lambda / 文本块
  *
- * @since 0.5.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class ToolDocsGenerator {
@@ -25,7 +25,7 @@ public final class ToolDocsGenerator {
      *
      * @param skill the skill to render
      * @return Markdown content for {@code docs/tools/<tool>.md}
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static String renderMarkdown(Skill<?> skill) {
@@ -157,7 +157,7 @@ public final class ToolDocsGenerator {
      * is the only place allowed to use {@code System.out.println} directly.
      *
      * @param args ignored
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static void main(String[] args) {

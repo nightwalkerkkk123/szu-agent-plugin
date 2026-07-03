@@ -17,7 +17,7 @@ import java.util.Objects;
  *
  * <p>// 编程技术: 依赖注入 / 不可变 / 异常处理
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class PlaywrightExamFetchProvider implements ExamFetchProvider {

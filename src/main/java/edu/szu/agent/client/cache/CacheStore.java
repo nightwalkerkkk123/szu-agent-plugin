@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
  * <p>Design Pattern: Adapter (over java.nio.file APIs, mirroring SessionStore).
  * // 编程技术: 不可变 record-like 状态 + NIO.2 + POSIX 文件权限 + Builder
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class CacheStore {
@@ -56,7 +56,7 @@ public final class CacheStore {
      * (all lookups return not-fresh). Prefer {@link Builder} to configure TTLs.
      *
      * @param home home directory under which {@code .szu-agent/cache/} lives
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public CacheStore(Path home) {
@@ -70,7 +70,7 @@ public final class CacheStore {
      * @param key   cache key within the scope
      * @return path of the form {@code <home>/.szu-agent/cache/<scope>/<key>.json}
      * @throws IllegalArgumentException if scope or key fails validation
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public Path defaultPath(String scope, String key) {
@@ -85,7 +85,7 @@ public final class CacheStore {
      * @param scope cache scope
      * @param key   cache key
      * @return {@code true} if the file exists
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public boolean exists(String scope, String key) {
@@ -99,7 +99,7 @@ public final class CacheStore {
      * @param scope cache scope
      * @param key   cache key
      * @return {@code true} if file exists, age is within scope TTL, and scope has a TTL configured
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public boolean isFresh(String scope, String key) {
@@ -118,7 +118,7 @@ public final class CacheStore {
      * @param key   cache key
      * @param ttl   maximum allowed age
      * @return {@code true} if file exists and age {@code < ttl}, otherwise {@code false}
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public boolean isFresh(String scope, String key, Duration ttl) {
@@ -144,7 +144,7 @@ public final class CacheStore {
      * @param key   cache key
      * @return raw JSON string, or {@code null} if file does not exist
      * @throws IOException if read fails
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public String read(String scope, String key) throws IOException {
@@ -164,7 +164,7 @@ public final class CacheStore {
      * @param json  serialized cache payload
      * @return the written file path
      * @throws IOException if write fails
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public Path write(String scope, String key, String json) throws IOException {
@@ -203,7 +203,7 @@ public final class CacheStore {
      * @param scope cache scope
      * @param key   cache key
      * @throws IOException if deletion fails
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public void deleteIfExists(String scope, String key) throws IOException {
@@ -240,7 +240,7 @@ public final class CacheStore {
      *
      * // 编程技术: Builder 模式
      *
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static final class Builder {
@@ -251,7 +251,7 @@ public final class CacheStore {
          * Creates a builder rooted at the given home directory.
          *
          * @param home cache home directory
-         * @since 0.3.0
+         * @since 0.6.0
          * @author 王子豪
          */
         public Builder(Path home) {
@@ -265,7 +265,7 @@ public final class CacheStore {
          * @param scope cache scope (e.g. {@code schedule})
          * @param ttl  maximum age before treating entries as stale
          * @return this builder
-         * @since 0.3.0
+         * @since 0.6.0
          * @author 王子豪
          */
         public Builder ttl(String scope, Duration ttl) {
@@ -280,7 +280,7 @@ public final class CacheStore {
          * registered via {@link #ttl}.
          *
          * @return a configured CacheStore
-         * @since 0.3.0
+         * @since 0.6.0
          * @author 王子豪
          */
         public CacheStore build() {

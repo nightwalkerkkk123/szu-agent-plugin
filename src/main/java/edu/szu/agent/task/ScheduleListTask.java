@@ -37,7 +37,7 @@ import java.util.function.Function;
  *
  * <p>// 编程技术: 泛型 / 枚举 / Lambda / 依赖注入
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class ScheduleListTask implements CampusTask<ScheduleListResult> {

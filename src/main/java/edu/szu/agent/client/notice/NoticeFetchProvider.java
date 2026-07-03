@@ -16,7 +16,7 @@ import java.util.List;
  * <p>// Design Pattern: Strategy
  * <p>// 编程技术: 接口 / Lambda / FunctionalInterface
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 // Design Pattern: Strategy

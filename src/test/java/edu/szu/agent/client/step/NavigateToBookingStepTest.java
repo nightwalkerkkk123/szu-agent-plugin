@@ -23,7 +23,7 @@ import static org.mockito.Mockito.verify;
 /**
  * Tests for {@link NavigateToBookingStep}.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @ExtendWith(MockitoExtension.class)

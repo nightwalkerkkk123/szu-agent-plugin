@@ -40,7 +40,7 @@ import java.util.concurrent.Callable;
  *
  * <p>// 编程技术: 注解 / Lambda / record / 工厂方法
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @Command(
@@ -66,7 +66,7 @@ public class CalendarCommand implements Callable<Integer> {
      * <p>// 编程技术: 泛型 / Lambda
      *
      * @return calendar-get task with real-fetch and static fallback routing
-     * @since 0.4.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static CampusTask<CalendarListResult> defaultTask() {
@@ -101,7 +101,7 @@ public class CalendarCommand implements Callable<Integer> {
          * without starting Playwright.
          *
          * @param task backend task for {@code calendar_get}
-         * @since 0.4.0
+         * @since 0.6.0
          */
         GetAction(CampusTask<CalendarListResult> task) {
             this.task = Objects.requireNonNull(task, "task");

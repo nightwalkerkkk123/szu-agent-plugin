@@ -19,7 +19,7 @@ import java.util.Objects;
  *
  * @param weeks sorted, distinct list of week numbers
  * @param raw   the original ehall text, e.g. {@code "1-17周"} or {@code "1-8,10-17周(单)"}
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record WeekRange(List<Integer> weeks, String raw) {
@@ -44,7 +44,7 @@ public record WeekRange(List<Integer> weeks, String raw) {
      * @param s the raw text (without the trailing {@code 周} required)
      * @return a parsed range; returns a single-week range for digits-only input
      * @throws IllegalArgumentException if the input cannot be parsed
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static WeekRange parse(String s) {
         return edu.szu.agent.client.schedule.WeekRangeParser.parse(s);
@@ -55,7 +55,7 @@ public record WeekRange(List<Integer> weeks, String raw) {
      *
      * @param week 1-based week number
      * @return {@code true} if {@code week} is in {@link #weeks()}
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public boolean contains(int week) {
         return weeks.contains(week);
@@ -69,7 +69,7 @@ public record WeekRange(List<Integer> weeks, String raw) {
      * length &gt; 1, else as a single number.
      *
      * @return the compact display string
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public String compact() {
         if (weeks.isEmpty()) {

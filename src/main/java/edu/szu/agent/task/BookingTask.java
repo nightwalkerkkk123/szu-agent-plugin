@@ -44,7 +44,7 @@ import java.util.function.Supplier;
  *
  * // 编程技术: 泛型 / 枚举 / Lambda
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class BookingTask implements CampusTask<BookingResult> {
@@ -75,7 +75,7 @@ public class BookingTask implements CampusTask<BookingResult> {
      *                            {@link AccountResolutionException}, with
      *                            the fresh headed browser and the
      *                            requesting username)
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public BookingTask(Function<Account, VenueBookingClient> clientFactory,

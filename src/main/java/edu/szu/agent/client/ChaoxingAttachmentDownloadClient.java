@@ -47,7 +47,7 @@ import java.util.Optional;
  * // Design Pattern: Strategy (pipeline of BookingSteps) + Adapter
  * // 编程技术: 不可变构造器注入 / sealed 接口返回
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class ChaoxingAttachmentDownloadClient {
@@ -71,7 +71,7 @@ public class ChaoxingAttachmentDownloadClient {
      * @param sessionStore on-disk store rooted at user home (must not be null)
      * @param sessionProbe alive probe for the LMS user index (must not be null)
      * @param sessionTtl   freshness window for persisted state (must not be null)
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public ChaoxingAttachmentDownloadClient(Account account,

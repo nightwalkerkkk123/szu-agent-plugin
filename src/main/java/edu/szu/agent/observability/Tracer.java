@@ -43,7 +43,7 @@ import java.util.Optional;
  * // Design Pattern: Singleton (double-checked locking)
  * // 编程技术: 枚举 / record-style immutability / MDC / SecureRandom
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class Tracer {

@@ -14,7 +14,7 @@ import java.util.List;
  *
  * // 编程技术: 密封类型 / record / 模式匹配
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public sealed interface CalendarListResult {

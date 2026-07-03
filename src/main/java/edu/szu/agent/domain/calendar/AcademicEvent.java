@@ -17,7 +17,7 @@ import java.time.LocalDate;
  * @param description human-readable description
  * @param semester    semester tag, e.g. "2025-2026-SPRING"
  * @param weekOfTerm  1-based week of term, or {@code null} if not applicable
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record AcademicEvent(LocalDate date,

@@ -34,7 +34,7 @@ import com.microsoft.playwright.Page;
  *
  * // 编程技术: 抽象类 / 不可变
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class FakeBrowser implements BrowserLifecycle {

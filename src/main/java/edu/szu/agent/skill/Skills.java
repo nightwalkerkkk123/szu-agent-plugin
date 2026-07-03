@@ -24,7 +24,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * // Design Pattern: Singleton (double-checked locking)
  * // 编程技术: 泛型 / 枚举 / Lambda
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class Skills {
@@ -51,7 +51,7 @@ public final class Skills {
      * Resets the registry — public for test isolation only. Production
      * code should never call this. Mirrors {@code Tracer.reset()}.
      *
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static void reset() {
         synchronized (Skills.class) {
@@ -67,7 +67,7 @@ public final class Skills {
      * @param skill the skill to register
      * @throws IllegalArgumentException if a skill with the same name
      *         is already registered
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public void register(Skill<?> skill) {
         Objects.requireNonNull(skill, "skill");
@@ -87,7 +87,7 @@ public final class Skills {
      * name for stable output.
      *
      * @return sorted immutable list
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public List<Skill<?>> all() {
         List<Skill<?>> copy = new ArrayList<>(skills);
@@ -98,7 +98,7 @@ public final class Skills {
     /**
      * Returns the count of registered skills.
      *
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public int size() {
         return skills.size();

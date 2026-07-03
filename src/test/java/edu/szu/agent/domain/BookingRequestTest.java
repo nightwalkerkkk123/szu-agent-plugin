@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>Per ADR-0006 §一.4: 6-field Builder, build() validates 4 required
  * non-null fields + preferredVenueIndex &gt;= 1.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @DisplayName("BookingRequest Builder")

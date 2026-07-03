@@ -9,7 +9,7 @@ import edu.szu.agent.error.ErrorCode;
  *
  * // 编程技术: 不可变异常(cause + code)
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class CalendarFetchException extends RuntimeException {

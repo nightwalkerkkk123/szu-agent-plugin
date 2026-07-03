@@ -21,7 +21,7 @@ import java.util.List;
  * // Design Pattern: Adapter (target interface)
  * // 编程技术: 接口 + Java 21 sealed 候选(本接口暂不 sealed,等 Phase 3 FakeBrowser 加入再评估)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public interface BrowserLifecycle {
@@ -149,7 +149,7 @@ public interface BrowserLifecycle {
      *
      * @param storageStateFile path to a Playwright storageState JSON; must not be null
      * @return {@code true} if the file existed and was parsed, {@code false} otherwise
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     boolean importStorageState(java.nio.file.Path storageStateFile);
@@ -160,7 +160,7 @@ public interface BrowserLifecycle {
      *
      * @param storageStateFile path to write to; must not be null
      * @throws edu.szu.agent.error.BookingException with SESSION_WRITE_FAILED on disk-write error
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     void exportStorageState(java.nio.file.Path storageStateFile);
@@ -173,7 +173,7 @@ public interface BrowserLifecycle {
      *
      * @return the new Page object (caller closes it when done)
      * @throws edu.szu.agent.error.BookingException with BROWSER_CRASH on failure
-     * @since 0.4.0
+     * @since 0.6.0
      * @author 王子豪
      */
     Page newPage();
@@ -194,7 +194,7 @@ public interface BrowserLifecycle {
      * @return number of bytes written
      * @throws BookingException with ATTACHMENT_DOWNLOAD_FAILED on HTTP / IO
      *         errors, NETWORK_TIMEOUT on timeout, BROWSER_CRASH otherwise
-     * @since 0.1.0
+     * @since 0.6.0
      * @author 王子豪
      */
     long downloadAttachment(String url, java.nio.file.Path target);
@@ -205,7 +205,7 @@ public interface BrowserLifecycle {
      * @return the complete document HTML markup
      * @throws edu.szu.agent.error.BookingException with BROWSER_CRASH
      *         if evaluation fails
-     * @since 0.4.0
+     * @since 0.6.0
      * @author 王子豪
      */
     String content();

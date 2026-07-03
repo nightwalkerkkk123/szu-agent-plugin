@@ -39,7 +39,7 @@ import java.util.concurrent.Callable;
  *
  * <p>// 编程技术: 注解 / Lambda / record / 工厂方法
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @Command(
@@ -65,7 +65,7 @@ public class NoticeCommand implements Callable<Integer> {
      * <p>// 编程技术: 泛型 / Lambda
      *
      * @return notice-list task with real-fetch and static fallback routing
-     * @since 0.4.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static CampusTask<NoticeListResult> defaultTask() {
@@ -99,7 +99,7 @@ public class NoticeCommand implements Callable<Integer> {
          * without starting Playwright.
          *
          * @param task backend task for {@code notice_list}
-         * @since 0.4.0
+         * @since 0.6.0
          */
         ListAction(CampusTask<NoticeListResult> task) {
             this.task = Objects.requireNonNull(task, "task");

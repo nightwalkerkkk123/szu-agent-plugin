@@ -11,7 +11,7 @@ import java.util.Objects;
  * @param sourcePath     classpath path of the source Markdown file
  * @param relevanceScore 1.0 = exact title match, 0.9 = exact content match,
  *                       0.7 = contains, 0.5 = regex; higher is better
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record KnowledgeResult(

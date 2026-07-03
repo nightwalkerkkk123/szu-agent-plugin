@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Tests for the sealed {@link Sport} hierarchy and its
  * campus-routed factory.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @DisplayName("Sport sealed hierarchy")

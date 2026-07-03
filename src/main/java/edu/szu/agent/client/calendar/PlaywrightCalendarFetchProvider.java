@@ -20,7 +20,7 @@ import java.util.Objects;
  * <p>// Design Pattern: Strategy
  * <p>// 编程技术: 接口实现 / Lambda / 不可变组合
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class PlaywrightCalendarFetchProvider implements CalendarFetchProvider {

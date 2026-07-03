@@ -24,7 +24,7 @@ import java.util.Objects;
  * @param runtime 执行环境提示（如 python3、bash、node）
  * @param inputSchema MCP JSON Schema 形状
  * @param directory Skill 所在目录
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -61,7 +61,7 @@ public record ExternalSkillManifest(
      * </ul>
      *
      * @return 入口脚本 {@link Path}
-     * @since 0.2.0
+     * @since 0.6.0
      */
     public Path entryScript() {
         Path unix = directory.resolve("run");
@@ -83,7 +83,7 @@ public record ExternalSkillManifest(
      * 判断入口脚本是否存在（任一平台）。
      *
      * @return true if either {@code run} or {@code run.bat} exists
-     * @since 0.2.0
+     * @since 0.6.0
      */
     public boolean hasEntryScript() {
         return directory.resolve("run").toFile().exists()

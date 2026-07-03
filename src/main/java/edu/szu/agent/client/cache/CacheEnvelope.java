@@ -19,7 +19,7 @@ import java.time.Instant;
  *
  * // 编程技术: record / Jackson JSON 序列化
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record CacheEnvelope<T>(
@@ -33,7 +33,7 @@ public record CacheEnvelope<T>(
      *
      * @param payload       cached data
      * @param schemaVersion payload schema version (increment on breaking changes)
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static <T> CacheEnvelope<T> of(T payload, int schemaVersion) {
@@ -47,7 +47,7 @@ public record CacheEnvelope<T>(
      *
      * @param typed a type reference of the form {@code new TypeReference<T>() {}}
      * @return the same reference as {@code TypeReference<?>}
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     @SuppressWarnings("unchecked")

@@ -31,7 +31,7 @@ import java.util.Objects;
  * // Design Pattern: Adapter (caller-facing seam)
  * // 编程技术: 不可变构造器注入
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class BookingFlowLauncher {
@@ -84,7 +84,7 @@ public class BookingFlowLauncher {
      *
      * @param account resolved credentials (supplies the student ID key)
      * @return a session-aware booking client for this account
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public VenueBookingClient clientFor(Account account) {
@@ -102,7 +102,7 @@ public class BookingFlowLauncher {
      * @param username the student ID key for the session store
      * @param browser  the browser to bind the client to (typically headed)
      * @return a session-aware booking client bound to {@code browser}
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public VenueBookingClient clientFor(String username, BrowserLifecycle browser) {

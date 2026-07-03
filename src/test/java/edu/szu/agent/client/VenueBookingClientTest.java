@@ -48,7 +48,7 @@ import static org.mockito.Mockito.verify;
  * <p>Uses explicit {@link BookingStep} implementations (not Mockito mocks)
  * since steps are functional interfaces best stubbed as anonymous classes.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @ExtendWith(MockitoExtension.class)

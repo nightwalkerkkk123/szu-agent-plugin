@@ -25,7 +25,7 @@ import java.util.function.BiConsumer;
  * <p>// Design Pattern: Strategy
  * // 编程技术: 泛型 / Jackson TypeReference / Lambda
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class CacheLookupStep implements BookingStep {
@@ -48,7 +48,7 @@ public final class CacheLookupStep implements BookingStep {
      * @param cacheKey       cache key (scope/key/schemaVersion)
      * @param envelopeType   Jackson type reference for the envelope
      * @param populate       consumer to populate the context slot on a hit
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public CacheLookupStep(CacheStore store,

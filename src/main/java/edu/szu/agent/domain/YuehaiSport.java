@@ -10,7 +10,7 @@ import edu.szu.agent.client.step.VenueSelector;
  *
  * <p>// 编程技术: 枚举(携带元数据字段) / sealed-interface 实现
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public enum YuehaiSport implements Sport {

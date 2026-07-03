@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
  *
  * // 编程技术: record / 输入校验
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record CacheKey(
@@ -30,7 +30,7 @@ public record CacheKey(
      * @param scope        cache scope (must match {@code [a-z][a-z0-9_]+})
      * @param key          cache key (free-form, sanitized for filesystem)
      * @param schemaVersion payload schema version
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public CacheKey {
@@ -48,7 +48,7 @@ public record CacheKey(
      * Returns the sanitized filename for this cache key.
      *
      * @return {@code "<scope>-<key>.json"}
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public String filename() {

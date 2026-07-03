@@ -17,7 +17,7 @@ import java.util.Objects;
  * <p>Per PLAN-p1-real-fetch.md §4 阶段 1: 动态判断路由,默认优先真实抓取,
  * 任何阶段失败(登录态丢失 / 抓取失败 / 解析失败)回退到静态,Skill 永远可用。
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 // Design Pattern: Decorator + Strategy(动态选择实现)

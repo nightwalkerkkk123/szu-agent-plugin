@@ -14,7 +14,7 @@ import edu.szu.agent.error.ErrorCode;
  *
  * // Design Pattern: Strategy (concrete step in schedule pipeline)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class NavigateToScheduleStep implements BookingStep {

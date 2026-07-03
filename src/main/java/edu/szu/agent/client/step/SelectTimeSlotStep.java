@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
  * // Design Pattern: Strategy
  * // 编程技术: Lambda / 枚举 / 静态轮询(Thread.sleep)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class SelectTimeSlotStep implements BookingStep {

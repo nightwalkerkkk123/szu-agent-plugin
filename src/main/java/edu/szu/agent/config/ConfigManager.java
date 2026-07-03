@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
  * // Design Pattern: Singleton (double-checked locking)
  * // 编程技术: 枚举 / Lambda / 不可变 Map / 重载
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class ConfigManager {
@@ -215,7 +215,7 @@ public final class ConfigManager {
      * {@code CacheStore} itself.
      *
      * @return a configured {@link CacheStore} (never {@code null})
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public CacheStore cacheStore() {
@@ -237,7 +237,7 @@ public final class ConfigManager {
      * {@code user.home} when {@code cache.home} is unset.
      *
      * @return the resolved cache home path (never {@code null})
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     private Path resolveCacheHome() {
@@ -255,7 +255,7 @@ public final class ConfigManager {
      *
      * @param value raw config string, possibly containing placeholders
      * @return the interpolated string
-     * @since 0.3.0
+     * @since 0.6.0
      * @author 王子豪
      */
     static String interpolate(String value) {
@@ -340,7 +340,7 @@ public final class ConfigManager {
      * @return a fresh {@link BrowserLifecycle} (caller owns the lifecycle)
      * @throws IllegalStateException        if {@code browser.kind} is unset or unknown
      * @throws UnsupportedOperationException if {@code browser.kind = FAKE}
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public BrowserLifecycle browser(boolean headless) {

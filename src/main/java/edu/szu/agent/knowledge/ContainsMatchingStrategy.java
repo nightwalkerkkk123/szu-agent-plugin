@@ -9,7 +9,7 @@ import java.util.List;
  * <p>Case-insensitive substring match in title, content, or category
  * display name. Produces a short excerpt around the first occurrence.
  *
- * @since 0.2.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class ContainsMatchingStrategy implements MatchingStrategy {

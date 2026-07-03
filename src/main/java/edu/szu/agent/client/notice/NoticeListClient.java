@@ -31,7 +31,7 @@ import java.util.Objects;
  *
  * <p>// 编程技术: 不可变组合 / Lambda / 密封类型
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class NoticeListClient {

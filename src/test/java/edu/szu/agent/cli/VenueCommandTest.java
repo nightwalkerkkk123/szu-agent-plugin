@@ -39,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>编程技术: Lambda / @Nested / @ParameterizedTest / @TempDir
  * <br>(picocli @Command 是框架机制,不计入项目 4 模式 — 见 ADR-0007 D1)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 class VenueCommandTest {

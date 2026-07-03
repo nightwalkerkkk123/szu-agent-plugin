@@ -27,7 +27,7 @@ import java.util.Map;
  * // 设计模式: Factory Method
  * // 编程技术: 泛型 / Lambda / 静态工具类
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class TaskInputSchema {
@@ -62,7 +62,7 @@ public final class TaskInputSchema {
      * @param description human-readable description
      * @param extras      additional schema keys; may be empty, may be null
      * @return an ordered map suitable for nesting under {@code properties}
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static Map<String, Object> property(String type, String description,
@@ -102,7 +102,7 @@ public final class TaskInputSchema {
      * @param values      allowed enum values
      * @param extras      additional schema keys; may be empty, may be null
      * @return an ordered map
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static Map<String, Object> enumProperty(String description, List<String> values,

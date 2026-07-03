@@ -24,7 +24,7 @@ import static edu.szu.agent.client.step.CourtListSelector.venueWaitMs;
  * <p>// Design Pattern: Strategy
  * <p>// 编程技术: 正则 / 作用域选择器 / sealed-interface 实现
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class CapacityVenueSelector implements VenueSelector {

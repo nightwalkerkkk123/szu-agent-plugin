@@ -36,7 +36,7 @@ import java.util.Objects;
  * @param examples     0..N example argument payloads (insertion order preserved)
  * @param resultShape  short description of the return-value structure
  * @param commonErrors 0..N common-error → fix strings
- * @since 0.5.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record ToolAnnotations(
@@ -57,7 +57,7 @@ public record ToolAnnotations(
     /**
      * @return an empty annotations instance — used as the
      *         {@link CampusTask#annotations()} default.
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static ToolAnnotations empty() {
@@ -66,7 +66,7 @@ public record ToolAnnotations(
 
     /**
      * @return a fresh builder with all fields unset
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static Builder builder() {
@@ -101,7 +101,7 @@ public record ToolAnnotations(
          *
          * @param example argument payload; must not be null
          * @return this builder
-         * @since 0.5.0
+         * @since 0.6.0
          * @author 王子豪
          */
         public Builder example(Map<String, Object> example) {

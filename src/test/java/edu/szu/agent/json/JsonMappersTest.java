@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * ISO-8601 strings, not numeric arrays — the bug that made MCP tool results
  * emit dates like {@code [2026,3,4]}.
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @DisplayName("JsonMappers")

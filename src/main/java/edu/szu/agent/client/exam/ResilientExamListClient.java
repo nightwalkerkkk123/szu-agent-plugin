@@ -23,7 +23,7 @@ import java.util.function.Supplier;
  * <p>// Design Pattern: Decorator + Strategy(动态选择实现)
  * <p>// 编程技术: 函数式接口 / Supplier 注入 / 不可变性 / 异常处理
  *
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class ResilientExamListClient {

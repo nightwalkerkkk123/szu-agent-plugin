@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * // 编程技术: 重载 / record / 枚举工厂 / char[]+Arrays.fill(密码可擦除) / ConcurrentHashMap
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class AccountResolver {
@@ -42,7 +42,7 @@ public final class AccountResolver {
      *
      * <p>Process-internal only — never written to disk, log, or env.
      *
-     * @since 0.5.0
+     * @since 0.6.0
      */
     private static final ConcurrentHashMap<String, char[]> SKILL_INJECTED =
         new ConcurrentHashMap<>();
@@ -161,7 +161,7 @@ public final class AccountResolver {
      * @param studentId the student ID; must not be null
      * @param password  the password buffer; ownership transfers to the
      *                  resolver (will be zeroed on consume or clear)
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static void injectCredential(String studentId, char[] password) {
@@ -179,7 +179,7 @@ public final class AccountResolver {
      * The internal buffer, if present, is zeroed before being dropped.
      *
      * @param studentId the student ID
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static void clearInjectedCredential(String studentId) {
@@ -193,7 +193,7 @@ public final class AccountResolver {
      * Clears all Skill-injected credentials. Intended for test isolation
      * (called from {@code @BeforeEach}); not for production use.
      *
-     * @since 0.5.0
+     * @since 0.6.0
      * @author 王子豪
      */
     static void resetSkillInjected() {

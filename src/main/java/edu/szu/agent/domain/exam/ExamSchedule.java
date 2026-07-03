@@ -20,7 +20,7 @@ import java.time.LocalTime;
  * @param endTime      exam end time
  * @param venue        exam venue (e.g.致理楼L1-601)
  * @param invigilator  invigilator name (e.g. 杜智华)
- * @since 0.4.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record ExamSchedule(

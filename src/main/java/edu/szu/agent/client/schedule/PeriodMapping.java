@@ -18,7 +18,7 @@ import java.util.Map;
  *
  * // 编程技术: 不可变 Map + 静态工厂
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class PeriodMapping {
@@ -45,7 +45,7 @@ public final class PeriodMapping {
      * @param endUnit   1-based end unit
      * @return the mapped period
      * @throws IllegalArgumentException if the unit pair is not in the table
-     * @since 0.1.0
+     * @since 0.6.0
      */
     public static Period lookup(int beginUnit, int endUnit) {
         Period p = TABLE.get(beginUnit + "-" + endUnit);

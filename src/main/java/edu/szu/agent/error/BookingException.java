@@ -14,7 +14,7 @@ import java.util.Objects;
  *
  * // 编程技术: 异常(RuntimeException + 携带 ErrorCode 元数据)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public class BookingException extends RuntimeException {

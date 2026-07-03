@@ -30,7 +30,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  * // Design Pattern: Factory Method (centralized ObjectMapper construction)
  * // 编程技术: 静态工厂 / Jackson 模块注册
  *
- * @since 0.3.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class JsonMappers {
@@ -49,7 +49,7 @@ public final class JsonMappers {
      * state.
      *
      * @return a configured mapper
-     * @since 0.3.0
+     * @since 0.6.0
      */
     public static ObjectMapper standard() {
         return new ObjectMapper()

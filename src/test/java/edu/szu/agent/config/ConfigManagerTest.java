@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>Singleton tests use {@link ConfigManager#getInstance()} and a
  * {@code @BeforeEach reset()} to isolate state across tests.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 class ConfigManagerTest {

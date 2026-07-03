@@ -11,7 +11,7 @@ import java.util.function.Supplier;
  * // Design Pattern: Strategy (concrete) + Singleton
  * // 编程技术: 不可变单例(public static final)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class NoRetry implements RetryPolicy {

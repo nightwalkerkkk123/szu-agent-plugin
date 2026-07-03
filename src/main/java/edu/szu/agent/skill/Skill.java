@@ -27,7 +27,7 @@ import java.util.Objects;
  * // 编程技术: 泛型 / record(Java 16+)
  *
  * @param <T> the wrapped task's result type
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public record Skill<T>(String name, String description, CampusTask<T> task) {
@@ -63,7 +63,7 @@ public record Skill<T>(String name, String description, CampusTask<T> task) {
      * @param task the backing task; supplies both name and description
      * @param <T>  the task's result type
      * @return a Skill wrapping {@code task}
-     * @since 0.4.0
+     * @since 0.6.0
      * @author 王子豪
      */
     public static <T> Skill<T> of(CampusTask<T> task) {

@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * value pattern are left as-is. Callers should avoid logging
  * raw credential values directly.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @DisplayName("LogMasker")

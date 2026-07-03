@@ -14,7 +14,7 @@ import edu.szu.agent.domain.BookingResult;
  * <p>// Design Pattern: Strategy
  * <p>// 编程技术: sealed interface / record
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public sealed interface StepOutcome {

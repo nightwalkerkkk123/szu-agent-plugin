@@ -19,7 +19,7 @@ import java.util.function.Supplier;
  * // Design Pattern: Strategy (concrete)
  * // 编程技术: 重载(6 技术之一,两个构造器)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 public final class ExponentialBackoff implements RetryPolicy {

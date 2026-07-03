@@ -30,7 +30,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
  * <p>These rules are enforced at test time so security-sensitive patterns
  * cannot re-enter the codebase without CI failing.
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @AnalyzeClasses(packages = "edu.szu.agent")

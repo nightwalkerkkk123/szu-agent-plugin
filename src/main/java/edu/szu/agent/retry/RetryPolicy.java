@@ -26,7 +26,7 @@ import java.util.function.Supplier;
  * // 编程技术: 泛型 / @FunctionalInterface / Lambda(默认方法 orElse 返回匿名内部类 —
  * 不可用 Lambda 因为 SAM 是泛型方法 <T> T execute(Supplier<T>),Lambda 推断不到 T)
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @FunctionalInterface

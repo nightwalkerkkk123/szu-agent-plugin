@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>Covers the three-layer credential lookup per ADR-0005 D1:
  * process env &gt; {@code --env-file} &gt; Skill injection (P1, untested).
  *
- * @since 0.1.0
+ * @since 0.6.0
  * @author 王子豪
  */
 @DisplayName("AccountResolver")
