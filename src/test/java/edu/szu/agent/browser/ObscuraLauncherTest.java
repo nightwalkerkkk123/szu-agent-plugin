@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for {@link ObscuraLauncher}.
@@ -98,6 +99,41 @@ class ObscuraLauncherTest {
         Path empty = home.resolve("obscura-empty");
         Files.write(empty, new byte[0], StandardOpenOption.CREATE);
         assertThat(ObscuraLauncher.hasExecutableMagic(empty)).isFalse();
+    }
+
+    @Test
+    @DisplayName("portOf(uri) returns the port from a well-formed URI")
+    void portOfReturnsUriPort() {
+        assertThat(ObscuraLauncher.portOf(URI.create("http://127.0.0.1:9999/json/version")))
+            .isEqualTo(9999);
+    }
+
+    @Test
+    @DisplayName("portOf(uri) returns 9222 when the URI has no explicit port")
+    void portOfDefaultsTo9222() {
+        assertThat(ObscuraLauncher.portOf(URI.create("http://127.0.0.1/json/version")))
+            .isEqualTo(9222);
+    }
+
+    @Test
+    @DisplayName("versionUriFromWsUrl converts ws://host:port to http://host:port/json/version")
+    void versionUriFromWsUrlConvertsScheme() {
+        URI result = ObscuraLauncher.versionUriFromWsUrl("ws://127.0.0.1:9999");
+        assertThat(result).isEqualTo(URI.create("http://127.0.0.1:9999/json/version"));
+    }
+
+    @Test
+    @DisplayName("versionUriFromWsUrl throws IllegalArgumentException for non-ws URLs")
+    void versionUriFromWsUrlRejectsHttp() {
+        assertThatThrownBy(() -> ObscuraLauncher.versionUriFromWsUrl("http://127.0.0.1:9999"))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("versionUriFromWsUrl throws IllegalArgumentException for null")
+    void versionUriFromWsUrlRejectsNull() {
+        assertThatThrownBy(() -> ObscuraLauncher.versionUriFromWsUrl(null))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static String binaryName() {
