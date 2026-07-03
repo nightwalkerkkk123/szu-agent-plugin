@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  * <p>Per ADR-0007 D1: {@link #browser()} is the only entry point for
  * constructing a {@link BrowserLifecycle} — there is no
  * {@code BrowserFactory} (seam in the wrong place). The dispatch
- * key is {@code browser.kind} in YAML: {@code PLAYWRIGHT} (production)
+ * key is {@code browser.kind} in YAML: {@code OBSCURA} (production)
  * or {@code FAKE} (unit test fixture, not yet implemented).
  *
  * <p>Per design-patterns.md §2: thread-safe singleton with double-checked
@@ -65,7 +65,7 @@ public final class ConfigManager {
 
     /** Dispatch keys (kept here so {@link #browser()} has a single source of truth). */
     private enum BrowserKind {
-        PLAYWRIGHT, FAKE;
+        OBSCURA, FAKE;
 
         static BrowserKind parse(String raw) {
             if (raw == null) {
@@ -359,9 +359,13 @@ public final class ConfigManager {
     private BrowserLifecycle buildBrowser(boolean headlessOverride) {
         BrowserKind kind = BrowserKind.parse(browserKind());
         return switch (kind) {
-            case PLAYWRIGHT -> {
+            case OBSCURA -> {
                 Playwright pw = Playwright.create();
-                yield new PlaywrightBrowserAdapter(pw, headlessOverride);
+                String wsUrl = get("browser.obscura.ws-url");
+                if (wsUrl == null || wsUrl.isBlank()) {
+                    wsUrl = "ws://127.0.0.1:9222";
+                }
+                yield new PlaywrightBrowserAdapter(pw, wsUrl);
             }
             case FAKE -> throw new UnsupportedOperationException(
                 "FakeBrowser is not yet implemented (Phase 4+ deliverable, see system-map.md §1)");

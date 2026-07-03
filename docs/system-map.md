@@ -75,7 +75,11 @@ edu.szu.agent
 │   │ # isVisible / textOf / allTextOf / currentUrl / screenshot /
 │   │ # importStorageState / exportStorageState(US-007)
 │   ├── PlaywrightBrowserAdapter    # Design Pattern: Adapter,真演示唯一入口
-│   │   # open() 改用 BrowserContext.newPage() 拿 storageState
+│   │   # open() 用 chromium().connectOverCDP(wsUrl) 连 Obscura daemon
+│   │   # (Obscura 二进制由 ObscuraLauncher 拉起,见 ADR-0010)
+│   ├── ObscuraLauncher             # Design Pattern: Process Supervisor(GoF Singleton + Lifecycle seam)
+│   │   # ensureRunning() 探测 → 抽取 ~/.szu-agent/bin/obscura{,.exe} → 启进程 → 等待 ready
+│   │   # shutdown hook 在 JVM exit 时 destroy() daemon
 │   └── FakeBrowser                 # 单元测试夹具,不出现在课堂演示
 │   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager.browser() 注入
 │
@@ -566,7 +570,7 @@ BrowserLifecycle browser = ConfigManager.getInstance().browser();
 
 - 适配器封装了第三方库的进阶能力(如网络拦截、请求重写),使用户无法访问
 - 适配层出错时,需要同时理解目标接口和被适配者 API,调试困难
-- Playwright 的 API 变化会直接冲击适配器层,维护成本高
+- Playwright SDK + Obs CDP 端的 API 变化会直接冲击适配器层,维护成本高(ADR-0010 D1 决定保留 SDK 当 CDP 客户端,但底层浏览器从 Chromium 切到 Obscura 后,Obscura 未实现的 CDP 方法如 `Page.captureScreenshot` 会通过 `mapException` 暴露为 `BROWSER_CRASH`)
 - 真演示唯一路径,任何 Adapter bug 都会让演示翻车(ADR-0001 D2)
 
 **改进方向:**
@@ -578,7 +582,8 @@ BrowserLifecycle browser = ConfigManager.getInstance().browser();
 
 **参考:**
 - "Design Patterns: Elements of Reusable Object-Oriented Software": Adapter + Decorator
-- Playwright Java Official Documentation
+- Playwright Java Official Documentation + [Obscura README](https://github.com/h4ckf0r0day/obscura)(声明为 headless Chrome 的 Playwright/Puppeteer drop-in replacement)
+- ADR-0010(Obscura 后端替换的完整决策链)
 
 > **历史变更**(ADR-0001 D9, 2026-06-11):原 `CloakBrowserAdapter` 已重命名为
 > `PlaywrightBrowserAdapter` — 直接封装 Playwright Java 绑定,无中间层。
@@ -631,6 +636,7 @@ BrowserLifecycle browser = ConfigManager.getInstance().browser();
 | ADR-0007 | 架构深度审视(improve-codebase-architecture) | `docs/adr/0007-architecture-deepening.md` | Accepted |
 | ADR-0008 | 登录态持久化(storageState + 30d TTL + 探针) | `docs/adr/0008-session-persistence.md` | Accepted |
 | ADR-0009 | 课表模块设计 | `docs/adr/0009-schedule-module-design.md` | Accepted |
+| ADR-0010 | Obscura 替换 Playwright-Chromium 后端(SDK 复用) | `docs/adr/0010-obscura-backend-replacement.md` | Accepted |
 
 > 实际 ADR 文档在 `docs/adr/` 目录下,采用 `{NNNN}-{kebab-case-slug}.md` 命名。
 > ADR-0003 / 0004 槽位未占(扩展点放在 P1 后续 ADR 描述,见 `CampusTask<T>` 与 `ExternalSkill` 设计)。

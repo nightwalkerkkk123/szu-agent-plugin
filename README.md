@@ -8,7 +8,7 @@
 
 本项目**不是**一个 AI Agent，而是一套**供 AI Agent 调用的工具集与 CLI 插件**。
 
-深圳大学内部网存在大量重复、固定、流程化的操作（体育场馆预约、公文通查询、畅课任务、成长方案、邮件草稿等）。本项目将这些操作封装成**标准化的 CLI 工具**与**Skill / MCP 插件**，使 OpenClaw、ChatGPT Agent、其他 Agent 系统可以通过命令调用，由本地浏览器（Playwright）在用户授权下完成实际网页操作。
+深圳大学内部网存在大量重复、固定、流程化的操作（体育场馆预约、公文通查询、畅课任务、成长方案、邮件草稿等）。本项目将这些操作封装成**标准化的 CLI 工具**与**Skill / MCP 插件**，使 OpenClaw、ChatGPT Agent、其他 Agent 系统可以通过命令调用，由本地浏览器（**Obscura** Rust 引擎，通过 Playwright SDK + CDP 在用户授权下完成实际网页操作；详见 ADR-0010）在用户授权下完成实际网页操作。
 
 ```
 ┌────────────────────┐    理解自然语言    ┌──────────────────┐
@@ -62,7 +62,7 @@
 # 编译
 mvn package
 
-# 体育场馆预约（核心 demo，**真跑** Playwright,ADR-0001 D2）
+# 体育场馆预约（核心 demo，**真跑** Obscura via Playwright SDK + CDP,ADR-0001 D2 + ADR-0010）
 java -jar target/szu-agent-plugin.jar booking venue \
   --username 2023150090 --campus YUEHAI --sport TENNIS \
   --date 2026-06-12 --time-slot 19:00-20:00
@@ -228,6 +228,7 @@ edu.szu.agent
 │   ├── exam/     ExamSchedule
 │   └── notice/   Notice / NoticeCategory
 ├── browser/       BrowserLifecycle(12 方法,见 ADR-0002 D1 + ADR-0008 D1) + PlaywrightBrowserAdapter
+│                  + ObscuraLauncher(进程监督,见 ADR-0010)
 │   # BrowserFactory 已删除(ADR-0007 D1),改 ConfigManager 配 browser.kind 注入
 ├── client/        VenueBookingClient + BookingFlowLauncher(seam) + ChaoxingHomeworkClient +
 │                  ChaoxingAttachmentDownloadClient + EhallScheduleClient
@@ -271,7 +272,7 @@ edu.szu.agent
 | **Builder** | `BookingRequest.Builder` / `HomeworkDownloadRequest.Builder` / `KnowledgeDocBuilder` | 拼装多参数对象（预约/下载/KB 文档） |
 | **单例** | `ConfigManager` / `Tracer` / `Skills` | 全局唯一，保证配置/追踪/Skill 注册中心一致 |
 | **策略** | `BookingStep` (15+ 实现) / `VenueSelector` (2) / `RetryPolicy` (3) / `MatchingStrategy` (3) | 步骤/选择器/重试/匹配策略可替换,新增策略不改调用方 |
-| **适配器** | `PlaywrightBrowserAdapter` 适配 `BrowserLifecycle` / `McpHttpServer` 适配 `McpStdioServer.handle()` | 业务不感知 Playwright;HTTP transport 复用 stdio dispatch |
+| **适配器** | `PlaywrightBrowserAdapter` 适配 `BrowserLifecycle`(底层 Obscura + Playwright SDK + CDP,见 ADR-0010) / `McpHttpServer` 适配 `McpStdioServer.handle()` | 业务不感知 Obscura;HTTP transport 复用 stdio dispatch |
 
 > **5 → 4 模式变更**(ADR-0007 D1):`BrowserFactory` / Static Factory 删除,改 `ConfigManager` 配置 `browser.kind` 注入;seam 深度提升,调用方零决策。详见 [docs/design-patterns.md](docs/design-patterns.md) §5。
 
