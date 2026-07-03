@@ -62,6 +62,19 @@ public final class ObscuraLauncher {
     }
 
     /**
+     * Idempotently starts an Obscura daemon on the port implied by
+     * {@code versionUri}. Equivalent to {@link #ensureRunning()} when
+     * {@code versionUri} is the default {@code http://127.0.0.1:9222/json/version}.
+     *
+     * @param versionUri the version-probe endpoint for the daemon
+     * @since 0.2.0
+     * @author 王子豪
+     */
+    public static void ensureRunning(URI versionUri) {
+        ensureRunning(Path.of(System.getProperty("user.home")), versionUri);
+    }
+
+    /**
      * Test seam for using a temporary home directory and endpoint.
      *
      * @param home       user home under which {@code .szu-agent/bin} lives
@@ -86,7 +99,7 @@ public final class ObscuraLauncher {
             if (isRunning(versionUri)) {
                 return;
             }
-            startProcess(home, binary);
+            startProcess(home, binary, portOf(versionUri));
             waitUntilReady(versionUri);
         }
     }
@@ -156,6 +169,33 @@ public final class ObscuraLauncher {
 
     private static String binaryName() {
         return isWindows() ? "obscura.exe" : "obscura";
+    }
+
+    /** Visible for testing — extract port from the version URI (defaults to 9222). */
+    static int portOf(URI versionUri) {
+        Objects.requireNonNull(versionUri, "versionUri");
+        int port = versionUri.getPort();
+        return port == -1 ? 9222 : port;
+    }
+
+    /**
+     * Convert a Playwright-style {@code ws://host:port[/path]} endpoint into the
+     * corresponding Obscura version-probe {@code http://host:port/json/version}.
+     *
+     * @param wsUrl the WebSocket CDP endpoint (must start with {@code ws://})
+     * @return the matching version URI
+     * @throws IllegalArgumentException if input is null, blank, or not {@code ws://}
+     * @since 0.2.0
+     * @author 王子豪
+     */
+    public static URI versionUriFromWsUrl(String wsUrl) {
+        if (wsUrl == null || wsUrl.isBlank()) {
+            throw new IllegalArgumentException("wsUrl must be non-blank");
+        }
+        if (!wsUrl.startsWith("ws://")) {
+            throw new IllegalArgumentException("wsUrl must use ws:// scheme: " + wsUrl);
+        }
+        return URI.create(wsUrl.replaceFirst("^ws://", "http://") + "/json/version");
     }
 
     private static String workerName() {
@@ -240,10 +280,13 @@ public final class ObscuraLauncher {
         }
     }
 
-    private static void startProcess(Path home, Path binary) {
+    private static void startProcess(Path home, Path binary, int port) {
         try {
             Files.createDirectories(home.resolve(".szu-agent"));
-            ProcessBuilder builder = new ProcessBuilder(binary.toString(), "serve", "--host", "127.0.0.1", "--port", "9222");
+            ProcessBuilder builder = new ProcessBuilder(
+                binary.toString(), "serve",
+                "--host", "127.0.0.1",
+                "--port", Integer.toString(port));
             builder.directory(binary.getParent().toFile());
             builder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile(home).toFile()));
             builder.redirectError(ProcessBuilder.Redirect.appendTo(logFile(home).toFile()));
@@ -251,7 +294,7 @@ public final class ObscuraLauncher {
             managedProcess = process;
             Files.writeString(pidFile(home), Long.toString(process.pid()));
             Runtime.getRuntime().addShutdownHook(new Thread(() -> stopManagedProcess(process), "obscura-shutdown"));
-            log.info("Started Obscura daemon pid={} binary={}", process.pid(), binary);
+            log.info("Started Obscura daemon pid={} port={} binary={}", process.pid(), port, binary);
         } catch (IOException e) {
             throw new BookingException(ErrorCode.BROWSER_CRASH,
                 "failed to start Obscura daemon: " + e.getMessage(), e);
