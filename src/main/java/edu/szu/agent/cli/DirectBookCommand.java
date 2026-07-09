@@ -94,6 +94,10 @@ public class DirectBookCommand implements Callable<Integer> {
     @Option(names = {"-e", "--env-file"}, description = "Path to .env file for display-name resolution")
     private String envFile;
 
+    @Option(names = {"--yylx"}, description = "Booking type: 1.0 (package) or 2.0 (dismissal/scattered); default 1.0",
+        defaultValue = "1.0")
+    private String yylx;
+
     @Override
     public Integer call() {
         PrintWriter out = spec.commandLine().getOut();
@@ -180,7 +184,8 @@ public class DirectBookCommand implements Callable<Integer> {
                         "Date " + date + " is not open for booking; available: " + dates);
                 }
 
-                List<TimeSlotOption> slots = api.getTimeSlots(resolvedCampusCode, resolvedSportCode, date);
+                List<TimeSlotOption> slots = api.getTimeSlots(
+                    resolvedCampusCode, resolvedSportCode, date, yylx);
                 TimeSlotOption chosenSlot = slots.stream()
                     .filter(s -> s.code().equals(slot.slotId()))
                     .findFirst()
@@ -191,7 +196,8 @@ public class DirectBookCommand implements Callable<Integer> {
                         "Time slot " + slot.slotId() + " is not bookable");
                 }
 
-                List<VenueOption> venues = api.getOpeningRooms(resolvedCampusCode, resolvedSportCode, date, slot);
+                List<VenueOption> venues = api.getOpeningRooms(
+                    resolvedCampusCode, resolvedSportCode, date, slot, null, yylx);
                 List<VenueOption> available = venues.stream()
                     .filter(v -> !v.disabled())
                     .toList();
@@ -208,7 +214,7 @@ public class DirectBookCommand implements Callable<Integer> {
 
                 BookingForm form = new BookingForm(
                     username, bookerName, resolvedCampusCode, resolvedSportCode,
-                    venue.venueGroupCode(), venue.wid(), date, slot, "1.0", "");
+                    venue.venueGroupCode(), venue.wid(), date, slot, yylx, "");
                 String dhid = api.book(form);
 
                 ObjectNode data = JSON.createObjectNode();

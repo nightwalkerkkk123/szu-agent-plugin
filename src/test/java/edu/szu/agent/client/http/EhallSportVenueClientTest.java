@@ -10,11 +10,14 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @DisplayName("EhallSportVenueClient")
@@ -156,5 +159,56 @@ class EhallSportVenueClientTest {
 
         assertThat(venues).hasSize(1);
         assertThat(venues.get(0).name()).isEqualTo("北区网球1号场");
+    }
+
+    @Test
+    @DisplayName("getTimeSlots 按 YYLX 传入正确的预约类型")
+    void timeSlotsPassesYylx() {
+        CampusHttpClient http = mock(CampusHttpClient.class);
+        when(http.postForm(any(), any(), any(), any())).thenReturn("[]");
+
+        EhallSportVenueClient client = new EhallSportVenueClient(http);
+        client.getTimeSlots("1", "007", LocalDate.of(2026, 7, 10), "2.0");
+
+        verify(http).postForm(eq("https://ehall.szu.edu.cn/qljfwapp/sys/lwSzuCgyy/sportVenue/getTimeList.do"),
+            any(), any(), eq(Map.of(
+                "XQ", "1",
+                "YYRQ", "2026-07-10",
+                "YYLX", "2.0",
+                "XMDM", "007")));
+    }
+
+    @Test
+    @DisplayName("getOpeningRooms 按 YYLX 传入正确的预约类型")
+    void openingRoomsPassesYylx() {
+        CampusHttpClient http = mock(CampusHttpClient.class);
+        when(http.postForm(any(), any(), any(), any())).thenReturn("""
+            {"datas":{"getOpeningRoom":{"rows":[
+              {"WID":"wid","CDMC":"健身房01","CGBM":"007","XQDM":"1","XMDM":"007",
+               "text":"1/1","disabled":false,"STATE_EXPLAIN":"SYS_OPEN"}
+            ],"pageNumber":0,"pageSize":0,"totalSize":1}},"code":"0"}
+            """);
+
+        EhallSportVenueClient client = new EhallSportVenueClient(http);
+        client.getOpeningRooms("1", "007", LocalDate.of(2026, 7, 10), TimeSlot.T08_09, null, "2.0");
+
+        verify(http).postForm(eq("https://ehall.szu.edu.cn/qljfwapp/sys/lwSzuCgyy/modules/sportVenue/getOpeningRoom.do"),
+            any(), any(), eq(Map.of(
+                "XMDM", "007",
+                "YYRQ", "2026-07-10",
+                "YYLX", "2.0",
+                "KSSJ", "08:00",
+                "JSSJ", "09:00",
+                "XQDM", "1")));
+    }
+
+    @Test
+    @DisplayName("BookingForm 接受自定义 YYLX")
+    void bookingFormAcceptsCustomYylx() {
+        EhallSportVenueClient.BookingForm form = new EhallSportVenueClient.BookingForm(
+            "2023150090", "王子豪", "1", "007", "007", "wid",
+            LocalDate.of(2026, 7, 10), TimeSlot.T08_09, "2.0", null);
+
+        assertThat(form.yylx()).isEqualTo("2.0");
     }
 }

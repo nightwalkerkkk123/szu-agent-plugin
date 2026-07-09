@@ -72,6 +72,10 @@ public class DirectVenuesCommand implements Callable<Integer> {
     @Option(names = {"--trust-all"}, description = "Disable TLS certificate validation (dev/internal only)")
     private boolean trustAll;
 
+    @Option(names = {"--yylx"}, description = "Booking type: 1.0 (package) or 2.0 (dismissal/scattered); default 1.0",
+        defaultValue = "1.0")
+    private String yylx;
+
     @Override
     public Integer call() {
         PrintWriter out = spec.commandLine().getOut();
@@ -110,13 +114,15 @@ public class DirectVenuesCommand implements Callable<Integer> {
                     .cookieJar(jar)
                     .build()) {
                 EhallSportVenueClient api = new EhallSportVenueClient(http);
-                List<VenueOption> venues = api.getOpeningRooms(campusCode, sportCode, date, slot, venueGroupCode);
+                List<VenueOption> venues = api.getOpeningRooms(
+                    campusCode, sportCode, date, slot, venueGroupCode, yylx);
 
                 ObjectNode result = JSON.createObjectNode();
                 result.put("traceId", traceId);
                 result.put("username", username);
                 result.put("campusCode", campusCode);
                 result.put("sportCode", sportCode);
+                result.put("yylx", yylx);
                 result.put("date", date.toString());
                 result.put("slot", slot.slotId());
                 ArrayNode array = result.putArray("venues");

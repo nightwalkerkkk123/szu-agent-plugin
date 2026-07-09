@@ -39,6 +39,7 @@ public final class EhallSportVenueClient {
         "X-Requested-With", "XMLHttpRequest"
     );
     private static final String YYLX_DEFAULT = "1.0";
+    private static final String YYLX_DISMISSAL = "2.0";
 
     private static final ObjectMapper MAPPER = JsonMappers.standard();
 
@@ -98,10 +99,32 @@ public final class EhallSportVenueClient {
      * @author 王子豪
      */
     public List<TimeSlotOption> getTimeSlots(String campusCode, String sportCode, LocalDate date) {
+        return getTimeSlots(campusCode, sportCode, date, YYLX_DEFAULT);
+    }
+
+    /**
+     * Returns the time-slot options for a given campus, sport, date, and
+     * booking type ({@code YYLX}).
+     *
+     * <p>{@code YYLX} controls whether the request is for package venues
+     * ({@code 1.0}) or dismissal/scattered venues ({@code 2.0}). Some sports
+     * such as gym and swimming only support {@code 2.0}.
+     *
+     * @param campusCode campus code ({@code XQDM})
+     * @param sportCode  sport code ({@code XMDM})
+     * @param date       booking date
+     * @param yylx       booking type: {@code 1.0} or {@code 2.0}
+     * @return list of time-slot options
+     * @throws BookingException on network or parse failure
+     * @since 0.6.0
+     * @author 王子豪
+     */
+    public List<TimeSlotOption> getTimeSlots(String campusCode, String sportCode,
+                                              LocalDate date, String yylx) {
         Map<String, String> form = Map.of(
             "XQ", campusCode,
             "YYRQ", date.toString(),
-            "YYLX", YYLX_DEFAULT,
+            "YYLX", normalizeYylx(yylx),
             "XMDM", sportCode
         );
         String body = http.postForm(BASE + "/sportVenue/getTimeList.do", REFERER, AJAX_HEADERS, form);
@@ -122,7 +145,7 @@ public final class EhallSportVenueClient {
      */
     public List<VenueOption> getOpeningRooms(String campusCode, String sportCode,
                                               LocalDate date, TimeSlot timeSlot) {
-        return getOpeningRooms(campusCode, sportCode, date, timeSlot, null);
+        return getOpeningRooms(campusCode, sportCode, date, timeSlot, null, YYLX_DEFAULT);
     }
 
     /**
@@ -141,10 +164,30 @@ public final class EhallSportVenueClient {
     public List<VenueOption> getOpeningRooms(String campusCode, String sportCode,
                                               LocalDate date, TimeSlot timeSlot,
                                               String venueGroupCode) {
+        return getOpeningRooms(campusCode, sportCode, date, timeSlot, venueGroupCode, YYLX_DEFAULT);
+    }
+
+    /**
+     * Returns the open venues with optional venue-group filter and booking type.
+     *
+     * @param campusCode      campus code ({@code XQDM})
+     * @param sportCode       sport code ({@code XMDM})
+     * @param date            booking date
+     * @param timeSlot        1-hour time slot
+     * @param venueGroupCode  optional venue group code ({@code CGBM}) to narrow results
+     * @param yylx            booking type: {@code 1.0} or {@code 2.0}
+     * @return list of venue options
+     * @throws BookingException on network or parse failure
+     * @since 0.6.0
+     * @author 王子豪
+     */
+    public List<VenueOption> getOpeningRooms(String campusCode, String sportCode,
+                                              LocalDate date, TimeSlot timeSlot,
+                                              String venueGroupCode, String yylx) {
         Map<String, String> form = new java.util.HashMap<>(Map.of(
             "XMDM", sportCode,
             "YYRQ", date.toString(),
-            "YYLX", YYLX_DEFAULT,
+            "YYLX", normalizeYylx(yylx),
             "KSSJ", timeSlot.start(),
             "JSSJ", timeSlot.end(),
             "XQDM", campusCode
@@ -439,6 +482,20 @@ public final class EhallSportVenueClient {
             throw new BookingException(ErrorCode.NETWORK_TIMEOUT,
                 "Failed to parse my-bookings response: " + e.getMessage(), e);
         }
+    }
+
+    private static String normalizeYylx(String yylx) {
+        if (yylx == null || yylx.isBlank()) {
+            return YYLX_DEFAULT;
+        }
+        String trimmed = yylx.trim();
+        if ("2".equals(trimmed) || "2.0".equals(trimmed) || "散场".equals(trimmed)) {
+            return YYLX_DISMISSAL;
+        }
+        if ("1".equals(trimmed) || "1.0".equals(trimmed) || "包场".equals(trimmed)) {
+            return YYLX_DEFAULT;
+        }
+        return trimmed;
     }
 
     private static String text(JsonNode node, String field) {
