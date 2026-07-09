@@ -125,9 +125,20 @@ public class DirectBookCommand implements Callable<Integer> {
                 resolvedCampusCode = campusCode;
                 campusDisplayName = campusCode;
             } else if (campusName != null && !campusName.isBlank()) {
-                Campus campus = Campus.valueOf(campusName.toUpperCase());
-                resolvedCampusCode = EhallSportVenueClient.campusCode(campus);
-                campusDisplayName = campus.displayName();
+                // Try Chinese name first
+                String normalizedCampus = campusName.trim().toUpperCase();
+                if (normalizedCampus.contains("粤") || normalizedCampus.contains("海")) {
+                    resolvedCampusCode = "1";
+                    campusDisplayName = "粤海校区";
+                } else if (normalizedCampus.contains("丽") || normalizedCampus.contains("湖")) {
+                    resolvedCampusCode = "2";
+                    campusDisplayName = "丽湖校区";
+                } else {
+                    // Try enum name
+                    Campus campus = Campus.valueOf(normalizedCampus);
+                    resolvedCampusCode = EhallSportVenueClient.campusCode(campus);
+                    campusDisplayName = campus.displayName();
+                }
             } else {
                 throw new BookingException(ErrorCode.INVALID_REQUEST,
                     "Either --campus or --campus-code must be provided");
@@ -137,10 +148,18 @@ public class DirectBookCommand implements Callable<Integer> {
                 resolvedSportCode = sportCode;
                 sportDisplayName = sportCode;
             } else if (sportName != null && !sportName.isBlank()) {
-                Campus campus = Campus.valueOf(campusName != null ? campusName.toUpperCase() : "YUEHAI");
-                Sport sport = Sport.of(campus, sportName.toUpperCase());
-                resolvedSportCode = EhallSportVenueClient.sportCode(sport);
-                sportDisplayName = sport.displayName();
+                // Try Chinese name first
+                String chineseCode = resolveChineseSport(sportName);
+                if (chineseCode != null) {
+                    resolvedSportCode = chineseCode;
+                    sportDisplayName = resolveChineseSportDisplay(sportName);
+                } else {
+                    // Try enum name
+                    Campus campus = Campus.valueOf(campusName != null ? campusName.toUpperCase() : "YUEHAI");
+                    Sport sport = Sport.of(campus, sportName.toUpperCase());
+                    resolvedSportCode = EhallSportVenueClient.sportCode(sport);
+                    sportDisplayName = sport.displayName();
+                }
             } else {
                 throw new BookingException(ErrorCode.INVALID_REQUEST,
                     "Either --sport or --sport-code must be provided");
@@ -270,5 +289,37 @@ public class DirectBookCommand implements Callable<Integer> {
         } catch (AccountResolutionException e) {
             return username;
         }
+    }
+
+    private String resolveChineseSport(String chinese) {
+        if (chinese.contains("羽毛球")) return "001";
+        if (chinese.contains("足球")) return "002";
+        if (chinese.contains("排球")) return "003";
+        if (chinese.contains("网球")) return "004";
+        if (chinese.contains("篮球")) return "005";
+        if (chinese.contains("壁球")) return "006";
+        if (chinese.contains("健身")) return "007";
+        if (chinese.contains("游泳")) return "009";
+        if (chinese.contains("乒乓球")) return "013";
+        if (chinese.contains("舞蹈")) return "015";
+        if (chinese.contains("桌球")) return "016";
+        if (chinese.contains("瑜伽")) return "021";
+        return null;
+    }
+
+    private String resolveChineseSportDisplay(String chinese) {
+        if (chinese.contains("羽毛球")) return "羽毛球";
+        if (chinese.contains("足球")) return "足球";
+        if (chinese.contains("排球")) return "排球";
+        if (chinese.contains("网球")) return "网球";
+        if (chinese.contains("篮球")) return "篮球";
+        if (chinese.contains("壁球")) return "壁球";
+        if (chinese.contains("健身")) return "健身";
+        if (chinese.contains("游泳")) return "游泳";
+        if (chinese.contains("乒乓球")) return "乒乓球";
+        if (chinese.contains("舞蹈")) return "舞蹈";
+        if (chinese.contains("桌球")) return "桌球";
+        if (chinese.contains("瑜伽")) return "瑜伽";
+        return chinese;
     }
 }

@@ -46,6 +46,12 @@ public class DirectDatesCommand implements Callable<Integer> {
     @Option(names = {"-u", "--username"}, description = "Student ID", required = true)
     private String username;
 
+    @Option(names = {"--campus"}, description = "Campus name (YUEHAI/LIHU) or code; for reference in output")
+    private String campusName;
+
+    @Option(names = {"--sport"}, description = "Sport name (TENNIS/BASKETBALL/etc) or code; for reference in output")
+    private String sportName;
+
     @Option(names = {"--session-home"}, description = "Directory under which .szu-agent/sessions is created",
         defaultValue = "${sys:user.home}")
     private String sessionHome;
@@ -83,6 +89,8 @@ public class DirectDatesCommand implements Callable<Integer> {
                 ObjectNode result = JSON.createObjectNode();
                 result.put("traceId", traceId);
                 result.put("username", username);
+                result.put("campus", campusName != null ? campusName : "");
+                result.put("sport", sportName != null ? sportName : "");
                 ArrayNode array = result.putArray("dates");
                 for (String d : dates) {
                     array.add(d);

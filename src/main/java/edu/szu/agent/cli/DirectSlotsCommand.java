@@ -49,10 +49,16 @@ public class DirectSlotsCommand implements Callable<Integer> {
     @Option(names = {"-u", "--username"}, description = "Student ID", required = true)
     private String username;
 
-    @Option(names = {"--campus-code"}, description = "Raw campus code (XQDM)", required = true)
+    @Option(names = {"--campus"}, description = "Campus name (YUEHAI/LIHU) or code; auto-resolves if not a code")
+    private String campusName;
+
+    @Option(names = {"--campus-code"}, description = "Raw campus code (XQDM); overrides --campus")
     private String campusCode;
 
-    @Option(names = {"--sport-code"}, description = "Raw sport code (XMDM)", required = true)
+    @Option(names = {"--sport"}, description = "Sport name (TENNIS/BASKETBALL/etc) or code; auto-resolves if not a code")
+    private String sportName;
+
+    @Option(names = {"--sport-code"}, description = "Raw sport code (XMDM); overrides --sport")
     private String sportCode;
 
     @Option(names = {"--date"}, description = "Booking date (ISO 8601)", required = true)
@@ -75,15 +81,64 @@ public class DirectSlotsCommand implements Callable<Integer> {
         long startMs = System.currentTimeMillis();
         String traceId = Tracer.getInstance().generateTraceId();
 
+        String resolvedCampusCode;
+        String resolvedSportCode;
         LocalDate date;
         try {
+            // Resolve campus: --campus-code takes precedence
+            if (campusCode != null && !campusCode.isBlank()) {
+                resolvedCampusCode = campusCode;
+            } else if (campusName != null && !campusName.isBlank()) {
+                // Try parsing as enum name first
+                try {
+                    edu.szu.agent.domain.Campus campus = edu.szu.agent.domain.Campus.valueOf(campusName.toUpperCase());
+                    resolvedCampusCode = EhallSportVenueClient.campusCode(campus);
+                } catch (IllegalArgumentException e) {
+                    // Not an enum name, treat as raw code
+                    resolvedCampusCode = campusName;
+                }
+            } else {
+                throw new BookingException(ErrorCode.INVALID_REQUEST,
+                    "Either --campus or --campus-code must be provided");
+            }
+
+            // Resolve sport: --sport-code takes precedence
+            if (sportCode != null && !sportCode.isBlank()) {
+                resolvedSportCode = sportCode;
+            } else if (sportName != null && !sportName.isBlank()) {
+                // Try Chinese name mapping first
+                String chineseCode = resolveChineseSport(sportName);
+                if (chineseCode != null) {
+                    resolvedSportCode = chineseCode;
+                } else {
+                    // Try parsing as enum name
+                    try {
+                        edu.szu.agent.domain.Campus campus = edu.szu.agent.domain.Campus.valueOf(
+                            campusName != null ? campusName.toUpperCase() : "YUEHAI");
+                        edu.szu.agent.domain.Sport sport = edu.szu.agent.domain.Sport.of(campus, sportName.toUpperCase());
+                        resolvedSportCode = EhallSportVenueClient.sportCode(sport);
+                    } catch (IllegalArgumentException e) {
+                        // Not an enum name, treat as raw code
+                        resolvedSportCode = sportName;
+                    }
+                }
+            } else {
+                throw new BookingException(ErrorCode.INVALID_REQUEST,
+                    "Either --sport or --sport-code must be provided");
+            }
+
             date = LocalDate.parse(dateValue);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
-                ErrorCode.INVALID_REQUEST.name(), "Invalid date: " + dateValue,
+                ErrorCode.INVALID_REQUEST.name(), e.getMessage(),
                 traceId, elapsed, "json"));
             return CommandOutput.exitCodeFor(ErrorCode.INVALID_REQUEST);
+        } catch (BookingException e) {
+            long elapsed = System.currentTimeMillis() - startMs;
+            out.println(CommandOutput.formatResult(false, null,
+                e.code().name(), e.getMessage(), traceId, elapsed, "json"));
+            return CommandOutput.exitCodeFor(e.code());
         }
 
         SessionStore store = new SessionStore(Path.of(sessionHome), username);
@@ -105,13 +160,13 @@ public class DirectSlotsCommand implements Callable<Integer> {
                     .cookieJar(jar)
                     .build()) {
                 EhallSportVenueClient api = new EhallSportVenueClient(http);
-                List<TimeSlotOption> slots = api.getTimeSlots(campusCode, sportCode, date, yylx);
+                List<TimeSlotOption> slots = api.getTimeSlots(resolvedCampusCode, resolvedSportCode, date, yylx);
 
                 ObjectNode result = JSON.createObjectNode();
                 result.put("traceId", traceId);
                 result.put("username", username);
-                result.put("campusCode", campusCode);
-                result.put("sportCode", sportCode);
+                result.put("campusCode", resolvedCampusCode);
+                result.put("sportCode", resolvedSportCode);
                 result.put("yylx", yylx);
                 result.put("date", date.toString());
                 ArrayNode array = result.putArray("slots");
@@ -147,5 +202,24 @@ public class DirectSlotsCommand implements Callable<Integer> {
                 traceId, elapsed, "json"));
             return 1;
         }
+    }
+
+    /**
+     * Resolves Chinese sport name to ehall sport code.
+     */
+    private String resolveChineseSport(String chinese) {
+        if (chinese.contains("羽毛球")) return "001";
+        if (chinese.contains("足球")) return "002";
+        if (chinese.contains("排球")) return "003";
+        if (chinese.contains("网球")) return "004";
+        if (chinese.contains("篮球")) return "005";
+        if (chinese.contains("壁球")) return "006";
+        if (chinese.contains("健身")) return "007";
+        if (chinese.contains("游泳")) return "009";
+        if (chinese.contains("乒乓球")) return "013";
+        if (chinese.contains("舞蹈")) return "015";
+        if (chinese.contains("桌球")) return "016";
+        if (chinese.contains("瑜伽")) return "021";
+        return null;
     }
 }

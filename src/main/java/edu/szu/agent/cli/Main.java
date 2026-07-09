@@ -66,7 +66,8 @@ import java.util.stream.Collectors;
         DirectSportsCommand.class,
         DirectDatesCommand.class,
         DirectSlotsCommand.class,
-        DirectVenuesCommand.class
+        DirectVenuesCommand.class,
+        DirectDiscoverCommand.class
     }
 )
 public class Main implements Callable<Integer> {
