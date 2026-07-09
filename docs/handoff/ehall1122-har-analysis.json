@@ -1,0 +1,377 @@
+{
+  "total_entries": 42,
+  "insertVenueBookingInfo": [
+    {
+      "status": 200,
+      "fields": {
+        "DHID": "",
+        "YYRGH": "2023150090",
+        "CYRS": "",
+        "YYRXM": "王子豪",
+        "CGDM": "015",
+        "CDWID": "c085941834ff4625b59fddb11ffb07b9",
+        "XMDM": "004",
+        "XQWID": "1",
+        "KYYSJD": "17:00-18:00",
+        "YYRQ": "2026-07-10",
+        "YYLX": "1.0",
+        "YYKS": "2026-07-10+17:00",
+        "YYJS": "2026-07-10+18:00",
+        "PC_OR_PHONE": "pc"
+      },
+      "response": "{\"code\":\"0\",\"msg\":\"成功\",\"data\":{\"DHID\":\"202607092034012630\"}}"
+    }
+  ],
+  "getOpeningRoom": [
+    {
+      "request": {
+        "XMDM": "004",
+        "YYRQ": "2026-07-10",
+        "YYLX": "1.0",
+        "KSSJ": "08:00",
+        "JSSJ": "09:00",
+        "XQDM": "1"
+      },
+      "rooms": [
+        {
+          "CDMC": "北区网球1号场",
+          "CDWID": "c085941834ff4625b59fddb11ffb07b9",
+          "CGBM": "015",
+          "CGBM_DISPLAY": "北区网球场",
+          "XQDM": "1",
+          "XMDM": "004",
+          "STATE_EXPLAIN": "SYS_OPEN",
+          "disabled": true,
+          "text": "已满员"
+        },
+        {
+          "CDMC": "北区网球2号场",
+          "CDWID": "aa18e4fe9c544a39b28c47f754348ab3",
+          "CGBM": "015",
+          "CGBM_DISPLAY": "北区网球场",
+          "XQDM": "1",
+          "XMDM": "004",
+          "STATE_EXPLAIN": "SYS_OPEN",
+          "disabled": false,
+          "text": "可预约"
+        },
+        {
+          "CDMC": "北区网球3号场",
+          "CDWID": "1162ee23cc1f4c67a0717d163d05a0d0",
+          "CGBM": "015",
+          "CGBM_DISPLAY": "北区网球场",
+          "XQDM": "1",
+          "XMDM": "004",
+          "STATE_EXPLAIN": "SYS_OPEN",
+          "disabled": false,
+          "text": "可预约"
+        },
+        {
+          "CDMC": "海边网球场1号场",
+          "CDWID": "89d7005a36f341a39d89354d659b639d",
+          "CGBM": "009",
+          "CGBM_DISPLAY": "运动广场海边网球场",
+          "XQDM": "1",
+          "XMDM": "004",
+          "STATE_EXPLAIN": "SYS_OPEN",
+          "disabled": false,
+          "text": "可预约"
+        },
+        {
+          "CDMC": "海边网球场2号场",
+          "CDWID": "2b375360778a4978922e48b34d772947",
+          "CGBM": "009",
+          "CGBM_DISPLAY": "运动广场海边网球场",
+          "XQDM": "1",
+          "XMDM": "004",
+          "STATE_EXPLAIN": "SYS_OPEN",
+          "disabled": false,
+          "text": "可预约"
+        }
+      ]
+    },
+    {
+      "request": {
+        "XMDM": "004",
+        "YYRQ": "2026-07-10",
+        "YYLX": "1.0",
+        "KSSJ": "17:00",
+        "JSSJ": "18:00",
+        "XQDM": "1"
+      },
+      "rooms": [
+        {
+          "CDMC": "北区网球1号场",
+          "CDWID": "c085941834ff4625b59fddb11ffb07b9",
+          "CGBM": "015",
+          "CGBM_DISPLAY": "北区网球场",
+          "XQDM": "1",
+          "XMDM": "004",
+          "STATE_EXPLAIN": "SYS_OPEN",
+          "disabled": false,
+          "text": "可预约"
+        },
+        {
+          "CDMC": "北区网球2号场",
+          "CDWID": "aa18e4fe9c544a39b28c47f754348ab3",
+          "CGBM": "015",
+          "CGBM_DISPLAY": "北区网球场",
+          "XQDM": "1",
+          "XMDM": "004",
+          "STATE_EXPLAIN": "SYS_OPEN",
+          "disabled": true,
+          "text": "已满员"
+        },
+        {
+          "CDMC": "北区网球3号场",
+          "CDWID": "1162ee23cc1f4c67a0717d163d05a0d0",
+          "CGBM": "015",
+          "CGBM_DISPLAY": "北区网球场",
+          "XQDM": "1",
+          "XMDM": "004",
+          "STATE_EXPLAIN": "SYS_OPEN",
+          "disabled": true,
+          "text": "已满员"
+        },
+        {
+          "CDMC": "海边网球场1号场",
+          "CDWID": "89d7005a36f341a39d89354d659b639d",
+          "CGBM": "009",
+          "CGBM_DISPLAY": "运动广场海边网球场",
+          "XQDM": "1",
+          "XMDM": "004",
+          "STATE_EXPLAIN": "OTHER_OCCUPY",
+          "disabled": true,
+          "text": "已满员"
+        },
+        {
+          "CDMC": "海边网球场2号场",
+          "CDWID": "2b375360778a4978922e48b34d772947",
+          "CGBM": "009",
+          "CGBM_DISPLAY": "运动广场海边网球场",
+          "XQDM": "1",
+          "XMDM": "004",
+          "STATE_EXPLAIN": "SYS_OPEN",
+          "disabled": true,
+          "text": "已满员"
+        }
+      ]
+    }
+  ],
+  "getTimeList": [
+    {
+      "request": {
+        "XQ": "1",
+        "YYRQ": "2026-07-09",
+        "YYLX": "1.0",
+        "XMDM": "004"
+      },
+      "response": "[{\"WID\":\"04B0B883C0D0AB9FE063E7421FACC253\",\"CODE\":\"08:00-09:00\",\"NAME\":\"08:00-09:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D1AB9FE063E7421FACC253\",\"CODE\":\"09:00-10:00\",\"NAME\":\"09:00-10:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D2AB9FE063E7421FACC253\",\"CODE\":\"10:00-11:00\",\"NAME\":\"10:00-11:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D3AB9FE063E7421FACC253\",\"CODE\":\"11:00-12:00\",\"NAME\":\"11:00-12:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D4AB9FE063E7421FACC253\",\"CODE\":\"12:00-13:00\",\"NAME\":\"12:00-13:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D5AB9FE063E7421FACC253\",\"CODE\":\"13:00-14:00\",\"NAME\":\"13:00-14:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D6AB9FE063E7421FACC253\",\"CODE\":\"14:00-15:00\",\"NAME\":\"14:00-15:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D7AB9FE063E7421FACC253\",\"CODE\":\"15:00-16:00\",\"NAME\":\"15:00-16:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D8AB9FE063E7421FACC253\",\"CODE\":\"16:00-17:00\",\"NAME\":\"16:00-17:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D9AB9FE063E7421FACC253\",\"CODE\":\"17:00-18:00\",\"NAME\":\"17:00-18:00\",\"STATE_EXPLAIN\":\"OTHER_OCCUPY,SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0DAAB9FE063E7421FACC253\",\"CODE\":\"18:00-19:00\",\"NAME\":\"18:00-19:00\",\"STATE_EXPLAIN\":\"OTHER_OCCUPY,SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0DBAB9FE063E7421FACC253\",\"CODE\":\"19:00-20:00\",\"NAME\":\"19:00-20:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0DCAB9FE063E7421FACC253\",\"CODE\":\"20:00-21:00\",\"NAME\":\"20:00-21:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已满员\"},{\"WID\":\"04B0B883C0DDAB9FE063E7421FACC253\",\"CODE\":\"21:00-22:00\",\"NAME\":\"21:00-22:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已满员\"}]"
+    },
+    {
+      "request": {
+        "XQ": "1",
+        "YYRQ": "2026-07-09",
+        "YYLX": "1.0",
+        "XMDM": "004"
+      },
+      "response": "[{\"WID\":\"04B0B883C0D0AB9FE063E7421FACC253\",\"CODE\":\"08:00-09:00\",\"NAME\":\"08:00-09:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D1AB9FE063E7421FACC253\",\"CODE\":\"09:00-10:00\",\"NAME\":\"09:00-10:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D2AB9FE063E7421FACC253\",\"CODE\":\"10:00-11:00\",\"NAME\":\"10:00-11:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D3AB9FE063E7421FACC253\",\"CODE\":\"11:00-12:00\",\"NAME\":\"11:00-12:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D4AB9FE063E7421FACC253\",\"CODE\":\"12:00-13:00\",\"NAME\":\"12:00-13:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D5AB9FE063E7421FACC253\",\"CODE\":\"13:00-14:00\",\"NAME\":\"13:00-14:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D6AB9FE063E7421FACC253\",\"CODE\":\"14:00-15:00\",\"NAME\":\"14:00-15:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D7AB9FE063E7421FACC253\",\"CODE\":\"15:00-16:00\",\"NAME\":\"15:00-16:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D8AB9FE063E7421FACC253\",\"CODE\":\"16:00-17:00\",\"NAME\":\"16:00-17:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D9AB9FE063E7421FACC253\",\"CODE\":\"17:00-18:00\",\"NAME\":\"17:00-18:00\",\"STATE_EXPLAIN\":\"OTHER_OCCUPY,SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0DAAB9FE063E7421FACC253\",\"CODE\":\"18:00-19:00\",\"NAME\":\"18:00-19:00\",\"STATE_EXPLAIN\":\"OTHER_OCCUPY,SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0DBAB9FE063E7421FACC253\",\"CODE\":\"19:00-20:00\",\"NAME\":\"19:00-20:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0DCAB9FE063E7421FACC253\",\"CODE\":\"20:00-21:00\",\"NAME\":\"20:00-21:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已满员\"},{\"WID\":\"04B0B883C0DDAB9FE063E7421FACC253\",\"CODE\":\"21:00-22:00\",\"NAME\":\"21:00-22:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已满员\"}]"
+    },
+    {
+      "request": {
+        "XQ": "1",
+        "YYRQ": "2026-07-09",
+        "YYLX": "1.0",
+        "XMDM": "004"
+      },
+      "response": "[{\"WID\":\"04B0B883C0D0AB9FE063E7421FACC253\",\"CODE\":\"08:00-09:00\",\"NAME\":\"08:00-09:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D1AB9FE063E7421FACC253\",\"CODE\":\"09:00-10:00\",\"NAME\":\"09:00-10:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D2AB9FE063E7421FACC253\",\"CODE\":\"10:00-11:00\",\"NAME\":\"10:00-11:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D3AB9FE063E7421FACC253\",\"CODE\":\"11:00-12:00\",\"NAME\":\"11:00-12:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D4AB9FE063E7421FACC253\",\"CODE\":\"12:00-13:00\",\"NAME\":\"12:00-13:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D5AB9FE063E7421FACC253\",\"CODE\":\"13:00-14:00\",\"NAME\":\"13:00-14:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D6AB9FE063E7421FACC253\",\"CODE\":\"14:00-15:00\",\"NAME\":\"14:00-15:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D7AB9FE063E7421FACC253\",\"CODE\":\"15:00-16:00\",\"NAME\":\"15:00-16:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D8AB9FE063E7421FACC253\",\"CODE\":\"16:00-17:00\",\"NAME\":\"16:00-17:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0D9AB9FE063E7421FACC253\",\"CODE\":\"17:00-18:00\",\"NAME\":\"17:00-18:00\",\"STATE_EXPLAIN\":\"OTHER_OCCUPY,SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0DAAB9FE063E7421FACC253\",\"CODE\":\"18:00-19:00\",\"NAME\":\"18:00-19:00\",\"STATE_EXPLAIN\":\"OTHER_OCCUPY,SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0DBAB9FE063E7421FACC253\",\"CODE\":\"19:00-20:00\",\"NAME\":\"19:00-20:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已过期\"},{\"WID\":\"04B0B883C0DCAB9FE063E7421FACC253\",\"CODE\":\"20:00-21:00\",\"NAME\":\"20:00-21:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已满员\"},{\"WID\":\"04B0B883C0DDAB9FE063E7421FACC253\",\"CODE\":\"21:00-22:00\",\"NAME\":\"21:00-22:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已满员\"}]"
+    },
+    {
+      "request": {
+        "XQ": "1",
+        "YYRQ": "2026-07-10",
+        "YYLX": "1.0",
+        "XMDM": "004"
+      },
+      "response": "[{\"WID\":\"04B0B883C0D0AB9FE063E7421FACC253\",\"CODE\":\"08:00-09:00\",\"NAME\":\"08:00-09:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":false,\"text\":\"可预约\"},{\"WID\":\"04B0B883C0D1AB9FE063E7421FACC253\",\"CODE\":\"09:00-10:00\",\"NAME\":\"09:00-10:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":false,\"text\":\"可预约\"},{\"WID\":\"04B0B883C0D2AB9FE063E7421FACC253\",\"CODE\":\"10:00-11:00\",\"NAME\":\"10:00-11:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":false,\"text\":\"可预约\"},{\"WID\":\"04B0B883C0D3AB9FE063E7421FACC253\",\"CODE\":\"11:00-12:00\",\"NAME\":\"11:00-12:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":false,\"text\":\"可预约\"},{\"WID\":\"04B0B883C0D4AB9FE063E7421FACC253\",\"CODE\":\"12:00-13:00\",\"NAME\":\"12:00-13:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":false,\"text\":\"可预约\"},{\"WID\":\"04B0B883C0D5AB9FE063E7421FACC253\",\"CODE\":\"13:00-14:00\",\"NAME\":\"13:00-14:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":false,\"text\":\"可预约\"},{\"WID\":\"04B0B883C0D6AB9FE063E7421FACC253\",\"CODE\":\"14:00-15:00\",\"NAME\":\"14:00-15:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":false,\"text\":\"可预约\"},{\"WID\":\"04B0B883C0D7AB9FE063E7421FACC253\",\"CODE\":\"15:00-16:00\",\"NAME\":\"15:00-16:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":false,\"text\":\"可预约\"},{\"WID\":\"04B0B883C0D8AB9FE063E7421FACC253\",\"CODE\":\"16:00-17:00\",\"NAME\":\"16:00-17:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":false,\"text\":\"可预约\"},{\"WID\":\"04B0B883C0D9AB9FE063E7421FACC253\",\"CODE\":\"17:00-18:00\",\"NAME\":\"17:00-18:00\",\"STATE_EXPLAIN\":\"OTHER_OCCUPY,SYS_OPEN\",\"disabled\":false,\"text\":\"可预约\"},{\"WID\":\"04B0B883C0DAAB9FE063E7421FACC253\",\"CODE\":\"18:00-19:00\",\"NAME\":\"18:00-19:00\",\"STATE_EXPLAIN\":\"OTHER_OCCUPY,SYS_OPEN\",\"disabled\":true,\"text\":\"已满员\"},{\"WID\":\"04B0B883C0DBAB9FE063E7421FACC253\",\"CODE\":\"19:00-20:00\",\"NAME\":\"19:00-20:00\",\"STATE_EXPLAIN\":\"OTHER_OCCUPY,SYS_OPEN\",\"disabled\":true,\"text\":\"已满员\"},{\"WID\":\"04B0B883C0DCAB9FE063E7421FACC253\",\"CODE\":\"20:00-21:00\",\"NAME\":\"20:00-21:00\",\"STATE_EXPLAIN\":\"OTHER_OCCUPY,SYS_OPEN\",\"disabled\":true,\"text\":\"已满员\"},{\"WID\":\"04B0B883C0DDAB9FE063E7421FACC253\",\"CODE\":\"21:00-22:00\",\"NAME\":\"21:00-22:00\",\"STATE_EXPLAIN\":\"SYS_OPEN\",\"disabled\":true,\"text\":\"已满员\"}]"
+    }
+  ],
+  "myBookingInfo": {
+    "totalSize": 336,
+    "rows_sample": [
+      {
+        "XQWID": "1",
+        "XQWID_DISPLAY": "粤海校区",
+        "XMDM": "004",
+        "XMDM_DISPLAY": "网球",
+        "CGBM": null,
+        "CGBM_DISPLAY": null,
+        "CDMC": null,
+        "YYLX": "1.0",
+        "YYZT": "CG_YY",
+        "YYZT_DISPLAY": "已预约",
+        "DHID": "202607092034012630",
+        "YYRQ": null,
+        "KYYSJD": null
+      },
+      {
+        "XQWID": "1",
+        "XQWID_DISPLAY": "粤海校区",
+        "XMDM": "007",
+        "XMDM_DISPLAY": "一楼重量型健身",
+        "CGBM": null,
+        "CGBM_DISPLAY": null,
+        "CDMC": null,
+        "YYLX": "2.0",
+        "YYZT": "CG_YY",
+        "YYZT_DISPLAY": "已预约",
+        "DHID": "202607041207168506",
+        "YYRQ": null,
+        "KYYSJD": null
+      },
+      {
+        "XQWID": "1",
+        "XQWID_DISPLAY": "粤海校区",
+        "XMDM": "007",
+        "XMDM_DISPLAY": "一楼重量型健身",
+        "CGBM": null,
+        "CGBM_DISPLAY": null,
+        "CDMC": null,
+        "YYLX": "2.0",
+        "YYZT": "CG_WC",
+        "YYZT_DISPLAY": "已完成",
+        "DHID": "202606262202526967",
+        "YYRQ": null,
+        "KYYSJD": null
+      },
+      {
+        "XQWID": "1",
+        "XQWID_DISPLAY": "粤海校区",
+        "XMDM": "008",
+        "XMDM_DISPLAY": "二楼有氧健身",
+        "CGBM": null,
+        "CGBM_DISPLAY": null,
+        "CDMC": null,
+        "YYLX": "2.0",
+        "YYZT": "CG_QX",
+        "YYZT_DISPLAY": "取消预约",
+        "DHID": "202606241920050007",
+        "YYRQ": null,
+        "KYYSJD": null
+      },
+      {
+        "XQWID": "1",
+        "XQWID_DISPLAY": "粤海校区",
+        "XMDM": "008",
+        "XMDM_DISPLAY": "二楼有氧健身",
+        "CGBM": null,
+        "CGBM_DISPLAY": null,
+        "CDMC": null,
+        "YYLX": "2.0",
+        "YYZT": "CG_QX",
+        "YYZT_DISPLAY": "取消预约",
+        "DHID": "202606241821539620",
+        "YYRQ": null,
+        "KYYSJD": null
+      },
+      {
+        "XQWID": "1",
+        "XQWID_DISPLAY": "粤海校区",
+        "XMDM": "008",
+        "XMDM_DISPLAY": "二楼有氧健身",
+        "CGBM": null,
+        "CGBM_DISPLAY": null,
+        "CDMC": null,
+        "YYLX": "2.0",
+        "YYZT": "CG_QX",
+        "YYZT_DISPLAY": "取消预约",
+        "DHID": "202606241817559598",
+        "YYRQ": null,
+        "KYYSJD": null
+      },
+      {
+        "XQWID": "1",
+        "XQWID_DISPLAY": "粤海校区",
+        "XMDM": "007",
+        "XMDM_DISPLAY": "一楼重量型健身",
+        "CGBM": null,
+        "CGBM_DISPLAY": null,
+        "CDMC": null,
+        "YYLX": "2.0",
+        "YYZT": "CG_QX",
+        "YYZT_DISPLAY": "取消预约",
+        "DHID": "202606241815109580",
+        "YYRQ": null,
+        "KYYSJD": null
+      },
+      {
+        "XQWID": "1",
+        "XQWID_DISPLAY": "粤海校区",
+        "XMDM": "008",
+        "XMDM_DISPLAY": "二楼有氧健身",
+        "CGBM": null,
+        "CGBM_DISPLAY": null,
+        "CDMC": null,
+        "YYLX": "2.0",
+        "YYZT": "CG_QX",
+        "YYZT_DISPLAY": "取消预约",
+        "DHID": "202606241749069456",
+        "YYRQ": null,
+        "KYYSJD": null
+      },
+      {
+        "XQWID": "1",
+        "XQWID_DISPLAY": "粤海校区",
+        "XMDM": "008",
+        "XMDM_DISPLAY": "二楼有氧健身",
+        "CGBM": null,
+        "CGBM_DISPLAY": null,
+        "CDMC": null,
+        "YYLX": "2.0",
+        "YYZT": "CG_QX",
+        "YYZT_DISPLAY": "取消预约",
+        "DHID": "202606241724149309",
+        "YYRQ": null,
+        "KYYSJD": null
+      },
+      {
+        "XQWID": "1",
+        "XQWID_DISPLAY": "粤海校区",
+        "XMDM": "008",
+        "XMDM_DISPLAY": "二楼有氧健身",
+        "CGBM": null,
+        "CGBM_DISPLAY": null,
+        "CDMC": null,
+        "YYLX": "2.0",
+        "YYZT": "CG_QX",
+        "YYZT_DISPLAY": "取消预约",
+        "DHID": "202606240850347145",
+        "YYRQ": null,
+        "KYYSJD": null
+      }
+    ],
+    "mappings": {
+      "XQ": [
+        [
+          "1",
+          "粤海校区"
+        ]
+      ],
+      "XM": [
+        [
+          "004",
+          "网球"
+        ],
+        [
+          "007",
+          "一楼重量型健身"
+        ],
+        [
+          "008",
+          "二楼有氧健身"
+        ]
+      ]
+    }
+  },
+  "cancel": []
+}

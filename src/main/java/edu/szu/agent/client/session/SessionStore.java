@@ -67,6 +67,17 @@ public final class SessionStore {
     }
 
     /**
+     * Returns the username that identifies this session store.
+     *
+     * @return the SZU account username
+     * @since 0.6.0
+     * @author 王子豪
+     */
+    public String username() {
+        return username;
+    }
+
+    /**
      * Resolves the canonical session file path for this user.
      *
      * @return path of the form {@code <home>/.szu-agent/sessions/<username>.json}
@@ -75,6 +86,22 @@ public final class SessionStore {
      */
     public Path defaultPath() {
         return home.resolve(".szu-agent/sessions/" + username + ".json");
+    }
+
+    /**
+     * Reads the session file as a UTF-8 string.
+     *
+     * @return raw JSON content
+     * @throws IOException if the file does not exist or cannot be read
+     * @since 0.6.0
+     * @author 王子豪
+     */
+    public String read() throws IOException {
+        Path target = defaultPath();
+        if (!Files.exists(target)) {
+            throw new IOException("Session file does not exist: " + target);
+        }
+        return Files.readString(target, StandardCharsets.UTF_8);
     }
 
     /**

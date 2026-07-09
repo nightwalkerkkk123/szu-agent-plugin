@@ -22,7 +22,8 @@
 - ✅ CLI 工具 + 常驻 HTTP daemon + Skill 插件 + MCP 工具导出(8 工具),供外部 Agent 调用
 - ✅ 一个常驻 JVM 可同时服务 Skill `curl` 与 MCP 宿主(`scripts/serve.sh --background`)
 - ✅ 外部 Skill 通过 `SZU_SKILL_PATH` 加载,无需改 Java 代码
-- ✅ 通过 `BrowserLifecycle` 适配器封装 Playwright
+- ✅ 通过 `BrowserLifecycle` 适配器封装 Obscura(底层通过 Playwright SDK + `connectOverCDP` 通信)
+- ✅ Obscura daemon 由 `ObscuraLauncher` 在首次 Skill 调用时自动拉起,shutdown hook 清理
 - ✅ 30 天会话复用(ADR-0008)— `~/.szu-agent/sessions/<username>.json`
 - ❌ **不是** AI Agent — 无 NLU / 意图识别 / 对话管理
 - ❌ 不绕过验证码、不高频访问、不发送敏感邮件
@@ -30,14 +31,19 @@
 ## Quick commands
 
 ```bash
-mvn -q -DskipTests package    # 构建
-mvn test                      # 跑测试
+mvn -q -DskipTests package              # 构建
+mvn -Pobscura-skip-download test        # 跑测试(离线模式,跳过 70 MB 二进制下载)
 java -jar target/szu-agent-plugin.jar booking venue \
   --username 2023150090 --campus YUEHAI --sport TENNIS \
   --date 2026-06-24 --time-slot 19:00-20:00 --format json
 java -jar target/szu-agent-plugin.jar skill list --format json
 scripts/serve.sh --background          # 启动常驻 HTTP daemon(端口 8765)
 curl localhost:8765/health             # {"status":"ok"}
+
+# Obscura daemon 诊断
+curl http://127.0.0.1:9222/json/version  # Obscura CDP 端点 UA
+cat ~/.szu-agent/obscura.pid             # 当前 daemon PID
+tail -f ~/.szu-agent/obscura.log         # daemon stdout/stderr
 ```
 
 > 平台相关：Windows 本机 Maven / JDK 路径见 [`docs/setup/windows-maven.md`](docs/setup/windows-maven.md)；

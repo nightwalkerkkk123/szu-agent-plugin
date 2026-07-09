@@ -57,7 +57,16 @@ import java.util.stream.Collectors;
         ExamCommand.class,
         KnowledgeCommand.class,
         SkillCommand.class,
-        MCPCommand.class
+        MCPCommand.class,
+        CaptureLoginCommand.class,
+        DirectLoginCommand.class,
+        HttpGetCommand.class,
+        DirectBookCommand.class,
+        DirectBookingsCommand.class,
+        DirectSportsCommand.class,
+        DirectDatesCommand.class,
+        DirectSlotsCommand.class,
+        DirectVenuesCommand.class
     }
 )
 public class Main implements Callable<Integer> {
