@@ -6,6 +6,7 @@ import edu.szu.agent.client.exam.PlaywrightExamFetchProvider;
 import edu.szu.agent.config.ConfigManager;
 import edu.szu.agent.domain.exam.ExamSchedule;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,9 +48,11 @@ public class ExamListTask implements CampusTask<List<ExamSchedule>> {
     private final Supplier<List<ExamSchedule>> realSupplier;
     private final Supplier<List<ExamSchedule>> fallbackSupplier;
     private final boolean staticOnly;
+    private final Clock clock;
 
     /**
-     * No-arg constructor — kept for binary compatibility. Uses static-only mode.
+     * No-arg constructor — kept for binary compatibility. Uses static-only mode
+     * and the system clock.
      */
     public ExamListTask() {
         this(new ExamListClient());
@@ -62,6 +65,17 @@ public class ExamListTask implements CampusTask<List<ExamSchedule>> {
      * @param staticClient the static client to use exclusively
      */
     public ExamListTask(ExamListClient staticClient) {
+        this(staticClient, Clock.systemDefaultZone());
+    }
+
+    /**
+     * Static-only constructor with an injectable clock for deterministic
+     * tests.
+     *
+     * @param staticClient the static client to use exclusively
+     * @param clock        clock used to decide "pending" vs. "finished"
+     */
+    public ExamListTask(ExamListClient staticClient, Clock clock) {
         this.staticClient = Objects.requireNonNull(staticClient, "staticClient");
         this.realSupplier = () -> {
             throw new IllegalStateException(
@@ -69,6 +83,7 @@ public class ExamListTask implements CampusTask<List<ExamSchedule>> {
         };
         this.fallbackSupplier = staticClient::list;
         this.staticOnly = true;
+        this.clock = Objects.requireNonNull(clock, "clock");
     }
 
     /**
@@ -84,7 +99,8 @@ public class ExamListTask implements CampusTask<List<ExamSchedule>> {
     public ExamListTask(Supplier<List<ExamSchedule>> realSupplier,
                         Supplier<List<ExamSchedule>> fallbackSupplier) {
         this(realSupplier, fallbackSupplier,
-            "0".equals(ConfigManager.getInstance().get("SZU_EXAM_REAL")));
+            "0".equals(ConfigManager.getInstance().get("SZU_EXAM_REAL")),
+            Clock.systemDefaultZone());
     }
 
     /**
@@ -94,10 +110,21 @@ public class ExamListTask implements CampusTask<List<ExamSchedule>> {
     ExamListTask(Supplier<List<ExamSchedule>> realSupplier,
                  Supplier<List<ExamSchedule>> fallbackSupplier,
                  boolean staticOnly) {
+        this(realSupplier, fallbackSupplier, staticOnly, Clock.systemDefaultZone());
+    }
+
+    /**
+     * Full constructor with clock injection.
+     */
+    ExamListTask(Supplier<List<ExamSchedule>> realSupplier,
+                 Supplier<List<ExamSchedule>> fallbackSupplier,
+                 boolean staticOnly,
+                 Clock clock) {
         this.staticClient = null; // not used in this path
         this.realSupplier = Objects.requireNonNull(realSupplier, "realSupplier");
         this.fallbackSupplier = Objects.requireNonNull(fallbackSupplier, "fallbackSupplier");
         this.staticOnly = staticOnly;
+        this.clock = Objects.requireNonNull(clock, "clock");
     }
 
     @Override
@@ -223,8 +250,8 @@ public class ExamListTask implements CampusTask<List<ExamSchedule>> {
             return true;
         }
         return switch (status.trim()) {
-            case "待开始考试" -> exam.examDate().isAfter(LocalDate.now().minusDays(1));
-            case "已结束" -> exam.examDate().isBefore(LocalDate.now());
+            case "待开始考试" -> exam.examDate().isAfter(LocalDate.now(clock).minusDays(1));
+            case "已结束" -> exam.examDate().isBefore(LocalDate.now(clock));
             default -> true;
         };
     }

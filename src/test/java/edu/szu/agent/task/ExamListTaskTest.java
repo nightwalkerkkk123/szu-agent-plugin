@@ -5,8 +5,11 @@ import edu.szu.agent.domain.exam.ExamSchedule;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -87,20 +90,21 @@ class ExamListTaskTest {
     @Test
     @DisplayName("filters 待开始考试")
     void filtersPendingExams() {
-        ExamListTask task = new ExamListTask(new ExamListClient(SNAPSHOT, 2026));
+        Clock june2026 = Clock.fixed(Instant.parse("2026-06-15T00:00:00Z"), ZoneId.of("Asia/Shanghai"));
+        ExamListTask task = new ExamListTask(new ExamListClient(SNAPSHOT, 2026), june2026);
 
         List<ExamSchedule> exams = task.execute(new TaskInput(Map.of(
             "username", "2023150090",
             "status", "待开始考试")));
 
-        // Both exams are in July 2026, current date is June 2026, so both are pending
+        // Both exams are in July 2026, fixed clock is June 2026, so both are pending
         assertThat(exams).hasSize(2);
     }
 
     @Test
     @DisplayName("filters 已结束 exams")
     void filtersCompletedExams() {
-        ExamListTask task = new ExamListTask(new ExamListClient(SNAPSHOT, 2026));
+        Clock july2026 = Clock.fixed(Instant.parse("2026-07-15T00:00:00Z"), ZoneId.of("Asia/Shanghai"));
 
         // Using a snapshot with exams in the past
         String pastSnapshot = """
@@ -120,7 +124,7 @@ class ExamListTaskTest {
             </table>
             </body></html>
             """;
-        ExamListTask pastTask = new ExamListTask(new ExamListClient(pastSnapshot, 2026));
+        ExamListTask pastTask = new ExamListTask(new ExamListClient(pastSnapshot, 2026), july2026);
 
         List<ExamSchedule> exams = pastTask.execute(new TaskInput(Map.of(
             "username", "2023150090",

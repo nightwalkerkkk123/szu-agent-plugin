@@ -5,16 +5,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.account.AccountResolutionException;
 import edu.szu.agent.account.AccountResolver;
-import edu.szu.agent.client.http.CampusHttpClient;
-import edu.szu.agent.client.http.CookieJar;
-import edu.szu.agent.client.http.EhallSportVenueClient;
-import edu.szu.agent.client.http.EhallSportVenueClient.BookingForm;
-import edu.szu.agent.client.http.EhallSportVenueClient.TimeSlotOption;
-import edu.szu.agent.client.http.EhallSportVenueClient.VenueOption;
-import edu.szu.agent.client.session.HttpSession;
+import edu.szu.agent.client.http.EhallSessionManager;
+import edu.szu.agent.client.http.RawBookingRequest;
+import edu.szu.agent.client.http.VenueBookingService;
 import edu.szu.agent.client.session.SessionStore;
-import edu.szu.agent.domain.Campus;
-import edu.szu.agent.domain.Sport;
 import edu.szu.agent.domain.TimeSlot;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
@@ -24,11 +18,9 @@ import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -116,54 +108,9 @@ public class DirectBookCommand implements Callable<Integer> {
             return CommandOutput.exitCodeFor(ErrorCode.INVALID_REQUEST);
         }
 
-        String resolvedCampusCode;
-        String resolvedSportCode;
-        String sportDisplayName;
-        String campusDisplayName;
+        CampusSportCodeResolver.Resolution code;
         try {
-            if (campusCode != null && !campusCode.isBlank()) {
-                resolvedCampusCode = campusCode;
-                campusDisplayName = campusCode;
-            } else if (campusName != null && !campusName.isBlank()) {
-                // Try Chinese name first
-                String normalizedCampus = campusName.trim().toUpperCase();
-                if (normalizedCampus.contains("粤") || normalizedCampus.contains("海")) {
-                    resolvedCampusCode = "1";
-                    campusDisplayName = "粤海校区";
-                } else if (normalizedCampus.contains("丽") || normalizedCampus.contains("湖")) {
-                    resolvedCampusCode = "2";
-                    campusDisplayName = "丽湖校区";
-                } else {
-                    // Try enum name
-                    Campus campus = Campus.valueOf(normalizedCampus);
-                    resolvedCampusCode = EhallSportVenueClient.campusCode(campus);
-                    campusDisplayName = campus.displayName();
-                }
-            } else {
-                throw new BookingException(ErrorCode.INVALID_REQUEST,
-                    "Either --campus or --campus-code must be provided");
-            }
-
-            if (sportCode != null && !sportCode.isBlank()) {
-                resolvedSportCode = sportCode;
-                sportDisplayName = sportCode;
-            } else if (sportName != null && !sportName.isBlank()) {
-                // Try Chinese name first
-                String chineseCode = resolveChineseSport(sportName);
-                if (chineseCode != null) {
-                    resolvedSportCode = chineseCode;
-                    sportDisplayName = resolveChineseSportDisplay(sportName);
-                } else {
-                    // Try enum name
-                    Campus campus = Campus.valueOf(campusName != null ? campusName.toUpperCase() : "YUEHAI");
-                    Sport sport = Sport.of(campus, sportName.toUpperCase());
-                    resolvedSportCode = EhallSportVenueClient.sportCode(sport);
-                    sportDisplayName = sport.displayName();
-                }
-            } else {
-                throw new BookingException(ErrorCode.INVALID_REQUEST,
-                    "Either --sport or --sport-code must be provided");
-            }
+            code = CampusSportCodeResolver.resolve(campusName, campusCode, sportName, sportCode);
         } catch (IllegalArgumentException e) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
@@ -176,102 +123,47 @@ public class DirectBookCommand implements Callable<Integer> {
             return CommandOutput.exitCodeFor(e.code());
         }
 
-        SessionStore store = new SessionStore(Path.of(sessionHome), username);
-        if (!store.exists()) {
+        Account account = resolveAccount();
+        if (account == null) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
-                ErrorCode.SESSION_NOT_FOUND.name(),
-                "No persisted state for " + username + "; run direct-login first",
-                traceId, elapsed, "json"));
-            return CommandOutput.exitCodeFor(ErrorCode.SESSION_NOT_FOUND);
+                ErrorCode.INVALID_REQUEST.name(),
+                "Could not resolve credential for " + username
+                    + " (set SZU_PASSWORD_" + username + ")", traceId, elapsed, "json"));
+            return CommandOutput.exitCodeFor(ErrorCode.INVALID_REQUEST);
         }
 
         try {
-            HttpSession session = HttpSession.read(store);
-            CookieJar jar = new CookieJar(session.cookies());
-            String bookerName = resolveDisplayName();
+            SessionStore store = new SessionStore(Path.of(sessionHome), username);
+            EhallSessionManager sessionManager = new EhallSessionManager(
+                account.studentId(), account.password(), trustAll);
+            VenueBookingService service = new VenueBookingService(account, store, sessionManager);
 
-            try (CampusHttpClient http = CampusHttpClient.builder()
-                    .trustAll(trustAll)
-                    .cookieJar(jar)
-                    .build()) {
-                // Prime the ehall session: if the persisted snapshot only holds
-                // authserver cookies (e.g. from a www1 CAS login), visiting the
-                // ehall CAS entry point lets authserver issue a service ticket and
-                // populate the jar with ehall-side session cookies before we call
-                // AJAX APIs.
-                http.get("https://ehall.szu.edu.cn/login?service=https%3A%2F%2Fehall.szu.edu.cn%2Fqljfwapp%2Fsys%2FlwSzuCgyy%2Findex.do");
+            RawBookingRequest request = new RawBookingRequest(
+                code.campusCode(), code.sportCode(), date, slot, preferredVenue, yylx);
+            String dhid = service.book(request);
 
-                EhallSportVenueClient api = new EhallSportVenueClient(http);
+            ObjectNode data = JSON.createObjectNode();
+            data.put("traceId", traceId);
+            data.put("username", username);
+            data.put("campus", code.campusDisplayName());
+            data.put("campusCode", code.campusCode());
+            data.put("sport", code.sportDisplayName());
+            data.put("sportCode", code.sportCode());
+            data.put("date", date.toString());
+            data.put("slot", slot.slotId());
+            data.put("preferredVenue", preferredVenue);
+            data.put("dhid", dhid);
+            data.put("durationMs", System.currentTimeMillis() - startMs);
 
-                List<String> dates = api.getAvailableDates();
-                if (!dates.contains(date.toString())) {
-                    throw new BookingException(ErrorCode.NO_AVAILABLE_VENUE,
-                        "Date " + date + " is not open for booking; available: " + dates);
-                }
-
-                List<TimeSlotOption> slots = api.getTimeSlots(
-                    resolvedCampusCode, resolvedSportCode, date, yylx);
-                TimeSlotOption chosenSlot = slots.stream()
-                    .filter(s -> s.code().equals(slot.slotId()))
-                    .findFirst()
-                    .orElseThrow(() -> new BookingException(ErrorCode.ELEMENT_NOT_FOUND,
-                        "Time slot " + slot.slotId() + " not found"));
-                if (chosenSlot.disabled()) {
-                    throw new BookingException(ErrorCode.NO_AVAILABLE_VENUE,
-                        "Time slot " + slot.slotId() + " is not bookable");
-                }
-
-                List<VenueOption> venues = api.getOpeningRooms(
-                    resolvedCampusCode, resolvedSportCode, date, slot, null, yylx);
-                List<VenueOption> available = venues.stream()
-                    .filter(v -> !v.disabled())
-                    .toList();
-                if (available.isEmpty()) {
-                    throw new BookingException(ErrorCode.NO_AVAILABLE_VENUE,
-                        "No available venue for " + sportDisplayName + " " + date + " " + slot.slotId());
-                }
-                if (preferredVenue < 1 || preferredVenue > available.size()) {
-                    throw new BookingException(ErrorCode.INVALID_REQUEST,
-                        "preferred-venue must be between 1 and " + available.size()
-                            + ", got " + preferredVenue);
-                }
-                VenueOption venue = available.get(preferredVenue - 1);
-
-                BookingForm form = new BookingForm(
-                    username, bookerName, resolvedCampusCode, resolvedSportCode,
-                    venue.venueGroupCode(), venue.wid(), date, slot, yylx, "");
-                String dhid = api.book(form);
-
-                ObjectNode data = JSON.createObjectNode();
-                data.put("traceId", traceId);
-                data.put("username", username);
-                data.put("campus", campusDisplayName);
-                data.put("campusCode", resolvedCampusCode);
-                data.put("sport", sportDisplayName);
-                data.put("sportCode", resolvedSportCode);
-                data.put("date", date.toString());
-                data.put("slot", slot.slotId());
-                data.put("venue", venue.name());
-                data.put("preferredVenue", preferredVenue);
-                data.put("dhid", dhid);
-                data.put("durationMs", System.currentTimeMillis() - startMs);
-
-                out.println(CommandOutput.formatResult(true, data, null, null,
-                    traceId, data.get("durationMs").asLong(), "json"));
-                return 0;
-            }
+            out.println(CommandOutput.formatResult(true, data, null, null,
+                traceId, data.get("durationMs").asLong(), "json"));
+            return 0;
         } catch (BookingException e) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
                 e.code().name(), e.getMessage(), traceId, elapsed, "json"));
             return CommandOutput.exitCodeFor(e.code());
-        } catch (IOException e) {
-            long elapsed = System.currentTimeMillis() - startMs;
-            out.println(CommandOutput.formatResult(false, null,
-                ErrorCode.SESSION_READ_FAILED.name(),
-                "Failed to load persisted state: " + e.getMessage(), traceId, elapsed, "json"));
-            return CommandOutput.exitCodeFor(ErrorCode.SESSION_READ_FAILED);
         } catch (RuntimeException e) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
@@ -281,52 +173,17 @@ public class DirectBookCommand implements Callable<Integer> {
         }
     }
 
-    private String resolveDisplayName() {
-        if (displayName != null && !displayName.isBlank()) {
-            return displayName;
-        }
+    private Account resolveAccount() {
         try {
-            Account account;
-            if (envFile != null) {
-                account = AccountResolver.resolve(username, System.getenv(), Path.of(envFile));
-            } else {
-                account = AccountResolver.resolve(username, System.getenv(), null);
+            Account resolved = (envFile != null)
+                ? AccountResolver.resolve(username, System.getenv(), Path.of(envFile))
+                : AccountResolver.resolve(username, System.getenv(), null);
+            if (displayName != null && !displayName.isBlank()) {
+                return new Account(resolved.studentId(), resolved.password(), displayName);
             }
-            return account.displayName();
+            return resolved;
         } catch (AccountResolutionException e) {
-            return username;
+            return null;
         }
-    }
-
-    private String resolveChineseSport(String chinese) {
-        if (chinese.contains("羽毛球")) return "001";
-        if (chinese.contains("足球")) return "002";
-        if (chinese.contains("排球")) return "003";
-        if (chinese.contains("网球")) return "004";
-        if (chinese.contains("篮球")) return "005";
-        if (chinese.contains("壁球")) return "006";
-        if (chinese.contains("健身")) return "007";
-        if (chinese.contains("游泳")) return "009";
-        if (chinese.contains("乒乓球")) return "013";
-        if (chinese.contains("舞蹈")) return "015";
-        if (chinese.contains("桌球")) return "016";
-        if (chinese.contains("瑜伽")) return "021";
-        return null;
-    }
-
-    private String resolveChineseSportDisplay(String chinese) {
-        if (chinese.contains("羽毛球")) return "羽毛球";
-        if (chinese.contains("足球")) return "足球";
-        if (chinese.contains("排球")) return "排球";
-        if (chinese.contains("网球")) return "网球";
-        if (chinese.contains("篮球")) return "篮球";
-        if (chinese.contains("壁球")) return "壁球";
-        if (chinese.contains("健身")) return "健身";
-        if (chinese.contains("游泳")) return "游泳";
-        if (chinese.contains("乒乓球")) return "乒乓球";
-        if (chinese.contains("舞蹈")) return "舞蹈";
-        if (chinese.contains("桌球")) return "桌球";
-        if (chinese.contains("瑜伽")) return "瑜伽";
-        return chinese;
     }
 }
