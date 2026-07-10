@@ -138,7 +138,25 @@ public enum ErrorCode {
     /** 外部 Skill 执行超时. */
     EXTERNAL_SKILL_TIMEOUT    (Severity.LOW,    false, false, false, "外部 Skill 执行超时"),
     /** 外部 Skill 输出非法 JSON. */
-    EXTERNAL_SKILL_JSON_ERROR (Severity.LOW,    false, false, false, "外部 Skill 输出非法 JSON");
+    EXTERNAL_SKILL_JSON_ERROR (Severity.LOW,    false, false, false, "外部 Skill 输出非法 JSON"),
+
+    // ----- 支付服务(payment) -----
+    /** 订单不存在或无权访问. */
+    PAYMENT_ORDER_NOT_FOUND   (Severity.MEDIUM,   false, false, false, "订单不存在或无权访问"),
+    /** 该订单已支付. */
+    PAYMENT_ALREADY_PAID      (Severity.LOW,      false, false, false, "该订单已支付"),
+    /** 所选支付方式不可用. */
+    PAYMENT_METHOD_UNAVAILABLE(Severity.MEDIUM,   true,  false, false, "所选支付方式不可用，请尝试其他方式"),
+    /** 校园卡自动支付需要配置密码环境变量. */
+    PAYMENT_PASSWORD_REQUIRED (Severity.MEDIUM,   false, false, false, "校园卡自动支付需要配置 SZU_CAMPUS_CARD_PASSWORD"),
+    /** 校园卡支付密码错误. */
+    PAYMENT_PASSWORD_INCORRECT(Severity.HIGH,     false, true,  true,  "校园卡支付密码错误"),
+    /** olepay 网关返回异常. */
+    PAYMENT_GATEWAY_ERROR     (Severity.HIGH,     true,  false, true,  "olepay 网关返回异常"),
+    /** 支付状态轮询超时. */
+    PAYMENT_STATUS_TIMEOUT    (Severity.MEDIUM,   false, false, false, "支付状态轮询超时，请使用 direct-pay-status 继续查询"),
+    /** 该支付方式需用户在手机上确认. */
+    PAYMENT_MANUAL_REQUIRED   (Severity.LOW,      false, false, false, "该支付方式需用户在手机上确认，请使用返回的二维码或链接");
 
     private final Severity severity;
     private final boolean retryable;
