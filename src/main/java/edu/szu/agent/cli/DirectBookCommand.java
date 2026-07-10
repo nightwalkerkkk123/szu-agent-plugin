@@ -195,6 +195,13 @@ public class DirectBookCommand implements Callable<Integer> {
                     .trustAll(trustAll)
                     .cookieJar(jar)
                     .build()) {
+                // Prime the ehall session: if the persisted snapshot only holds
+                // authserver cookies (e.g. from a www1 CAS login), visiting the
+                // ehall CAS entry point lets authserver issue a service ticket and
+                // populate the jar with ehall-side session cookies before we call
+                // AJAX APIs.
+                http.get("https://ehall.szu.edu.cn/login?service=https%3A%2F%2Fehall.szu.edu.cn%2Fqljfwapp%2Fsys%2FlwSzuCgyy%2Findex.do");
+
                 EhallSportVenueClient api = new EhallSportVenueClient(http);
 
                 List<String> dates = api.getAvailableDates();

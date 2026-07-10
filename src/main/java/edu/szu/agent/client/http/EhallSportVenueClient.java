@@ -46,6 +46,30 @@ public final class EhallSportVenueClient {
     private final CampusHttpClient http;
 
     /**
+     * Parses a JSON string that may start with a UTF-8 BOM.
+     *
+     * <p>The ehall sports-venue endpoints occasionally return responses with a
+     * leading {@code U+FEFF} byte order mark; Jackson rejects those unless the
+     * marker is stripped first.
+     *
+     * @param body raw response body, possibly with a leading BOM
+     * @return parsed JSON tree
+     * @throws Exception if the body is not valid JSON
+     * @since 0.6.0
+     * @author 王子豪
+     */
+    private static JsonNode readTree(String body) throws Exception {
+        return MAPPER.readTree(stripBom(body));
+    }
+
+    private static String stripBom(String body) {
+        if (body != null && !body.isEmpty() && body.charAt(0) == '\uFEFF') {
+            return body.substring(1);
+        }
+        return body;
+    }
+
+    /**
      * Creates a client backed by the given HTTP transport.
      *
      * @param http the HTTP client (must already carry a logged-in session)
@@ -311,7 +335,7 @@ public final class EhallSportVenueClient {
 
     private List<String> parseDateList(String body) {
         try {
-            JsonNode root = MAPPER.readTree(body);
+            JsonNode root = readTree(body);
             List<String> dates = new ArrayList<>(root.size());
             for (JsonNode node : root) {
                 dates.add(node.asText());
@@ -325,7 +349,7 @@ public final class EhallSportVenueClient {
 
     private SportVenueData parseSportVenueData(String body) {
         try {
-            JsonNode root = MAPPER.readTree(body);
+            JsonNode root = readTree(body);
             // The endpoint returns the payload at the top level, not wrapped in "datas".
             List<SportInfo> sports = parseSportInfoList(root.path("xmList"));
             List<CampusInfo> campuses = parseCampusList(root.path("campusList"));
@@ -385,7 +409,7 @@ public final class EhallSportVenueClient {
 
     private List<TimeSlotOption> parseTimeSlots(String body) {
         try {
-            JsonNode root = MAPPER.readTree(body);
+            JsonNode root = readTree(body);
             List<TimeSlotOption> list = new ArrayList<>(root.size());
             for (JsonNode node : root) {
                 list.add(new TimeSlotOption(
@@ -405,7 +429,7 @@ public final class EhallSportVenueClient {
 
     private List<VenueOption> parseVenues(String body) {
         try {
-            JsonNode rows = MAPPER.readTree(body)
+            JsonNode rows = readTree(body)
                 .path("datas")
                 .path("getOpeningRoom")
                 .path("rows");
@@ -431,7 +455,7 @@ public final class EhallSportVenueClient {
 
     private String parseBookingResult(String body) {
         try {
-            JsonNode root = MAPPER.readTree(body);
+            JsonNode root = readTree(body);
             String code = root.path("code").asText("");
             String msg = root.path("msg").asText("");
             if (!"0".equals(code)) {
@@ -449,7 +473,7 @@ public final class EhallSportVenueClient {
 
     private MyBookingsPage parseMyBookings(String body) {
         try {
-            JsonNode info = MAPPER.readTree(body)
+            JsonNode info = readTree(body)
                 .path("datas")
                 .path("myBookingInfo");
             int totalSize = info.path("totalSize").asInt(0);
