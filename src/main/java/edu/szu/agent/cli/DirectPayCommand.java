@@ -12,6 +12,7 @@ import edu.szu.agent.client.http.CookieJar;
 import edu.szu.agent.client.http.EhallSessionManager;
 import edu.szu.agent.client.http.EhallSportVenueClient;
 import edu.szu.agent.client.session.HttpSession;
+import edu.szu.agent.client.payment.CampusCardPaymentDriver;
 import edu.szu.agent.client.payment.DefaultPaymentMethodResolver;
 import edu.szu.agent.client.payment.EhallPaymentOrderClient;
 import edu.szu.agent.client.payment.ManualLinkPaymentDriver;
@@ -137,7 +138,7 @@ public class DirectPayCommand implements Callable<Integer> {
             PaymentService service = new PaymentService(
                 orderClient,
                 new DefaultPaymentMethodResolver(),
-                List.of(new ManualLinkPaymentDriver()),
+                List.of(new ManualLinkPaymentDriver(), new CampusCardPaymentDriver()),
                 poller,
                 browser
             );
