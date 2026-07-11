@@ -20,7 +20,8 @@ public record PaymentInitParams(
     String studentName,
     String studentId,
     String rzDate,
-    String jyDate
+    String jyDate,
+    boolean paid
 ) {
     /**
      * Canonical constructor replacing nulls with empty strings for string fields.

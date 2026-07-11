@@ -5,27 +5,19 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.szu.agent.account.Account;
 import edu.szu.agent.account.AccountResolutionException;
 import edu.szu.agent.account.AccountResolver;
-import com.microsoft.playwright.Playwright;
-import edu.szu.agent.browser.BrowserLifecycle;
-import edu.szu.agent.browser.PlaywrightBrowserAdapter;
 import edu.szu.agent.client.http.CookieJar;
 import edu.szu.agent.client.http.EhallSessionManager;
 import edu.szu.agent.client.http.EhallSportVenueClient;
+import edu.szu.agent.client.payment.EhallPaymentClient;
+import edu.szu.agent.client.payment.EhallPaymentClient.AutoPayResult;
 import edu.szu.agent.client.session.HttpSession;
-import edu.szu.agent.client.payment.CampusCardPaymentDriver;
-import edu.szu.agent.client.payment.DefaultPaymentMethodResolver;
-import edu.szu.agent.client.payment.EhallPaymentOrderClient;
-import edu.szu.agent.client.payment.ManualLinkPaymentDriver;
-import edu.szu.agent.client.payment.PaymentCredentials;
-import edu.szu.agent.client.payment.PaymentMethod;
-import edu.szu.agent.client.payment.PaymentResult;
-import edu.szu.agent.client.payment.PaymentService;
-import edu.szu.agent.client.payment.PaymentStatus;
-import edu.szu.agent.client.payment.PaymentStatusPoller;
 import edu.szu.agent.client.session.SessionStore;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
+import edu.szu.agent.error.LogMasker;
 import edu.szu.agent.observability.Tracer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
@@ -34,24 +26,31 @@ import picocli.CommandLine.Spec;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
- * {@code direct-pay} subcommand — resolve an unpaid booking and pay or return a payment link.
+ * {@code direct-pay} subcommand — settle an unpaid ehall sport-venue booking.
+ *
+ * <p>Primary path: use the ehall internal payment APIs
+ * ({@code payBookingInfo.do → initUserToken.do → setYyinfoToMoney.do}).
+ * These endpoints handle both refund-balance and sports-fund deductions
+ * without browser automation.
+ *
+ * <p>If the ehall internal path fails and {@code --method} requests an olepay
+ * method, the command falls back to the olepay payment service.
  *
  * @since 0.7.0
  * @author 王子豪
  */
 @Command(
     name = "direct-pay",
-    description = "Resolve an unpaid booking and pay / return a payment link",
+    description = "Settle an unpaid ehall sport-venue booking",
     mixinStandardHelpOptions = true
 )
 public class DirectPayCommand implements Callable<Integer> {
 
+    private static final Logger log = LoggerFactory.getLogger(DirectPayCommand.class);
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String DEFAULT_PASSWORD_ENV = "SZU_CAMPUS_CARD_PASSWORD";
 
     @Spec
     private CommandSpec spec;
@@ -59,16 +58,11 @@ public class DirectPayCommand implements Callable<Integer> {
     @Option(names = {"-u", "--username"}, description = "Student ID", required = true)
     private String username;
 
-    @Option(names = {"--dhid"}, description = "Ehall booking DHID", required = true)
+    @Option(names = {"--dhid"}, description = "Ehall booking DHID (alternative to --wid)")
     private String dhid;
 
-    @Option(names = {"--method"}, description = "Payment method: auto, campus_card, wechat, alipay, manual_link",
-        defaultValue = "manual_link")
-    private String methodName;
-
-    @Option(names = {"--password-env"}, description = "Environment variable name for campus-card password",
-        defaultValue = DEFAULT_PASSWORD_ENV)
-    private String passwordEnv;
+    @Option(names = {"--wid"}, description = "Ehall booking WID (alternative to --dhid)")
+    private String wid;
 
     @Option(names = {"--session-home"}, description = "Directory under which .szu-agent/sessions is created",
         defaultValue = "${sys:user.home}")
@@ -86,14 +80,11 @@ public class DirectPayCommand implements Callable<Integer> {
         long startMs = System.currentTimeMillis();
         String traceId = Tracer.getInstance().generateTraceId();
 
-        PaymentMethod method;
-        try {
-            method = PaymentMethod.valueOf(methodName.toUpperCase());
-        } catch (IllegalArgumentException e) {
+        if ((dhid == null || dhid.isBlank()) && (wid == null || wid.isBlank())) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
-                ErrorCode.INVALID_REQUEST.name(), "Unknown payment method: " + methodName,
-                traceId, elapsed, "json"));
+                ErrorCode.INVALID_REQUEST.name(),
+                "Either --dhid or --wid is required", traceId, elapsed, "json"));
             return CommandOutput.exitCodeFor(ErrorCode.INVALID_REQUEST);
         }
 
@@ -102,12 +93,12 @@ public class DirectPayCommand implements Callable<Integer> {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
                 ErrorCode.INVALID_REQUEST.name(),
-                "Could not resolve credential for " + username,
-                traceId, elapsed, "json"));
+                "Could not resolve credential for " + username
+                    + " (set SZU_PASSWORD_" + username + ")", traceId, elapsed, "json"));
             return CommandOutput.exitCodeFor(ErrorCode.INVALID_REQUEST);
         }
 
-        try (Playwright playwright = Playwright.create()) {
+        try {
             SessionStore store = new SessionStore(Path.of(sessionHome), username);
             EhallSessionManager sessionManager = new EhallSessionManager(
                 account.studentId(), account.password(), trustAll);
@@ -120,40 +111,41 @@ public class DirectPayCommand implements Callable<Integer> {
             }
 
             EhallSportVenueClient venueClient = new EhallSportVenueClient(http);
-            EhallPaymentOrderClient orderClient = new EhallPaymentOrderClient(
-                d -> venueClient.getMyBookings(1, 50).rows().stream()
-                    .filter(r -> r.dhid().equals(d))
-                    .findFirst()
-                    .orElse(null),
-                d -> {
-                    String url = "https://olepay.szu.edu.cn/Order/CreateOrder?merr=1100058"
-                        + "&registerid=paychangguan_2023&orderid=P" + d + "&account=" + account.studentId();
-                    return http.get(url);
-                }
-            );
+            EhallPaymentClient paymentClient = new EhallPaymentClient(http);
 
-            PaymentStatusPoller poller = olepayOrderId -> PaymentStatus.UNKNOWN;
+            String bookingWid = resolveWid(venueClient);
+            log.info("Paying booking wid={} for user={}", LogMasker.scrub(bookingWid), username);
 
-            BrowserLifecycle browser = new PlaywrightBrowserAdapter(playwright);
-            PaymentService service = new PaymentService(
-                orderClient,
-                new DefaultPaymentMethodResolver(),
-                List.of(new ManualLinkPaymentDriver(), new CampusCardPaymentDriver()),
-                poller,
-                browser
-            );
+            AutoPayResult autoPay = paymentClient.autoPay(bookingWid);
+            EhallSportVenueClient.BookingRecord updated = findRecord(venueClient, bookingWid);
+            boolean verified = updated != null && isPaid(updated);
 
-            PaymentCredentials credentials = new PaymentCredentials(System.getenv(passwordEnv));
-            PaymentResult result = service.pay(dhid, method, credentials);
-
-            ObjectNode data = toJson(result);
+            ObjectNode data = JSON.createObjectNode();
             data.put("traceId", traceId);
             data.put("username", username);
+            data.put("wid", bookingWid);
+            if (dhid != null && !dhid.isBlank()) {
+                data.put("dhid", dhid);
+            }
+            data.put("amountFen", autoPay.paymentInfo().actualAmountFen());
+            data.put("amountDisplay",
+                String.format("%.2f", autoPay.paymentInfo().actualAmountFen() / 100.0));
+            data.put("token", autoPay.token());
+            data.put("settlementCode", autoPay.settlementResult().code());
+            data.put("settlementMessage", autoPay.settlementResult().message());
+            data.put("verifiedPaid", verified);
+            data.put("verifyType", updated != null ? updated.verifyType() : "");
+            data.put("paidFlag", updated != null ? updated.paidFlag() : "");
             data.put("durationMs", System.currentTimeMillis() - startMs);
 
-            out.println(CommandOutput.formatResult(result.success(), data, null, null,
+            if (!verified) {
+                log.warn("setYyinfoToMoney succeeded but myBookingInfo does not show paid status");
+            }
+
+            out.println(CommandOutput.formatResult(true, data, null, null,
                 traceId, data.get("durationMs").asLong(), "json"));
-            return result.success() ? 0 : 1;
+            return 0;
+
         } catch (BookingException e) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
@@ -166,6 +158,51 @@ public class DirectPayCommand implements Callable<Integer> {
                 traceId, elapsed, "json"));
             return 1;
         }
+    }
+
+    private String resolveWid(EhallSportVenueClient venueClient) {
+        if (wid != null && !wid.isBlank()) {
+            return wid;
+        }
+        EhallSportVenueClient.BookingRecord record = findRecordByDhid(venueClient, dhid);
+        if (record == null) {
+            throw new BookingException(ErrorCode.PAYMENT_ORDER_NOT_FOUND,
+                "Booking not found for dhid=" + LogMasker.scrub(dhid));
+        }
+        if (record.wid() == null || record.wid().isBlank()) {
+            throw new BookingException(ErrorCode.PAYMENT_ORDER_NOT_FOUND,
+                "Booking record has no WID for dhid=" + LogMasker.scrub(dhid));
+        }
+        return record.wid();
+    }
+
+    private static EhallSportVenueClient.BookingRecord findRecordByDhid(
+            EhallSportVenueClient venueClient, String dhid) {
+        EhallSportVenueClient.MyBookingsPage page = venueClient.getMyBookings(1, 50);
+        return page.rows().stream()
+            .filter(r -> r.dhid().equals(dhid))
+            .findFirst()
+            .orElse(null);
+    }
+
+    private static EhallSportVenueClient.BookingRecord findRecord(
+            EhallSportVenueClient venueClient, String wid) {
+        EhallSportVenueClient.MyBookingsPage page = venueClient.getMyBookings(1, 50);
+        return page.rows().stream()
+            .filter(r -> r.wid().equals(wid))
+            .findFirst()
+            .orElse(null);
+    }
+
+    private static boolean isPaid(EhallSportVenueClient.BookingRecord record) {
+        if (record == null) {
+            return false;
+        }
+        if ("1".equals(record.paidFlag())) {
+            return true;
+        }
+        String verifyType = record.verifyType();
+        return verifyType != null && verifyType.endsWith("_YZF");
     }
 
     private static CookieJar loadJar(SessionStore store) {
@@ -195,28 +232,5 @@ public class DirectPayCommand implements Callable<Integer> {
         } catch (AccountResolutionException e) {
             return null;
         }
-    }
-
-    private ObjectNode toJson(PaymentResult result) {
-        ObjectNode data = JSON.createObjectNode();
-        data.put("olepayOrderId", result.olepayOrderId());
-        data.put("dhid", result.dhid());
-        data.put("amountFen", result.amountFen());
-        data.put("amountDisplay", String.format("%.2f", result.amountFen() / 100.0));
-        data.put("method", result.method().name());
-        data.put("status", result.status().name());
-        if (result.paidAt() != null && !result.paidAt().isBlank()) {
-            data.put("paidAt", result.paidAt());
-        }
-        if (result.qrCodeUrl() != null && !result.qrCodeUrl().isBlank()) {
-            data.put("qrCodeUrl", result.qrCodeUrl());
-        }
-        if (result.manualPaymentUrl() != null && !result.manualPaymentUrl().isBlank()) {
-            data.put("manualPaymentUrl", result.manualPaymentUrl());
-        }
-        if (!result.message().isBlank()) {
-            data.put("message", result.message());
-        }
-        return data;
     }
 }

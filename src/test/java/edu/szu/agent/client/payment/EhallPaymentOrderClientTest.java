@@ -25,7 +25,8 @@ class EhallPaymentOrderClientTest {
             dhid -> new EhallSportVenueClient.BookingRecord(
                 dhid, "wid", "1", "粤海", "004", "网球", "015", "北区网球场",
                 "venue-wid", "北区网球1号场", "1.0", "CG_YY", "已预约",
-                "2026-07-10 15:00~16:00", "2026-07-10 22:35:42", "5.00"
+                "2026-07-10 15:00~16:00", "2026-07-10 22:35:42", "5.00",
+                "YY_WZF", "0"
             ),
             dhid -> html
         );

@@ -23,11 +23,11 @@ class PaymentServiceTest {
         orderClient, resolver, List.of(manualDriver), poller, browser);
 
     @Test
-    @DisplayName("零金额订单直接返回已支付")
-    void zeroAmountReturnsAlreadyPaid() {
+    @DisplayName("已支付订单直接返回已支付")
+    void paidOrderReturnsAlreadyPaid() {
         when(orderClient.resolve("202607102327025769"))
             .thenReturn(new PaymentInitParams("P1", "202607102327025769", "m", "r", "a",
-                0, 0, "", "", "", "", "", "", ""));
+                0, 0, "", "", "", "", "", "", "", true));
 
         PaymentResult result = service.pay("202607102327025769", PaymentMethod.AUTO,
             new PaymentCredentials(""));
@@ -37,11 +37,11 @@ class PaymentServiceTest {
     }
 
     @Test
-    @DisplayName("非零金额返回手动支付链接")
-    void nonZeroAmountReturnsManualLink() {
+    @DisplayName("未支付订单返回手动支付链接")
+    void unpaidOrderReturnsManualLink() {
         when(orderClient.resolve("202607102327025769"))
             .thenReturn(new PaymentInitParams("P1", "202607102327025769", "m", "r", "a",
-                500, 500, "", "", "", "", "", "", ""));
+                500, 500, "", "", "", "", "", "", "", false));
 
         PaymentResult result = service.pay("202607102327025769", PaymentMethod.MANUAL_LINK,
             new PaymentCredentials(""));

@@ -49,7 +49,8 @@ class ManualLinkPaymentDriverTest {
             "王子豪",
             "2023150090",
             "",
-            ""
+            "",
+            false
         );
     }
 }

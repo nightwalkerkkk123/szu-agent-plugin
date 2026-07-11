@@ -18,9 +18,14 @@ public interface CasLoginClientFactory {
 
     /**
      * Default factory: authserver encryptor + ehall sports-venue service URL.
+     *
+     * <p>The service parameter is the final ehall application URL, not the
+     * {@code /login} CAS entry point. CAS will redirect back to this URL with a
+     * service ticket; ehall validates it and issues the session cookies required
+     * by the sports-venue module.
      */
     CasLoginClientFactory DEFAULT = (http, casBase) -> CasLoginClient.builder(http, casBase)
-        .service("https://ehall.szu.edu.cn/login?service=https%3A%2F%2Fehall.szu.edu.cn%2Fqljfwapp%2Fsys%2FlwSzuCgyy%2Findex.do")
+        .service("https://ehall.szu.edu.cn/qljfwapp/sys/lwSzuCgyy/index.do")
         .passwordEncryptor(new AuthserverPasswordEncryptor())
         .build();
 

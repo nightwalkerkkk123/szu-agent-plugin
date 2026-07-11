@@ -62,10 +62,10 @@ public class PaymentService {
     public PaymentResult pay(String dhid, PaymentMethod method, PaymentCredentials credentials) {
         PaymentInitParams params = orderClient.resolve(dhid);
 
-        if (params.actualAmountFen() == 0) {
-            log.info("Order dhid={} has zero amount, treating as already paid",
+        if (params.paid()) {
+            log.info("Order dhid={} is already marked paid (VERIFY_TYPE/SFZF)",
                 LogMasker.scrub(dhid));
-            return PaymentResult.alreadyPaid(params.olepayOrderId(), dhid, 0);
+            return PaymentResult.alreadyPaid(params.olepayOrderId(), dhid, params.actualAmountFen());
         }
 
         PaymentMethod resolved = methodResolver.resolve(params, method, credentials);

@@ -3,8 +3,12 @@ package edu.szu.agent.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import edu.szu.agent.account.Account;
+import edu.szu.agent.account.AccountResolutionException;
+import edu.szu.agent.account.AccountResolver;
 import edu.szu.agent.client.http.CampusHttpClient;
 import edu.szu.agent.client.http.CookieJar;
+import edu.szu.agent.client.http.EhallSessionManager;
 import edu.szu.agent.client.http.EhallSportVenueClient;
 import edu.szu.agent.client.session.HttpSession;
 import edu.szu.agent.client.session.SessionStore;
@@ -77,6 +81,9 @@ public class DirectDiscoverCommand implements Callable<Integer> {
         defaultValue = "1.0")
     private String yylx;
 
+    @Option(names = {"-e", "--env-file"}, description = "Path to .env file for credentials")
+    private String envFile;
+
     @Override
     public Integer call() {
         PrintWriter out = spec.commandLine().getOut();
@@ -109,14 +116,23 @@ public class DirectDiscoverCommand implements Callable<Integer> {
             return CommandOutput.exitCodeFor(ErrorCode.SESSION_NOT_FOUND);
         }
 
-        try {
-            HttpSession session = HttpSession.read(store);
-            CookieJar jar = new CookieJar(session.cookies());
+        Account account = resolveAccount();
+        if (account == null) {
+            long elapsed = System.currentTimeMillis() - startMs;
+            out.println(CommandOutput.formatResult(false, null,
+                ErrorCode.INVALID_REQUEST.name(),
+                "Could not resolve credential for " + username
+                    + " (set SZU_PASSWORD_" + username + ")", traceId, elapsed, "json"));
+            return CommandOutput.exitCodeFor(ErrorCode.INVALID_REQUEST);
+        }
 
-            try (CampusHttpClient http = CampusHttpClient.builder()
-                    .trustAll(trustAll)
-                    .cookieJar(jar)
-                    .build()) {
+        try {
+            EhallSessionManager sessionManager = new EhallSessionManager(
+                account.studentId(), account.password(), trustAll);
+            CookieJar jar = loadOrCreateJar(store);
+
+            try (CampusHttpClient http = sessionManager.ensureSession(jar)) {
+                persistSession(store, http.cookieJar());
                 EhallSportVenueClient api = new EhallSportVenueClient(http);
 
                 // Step 1: Resolve campus name to code
@@ -181,12 +197,6 @@ public class DirectDiscoverCommand implements Callable<Integer> {
             out.println(CommandOutput.formatResult(false, null,
                 e.code().name(), e.getMessage(), traceId, elapsed, "json"));
             return CommandOutput.exitCodeFor(e.code());
-        } catch (IOException e) {
-            long elapsed = System.currentTimeMillis() - startMs;
-            out.println(CommandOutput.formatResult(false, null,
-                ErrorCode.SESSION_READ_FAILED.name(),
-                "Failed to load persisted state: " + e.getMessage(), traceId, elapsed, "json"));
-            return CommandOutput.exitCodeFor(ErrorCode.SESSION_READ_FAILED);
         } catch (RuntimeException e) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
@@ -307,6 +317,8 @@ public class DirectDiscoverCommand implements Callable<Integer> {
         if (chinese.contains("网球")) return "004";
         if (chinese.contains("篮球")) return "005";
         if (chinese.contains("壁球")) return "006";
+        if (chinese.contains("有氧健身") || chinese.contains("二楼健身")) return "008";
+        if (chinese.contains("重量型健身") || chinese.contains("一楼健身")) return "007";
         if (chinese.contains("健身")) return "007";
         if (chinese.contains("游泳")) return "009";
         if (chinese.contains("乒乓球")) return "013";
@@ -314,5 +326,35 @@ public class DirectDiscoverCommand implements Callable<Integer> {
         if (chinese.contains("桌球")) return "016";
         if (chinese.contains("瑜伽")) return "021";
         return null;
+    }
+
+    private Account resolveAccount() {
+        try {
+            return (envFile != null)
+                ? AccountResolver.resolve(username, System.getenv(), Path.of(envFile))
+                : AccountResolver.resolve(username, System.getenv());
+        } catch (AccountResolutionException e) {
+            return null;
+        }
+    }
+
+    private static CookieJar loadOrCreateJar(SessionStore store) {
+        if (!store.exists()) {
+            return new CookieJar();
+        }
+        try {
+            HttpSession session = HttpSession.read(store);
+            return new CookieJar(session.cookies());
+        } catch (IOException e) {
+            return new CookieJar();
+        }
+    }
+
+    private static void persistSession(SessionStore store, CookieJar jar) {
+        try {
+            HttpSession.write(store, jar);
+        } catch (IOException e) {
+            // Best-effort persistence; discovery still succeeded.
+        }
     }
 }

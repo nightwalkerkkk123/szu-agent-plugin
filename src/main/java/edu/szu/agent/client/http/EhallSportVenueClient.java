@@ -498,7 +498,9 @@ public final class EhallSportVenueClient {
                     text(node, "YYZT_DISPLAY"),
                     text(node, "YYSJD"),
                     text(node, "CJSJ"),
-                    text(node, "ZHJE")
+                    text(node, "ACTULAMT"),
+                    text(node, "VERIFY_TYPE"),
+                    text(node, "SFZF")
                 ));
             }
             return new MyBookingsPage(totalSize, pageNumber, pageSize, list);
@@ -589,7 +591,9 @@ public final class EhallSportVenueClient {
         String statusText,
         String timeSlot,
         String createTime,
-        String amount
+        String amount,
+        String verifyType,
+        String paidFlag
     ) {
     }
 

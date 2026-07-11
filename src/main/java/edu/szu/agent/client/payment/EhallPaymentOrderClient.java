@@ -87,8 +87,9 @@ public class EhallPaymentOrderClient implements PaymentOrderClient {
             amountFen = parsedAmountFen;
         }
 
-        log.info("Resolved olepay params for dhid={}, orderId={}, amountFen={}",
-            LogMasker.scrub(dhid), olepayOrderId, amountFen);
+        boolean paid = isPaid(record);
+        log.info("Resolved olepay params for dhid={}, orderId={}, amountFen={}, paid={}",
+            LogMasker.scrub(dhid), olepayOrderId, amountFen, paid);
 
         return new PaymentInitParams(
             olepayOrderId,
@@ -104,8 +105,25 @@ public class EhallPaymentOrderClient implements PaymentOrderClient {
             studentName,
             studentId,
             "",
-            ""
+            "",
+            paid
         );
+    }
+
+    private static boolean isPaid(EhallSportVenueClient.BookingRecord record) {
+        if (record == null) {
+            return false;
+        }
+        // SFZF: 1 = paid, 0 = unpaid
+        if ("1".equals(record.paidFlag())) {
+            return true;
+        }
+        // VERIFY_TYPE codes ending with _YZF are paid; _WZF are unpaid.
+        String verifyType = record.verifyType();
+        if (verifyType != null && verifyType.endsWith("_YZF")) {
+            return true;
+        }
+        return false;
     }
 
     private static String firstMatch(Pattern pattern, String html) {

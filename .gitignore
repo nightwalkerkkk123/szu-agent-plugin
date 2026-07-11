@@ -34,6 +34,12 @@ logs/
 # HAR captures (large binary files; keep canonical copy in docs/superpowers/research/ if needed)
 *.har
 
+# Reverse-engineering scratch files (root only; payment/debug captures, cookies, order ids)
+/*.html
+/*.txt
+/*.json
+olepay_cookies*.txt
+
 # Node.js (MCP server)
 node_modules/
 npm-debug.log*

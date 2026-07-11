@@ -10,7 +10,7 @@ class DefaultPaymentMethodResolverTest {
 
     private final DefaultPaymentMethodResolver resolver = new DefaultPaymentMethodResolver();
     private final PaymentInitParams params = new PaymentInitParams(
-        "P1", "DH1", "m", "r", "a", 500, 500, "", "", "", "", "", "", "");
+        "P1", "DH1", "m", "r", "a", 500, 500, "", "", "", "", "", "", "", false);
 
     @Test
     @DisplayName("有校园卡密码时 AUTO 选择 CAMPUS_CARD")

@@ -3,8 +3,12 @@ package edu.szu.agent.cli;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import edu.szu.agent.account.Account;
+import edu.szu.agent.account.AccountResolutionException;
+import edu.szu.agent.account.AccountResolver;
 import edu.szu.agent.client.http.CampusHttpClient;
 import edu.szu.agent.client.http.CookieJar;
+import edu.szu.agent.client.http.EhallSessionManager;
 import edu.szu.agent.client.http.EhallSportVenueClient;
 import edu.szu.agent.client.http.EhallSportVenueClient.CampusInfo;
 import edu.szu.agent.client.http.EhallSportVenueClient.SportInfo;
@@ -59,6 +63,9 @@ public class DirectSportsCommand implements Callable<Integer> {
     @Option(names = {"--trust-all"}, description = "Disable TLS certificate validation (dev/internal only)")
     private boolean trustAll;
 
+    @Option(names = {"-e", "--env-file"}, description = "Path to .env file for credentials")
+    private String envFile;
+
     @Override
     public Integer call() {
         PrintWriter out = spec.commandLine().getOut();
@@ -75,14 +82,23 @@ public class DirectSportsCommand implements Callable<Integer> {
             return CommandOutput.exitCodeFor(ErrorCode.SESSION_NOT_FOUND);
         }
 
-        try {
-            HttpSession session = HttpSession.read(store);
-            CookieJar jar = new CookieJar(session.cookies());
+        Account account = resolveAccount();
+        if (account == null) {
+            long elapsed = System.currentTimeMillis() - startMs;
+            out.println(CommandOutput.formatResult(false, null,
+                ErrorCode.INVALID_REQUEST.name(),
+                "Could not resolve credential for " + username
+                    + " (set SZU_PASSWORD_" + username + ")", traceId, elapsed, "json"));
+            return CommandOutput.exitCodeFor(ErrorCode.INVALID_REQUEST);
+        }
 
-            try (CampusHttpClient http = CampusHttpClient.builder()
-                    .trustAll(trustAll)
-                    .cookieJar(jar)
-                    .build()) {
+        try {
+            EhallSessionManager sessionManager = new EhallSessionManager(
+                account.studentId(), account.password(), trustAll);
+            CookieJar jar = loadOrCreateJar(store);
+
+            try (CampusHttpClient http = sessionManager.ensureSession(jar)) {
+                persistSession(store, http.cookieJar());
                 EhallSportVenueClient api = new EhallSportVenueClient(http);
                 SportVenueData data = api.getSportVenueData();
 
@@ -124,18 +140,42 @@ public class DirectSportsCommand implements Callable<Integer> {
             out.println(CommandOutput.formatResult(false, null,
                 e.code().name(), e.getMessage(), traceId, elapsed, "json"));
             return CommandOutput.exitCodeFor(e.code());
-        } catch (IOException e) {
-            long elapsed = System.currentTimeMillis() - startMs;
-            out.println(CommandOutput.formatResult(false, null,
-                ErrorCode.SESSION_READ_FAILED.name(),
-                "Failed to load persisted state: " + e.getMessage(), traceId, elapsed, "json"));
-            return CommandOutput.exitCodeFor(ErrorCode.SESSION_READ_FAILED);
         } catch (RuntimeException e) {
             long elapsed = System.currentTimeMillis() - startMs;
             out.println(CommandOutput.formatResult(false, null,
                 ErrorCode.UNKNOWN.name(), "Unexpected error: " + e.getMessage(),
                 traceId, elapsed, "json"));
             return 1;
+        }
+    }
+
+    private Account resolveAccount() {
+        try {
+            return (envFile != null)
+                ? AccountResolver.resolve(username, System.getenv(), Path.of(envFile))
+                : AccountResolver.resolve(username, System.getenv());
+        } catch (AccountResolutionException e) {
+            return null;
+        }
+    }
+
+    private static CookieJar loadOrCreateJar(SessionStore store) {
+        if (!store.exists()) {
+            return new CookieJar();
+        }
+        try {
+            HttpSession session = HttpSession.read(store);
+            return new CookieJar(session.cookies());
+        } catch (IOException e) {
+            return new CookieJar();
+        }
+    }
+
+    private static void persistSession(SessionStore store, CookieJar jar) {
+        try {
+            HttpSession.write(store, jar);
+        } catch (IOException e) {
+            // Best-effort persistence; discovery still succeeded.
         }
     }
 }
