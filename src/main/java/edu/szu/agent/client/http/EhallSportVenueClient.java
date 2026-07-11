@@ -33,11 +33,9 @@ import java.util.Objects;
  */
 public final class EhallSportVenueClient {
 
-    private static final String BASE = "https://ehall.szu.edu.cn/qljfwapp/sys/lwSzuCgyy";
-    private static final String REFERER = BASE + "/index.do";
-    private static final Map<String, String> AJAX_HEADERS = Map.of(
-        "X-Requested-With", "XMLHttpRequest"
-    );
+    private static final String BASE = EhallAjaxHeaders.BASE;
+    private static final String REFERER = EhallAjaxHeaders.REFERER;
+    private static final Map<String, String> AJAX_HEADERS = EhallAjaxHeaders.standard();
     private static final String YYLX_DEFAULT = "1.0";
     private static final String YYLX_DISMISSAL = "2.0";
 
@@ -459,8 +457,7 @@ public final class EhallSportVenueClient {
             String code = root.path("code").asText("");
             String msg = root.path("msg").asText("");
             if (!"0".equals(code)) {
-                throw new BookingException(ErrorCode.VENUE_OCCUPIED,
-                    "Booking rejected: [" + code + "] " + msg);
+                throw bookingExceptionForCode(code, msg);
             }
             return root.path("data").path("DHID").asText();
         } catch (BookingException e) {
@@ -469,6 +466,16 @@ public final class EhallSportVenueClient {
             throw new BookingException(ErrorCode.NETWORK_TIMEOUT,
                 "Failed to parse booking response: " + e.getMessage(), e);
         }
+    }
+
+    private static BookingException bookingExceptionForCode(String code, String msg) {
+        String normalized = msg == null ? "" : msg;
+        if ("E111080000000".equals(code) || normalized.contains("操作过于频繁")) {
+            return new BookingException(ErrorCode.RATE_LIMITED,
+                "Booking rate limited: [" + code + "] " + normalized);
+        }
+        return new BookingException(ErrorCode.VENUE_OCCUPIED,
+            "Booking rejected: [" + code + "] " + normalized);
     }
 
     private MyBookingsPage parseMyBookings(String body) {

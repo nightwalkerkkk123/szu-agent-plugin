@@ -6,6 +6,7 @@ import edu.szu.agent.client.session.SessionStore;
 import edu.szu.agent.domain.TimeSlot;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
+import edu.szu.agent.util.SimpleRateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * High-level service that turns a resolved venue-booking request into an ehall
@@ -44,9 +46,20 @@ public final class VenueBookingService {
 
     private static final Logger log = LoggerFactory.getLogger(VenueBookingService.class);
 
+    // Throttling tuned for ehall sports-venue backend:
+    // - read calls (dates/slots/venues) are cheap but still tracked;
+    // - the final booking POST is the most expensive and rate-limited action.
+    private static final double QUERY_PERMITS_PER_SECOND = 2.0;
+    private static final double BOOK_PERMITS_PER_SECOND = 0.2;
+    private static final long RATE_LIMIT_COOLDOWN_BASE_MS = 5_000;
+    private static final long RATE_LIMIT_COOLDOWN_JITTER_MS = 2_000;
+    private static final int RATE_LIMIT_MAX_RETRIES = 1;
+
     private final Account account;
     private final SessionStore sessionStore;
     private final EhallSessionManager sessionManager;
+    private final SimpleRateLimiter queryLimiter;
+    private final SimpleRateLimiter bookLimiter;
 
     /**
      * Creates a service for the given account and session infrastructure.
@@ -59,9 +72,31 @@ public final class VenueBookingService {
      */
     public VenueBookingService(Account account, SessionStore sessionStore,
                                 EhallSessionManager sessionManager) {
+        this(account, sessionStore, sessionManager,
+            new SimpleRateLimiter(QUERY_PERMITS_PER_SECOND),
+            new SimpleRateLimiter(BOOK_PERMITS_PER_SECOND));
+    }
+
+    /**
+     * Creates a fully configured service with injectable rate limiters.
+     *
+     * @param account        the account performing the booking
+     * @param sessionStore   persistent session store for this account
+     * @param sessionManager session manager that refreshes CAS/ehall sessions
+     * @param queryLimiter   rate limiter for read-only ehall queries
+     * @param bookLimiter    rate limiter for the booking submission
+     * @since 0.7.0
+     * @author 王子豪
+     */
+    public VenueBookingService(Account account, SessionStore sessionStore,
+                                EhallSessionManager sessionManager,
+                                SimpleRateLimiter queryLimiter,
+                                SimpleRateLimiter bookLimiter) {
         this.account = Objects.requireNonNull(account, "account");
         this.sessionStore = Objects.requireNonNull(sessionStore, "sessionStore");
         this.sessionManager = Objects.requireNonNull(sessionManager, "sessionManager");
+        this.queryLimiter = Objects.requireNonNull(queryLimiter, "queryLimiter");
+        this.bookLimiter = Objects.requireNonNull(bookLimiter, "bookLimiter");
     }
 
     /**
@@ -113,29 +148,61 @@ public final class VenueBookingService {
     }
 
     private String executeBooking(EhallSportVenueClient api, RawBookingRequest request) {
-        validateDate(api, request.date());
+        return executeBooking(api, request, 0);
+    }
 
-        EhallSportVenueClient.TimeSlotOption chosenSlot = resolveTimeSlot(api, request);
-        if (chosenSlot.disabled()) {
-            throw new BookingException(ErrorCode.NO_AVAILABLE_VENUE,
-                "Time slot " + request.timeSlot().slotId() + " is not bookable");
+    private String executeBooking(EhallSportVenueClient api, RawBookingRequest request,
+                                   int attempt) {
+        try {
+            queryLimiter.acquire();
+            validateDate(api, request.date());
+
+            queryLimiter.acquire();
+            EhallSportVenueClient.TimeSlotOption chosenSlot = resolveTimeSlot(api, request);
+            if (chosenSlot.disabled()) {
+                throw new BookingException(ErrorCode.NO_AVAILABLE_VENUE,
+                    "Time slot " + request.timeSlot().slotId() + " is not bookable");
+            }
+
+            queryLimiter.acquire();
+            EhallSportVenueClient.VenueOption venue = resolveVenue(api, request);
+
+            EhallSportVenueClient.BookingForm form = new EhallSportVenueClient.BookingForm(
+                account.studentId(),
+                account.displayName(),
+                request.campusCode(),
+                request.sportCode(),
+                venue.venueGroupCode(),
+                venue.wid(),
+                request.date(),
+                request.timeSlot(),
+                request.yylx(),
+                ""
+            );
+
+            bookLimiter.acquire();
+            return api.book(form);
+        } catch (BookingException e) {
+            if (e.code() == ErrorCode.RATE_LIMITED && attempt < RATE_LIMIT_MAX_RETRIES) {
+                cooldown();
+                return executeBooking(api, request, attempt + 1);
+            }
+            throw e;
         }
+    }
 
-        EhallSportVenueClient.VenueOption venue = resolveVenue(api, request);
-
-        EhallSportVenueClient.BookingForm form = new EhallSportVenueClient.BookingForm(
-            account.studentId(),
-            account.displayName(),
-            request.campusCode(),
-            request.sportCode(),
-            venue.venueGroupCode(),
-            venue.wid(),
-            request.date(),
-            request.timeSlot(),
-            request.yylx(),
-            ""
-        );
-        return api.book(form);
+    private void cooldown() {
+        long jitter = ThreadLocalRandom.current().nextLong(RATE_LIMIT_COOLDOWN_JITTER_MS);
+        long delay = RATE_LIMIT_COOLDOWN_BASE_MS + jitter;
+        log.info("Rate limited on booking for {}, cooling down {} ms before retry",
+            account.studentId(), delay);
+        try {
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BookingException(ErrorCode.RATE_LIMITED,
+                "Booking cooldown interrupted for " + account.studentId(), e);
+        }
     }
 
     private void validateDate(EhallSportVenueClient api, LocalDate date) {

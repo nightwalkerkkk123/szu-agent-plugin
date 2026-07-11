@@ -37,6 +37,8 @@ public enum ErrorCode {
     CAPTCHA_REQUIRED      (Severity.HIGH,     true,  false, true,  "触发图形验证码"),
 
     // ----- 选场地阶段 -----
+    /** 请求过于频繁被服务端限流. */
+    RATE_LIMITED          (Severity.MEDIUM,   false, false, false, "请求过于频繁，请稍后再试"),
     /** 目标场地已被预约. */
     VENUE_OCCUPIED        (Severity.MEDIUM,   true,  false, false, "目标场地已被预约"),
     /** 该时段无任何可用场地. */

@@ -3,10 +3,12 @@ package edu.szu.agent.client.payment;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.szu.agent.client.http.CampusHttpClient;
+import edu.szu.agent.client.http.EhallAjaxHeaders;
 import edu.szu.agent.error.BookingException;
 import edu.szu.agent.error.ErrorCode;
 import edu.szu.agent.error.LogMasker;
 import edu.szu.agent.json.JsonMappers;
+import edu.szu.agent.util.SimpleRateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,23 +39,23 @@ public final class EhallPaymentClient {
 
     private static final Logger log = LoggerFactory.getLogger(EhallPaymentClient.class);
 
-    private static final String BASE = "https://ehall.szu.edu.cn/qljfwapp/sys/lwSzuCgyy";
-    private static final String REFERER = BASE + "/index.do";
+    private static final String BASE = EhallAjaxHeaders.BASE;
+    private static final String REFERER = EhallAjaxHeaders.REFERER;
     private static final String PAY_BOOKING_INFO_URL = BASE + "/sportVenue/payBookingInfo.do";
     private static final String INIT_USER_TOKEN_URL = BASE + "/sportVenue/initUserToken.do";
     private static final String SET_YYINFO_TO_MONEY_URL = BASE + "/sportVenue/setYyinfoToMoney.do";
+
+    private static final double PAY_PERMITS_PER_SECOND = 1.0;
 
     private static final ObjectMapper MAPPER = JsonMappers.standard();
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String TOKEN_ALPHABET = "0123456789abcdef";
     private static final int TOKEN_LENGTH = 32;
 
-    private static final Map<String, String> AJAX_HEADERS = Map.of(
-        "X-Requested-With", "XMLHttpRequest",
-        "Accept", "application/json, text/javascript, */*; q=0.01"
-    );
+    private static final Map<String, String> AJAX_HEADERS = EhallAjaxHeaders.standard();
 
     private final CampusHttpClient http;
+    private final SimpleRateLimiter limiter;
 
     /**
      * Creates a client backed by the given HTTP transport.
@@ -63,7 +65,20 @@ public final class EhallPaymentClient {
      * @author 王子豪
      */
     public EhallPaymentClient(CampusHttpClient http) {
+        this(http, new SimpleRateLimiter(PAY_PERMITS_PER_SECOND));
+    }
+
+    /**
+     * Creates a client with an injectable rate limiter for tests.
+     *
+     * @param http    the HTTP client (must already carry a logged-in ehall session)
+     * @param limiter rate limiter for payment API calls
+     * @since 0.7.0
+     * @author 王子豪
+     */
+    public EhallPaymentClient(CampusHttpClient http, SimpleRateLimiter limiter) {
         this.http = Objects.requireNonNull(http, "http");
+        this.limiter = Objects.requireNonNull(limiter, "limiter");
     }
 
     /**
@@ -77,6 +92,7 @@ public final class EhallPaymentClient {
      */
     public PaymentInfo payBookingInfo(String wid) {
         Objects.requireNonNull(wid, "wid");
+        limiter.acquire();
         String body = postForm(PAY_BOOKING_INFO_URL, Map.of("WID", wid));
         log.info("payBookingInfo response for wid={}: {}", LogMasker.scrub(wid),
             LogMasker.scrub(body));
@@ -94,6 +110,7 @@ public final class EhallPaymentClient {
      */
     public boolean initUserToken(String token) {
         Objects.requireNonNull(token, "token");
+        limiter.acquire();
         String body = postForm(INIT_USER_TOKEN_URL, Map.of("token", token));
         log.info("User credential registration response: {}", LogMasker.scrub(body));
         try {
@@ -116,6 +133,7 @@ public final class EhallPaymentClient {
      */
     public SettlementResult setYyinfoToMoney(SettlementRequest request) {
         Objects.requireNonNull(request, "request");
+        limiter.acquire();
         Map<String, String> form = Map.of(
             "ZFJE", String.valueOf(request.amountFen()),
             "TPIAO", String.valueOf(request.refundFen()),
@@ -165,7 +183,9 @@ public final class EhallPaymentClient {
         try {
             JsonNode root = MAPPER.readTree(stripBom(body));
             if (!root.path("success").asBoolean(true)) {
-                throw new BookingException(ErrorCode.PAYMENT_GATEWAY_ERROR,
+                String code = root.path("code").asText("");
+                String msg = root.path("msg").asText("");
+                throw gatewayExceptionForCode(code, msg,
                     "payBookingInfo returned failure for wid=" + LogMasker.scrub(wid));
             }
             int totalFen = parseFen(root.path("zuizong").asText("0"));
@@ -188,11 +208,31 @@ public final class EhallPaymentClient {
             JsonNode root = MAPPER.readTree(stripBom(body));
             String code = root.path("code").asText("");
             String msg = root.path("msg").asText("");
+            if ("E111080000000".equals(code) || isRateLimited(msg)) {
+                throw new BookingException(ErrorCode.RATE_LIMITED,
+                    "Payment rate limited: [" + code + "] " + msg);
+            }
             return new SettlementResult("0".equals(code), code, msg);
+        } catch (BookingException e) {
+            throw e;
         } catch (Exception e) {
             throw new BookingException(ErrorCode.PAYMENT_GATEWAY_ERROR,
                 "Failed to parse setYyinfoToMoney response: " + e.getMessage(), e);
         }
+    }
+
+    private static BookingException gatewayExceptionForCode(String code, String msg,
+                                                             String fallback) {
+        if ("E111080000000".equals(code) || isRateLimited(msg)) {
+            return new BookingException(ErrorCode.RATE_LIMITED,
+                "Payment rate limited: [" + code + "] " + msg);
+        }
+        return new BookingException(ErrorCode.PAYMENT_GATEWAY_ERROR,
+            fallback + " [" + code + "] " + msg);
+    }
+
+    private static boolean isRateLimited(String msg) {
+        return msg != null && msg.contains("操作过于频繁");
     }
 
     private static int parseFen(String value) {

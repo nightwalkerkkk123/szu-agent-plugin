@@ -40,15 +40,13 @@ public final class EhallSessionManager {
 
     private static final Logger log = LoggerFactory.getLogger(EhallSessionManager.class);
 
-    private static final String EHALL_BASE = "https://ehall.szu.edu.cn/qljfwapp/sys/lwSzuCgyy";
-    private static final String EHALL_REFERER = EHALL_BASE + "/index.do";
+    private static final String EHALL_BASE = EhallAjaxHeaders.BASE;
+    private static final String EHALL_REFERER = EhallAjaxHeaders.REFERER;
     private static final String EHALL_CAS_ENTRY =
         "https://ehall.szu.edu.cn/login?service=https%3A%2F%2Fehall.szu.edu.cn%2Fqljfwapp%2Fsys%2FlwSzuCgyy%2Findex.do";
     private static final String CAS_BASE = "https://authserver.szu.edu.cn";
     private static final String DATE_PROBE_URL = EHALL_BASE + "/sportVenue/getRqList.do";
-    private static final Map<String, String> AJAX_HEADERS = Map.of(
-        "X-Requested-With", "XMLHttpRequest"
-    );
+    private static final Map<String, String> AJAX_HEADERS = EhallAjaxHeaders.standard();
 
     private final String username;
     private final String password;
